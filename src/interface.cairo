@@ -1,10 +1,12 @@
 use starknet::ContractAddress;
-use openmark::primitives::Order;
+use openmark::primitives::{Order, Bid};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
     
     fn verifyOrder(self: @TState, order: Order, signer: felt252, signature: Span<felt252>) -> bool;
+    
+    fn verifyBid(self: @TState, bid: Bid, signer: felt252, signature: Span<felt252>) -> bool;
 
     fn buy(ref self: TState, seller: ContractAddress, order: Order, signature: Span<felt252>);
 
@@ -16,7 +18,8 @@ pub trait IOpenMark<TState> {
 
 #[starknet::interface]
 pub trait IOffchainMessageHash<T> {
-    fn get_message_hash(self: @T, order: Order, signer: felt252) -> felt252;
+    fn get_order_hash(self: @T, order: Order, signer: felt252) -> felt252;
+    fn get_bid_hash(self: @T, bid: Bid, signer: felt252) -> felt252;
 }
 
 #[starknet::interface]

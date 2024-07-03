@@ -14,11 +14,18 @@ const types = {
     { name: "expiry", type: "u128" },
     { name: "option", type: "OrderType" },
   ],
+  Bid: [
+    { name: "nftContract", type: "ContractAddress" },
+    { name: "amount", type: "u128" },
+    { name: "unitPrice", type: "u128" },
+    { name: "salt", type: "felt" },
+    { name: "expiry", type: "u128" },
+  ],
 };
 
 enum OrderType {
   Buy,
-  Sell,
+  Offer,
 }
 
 
@@ -31,6 +38,14 @@ interface Order {
   option: OrderType,
 }
 
+interface Bid {
+  nftContract: string,
+  amount: string,
+  unitPrice: string,
+  salt: string,
+  expiry: string,
+}
+
 function getDomain(chainId: string): typedData.StarkNetDomain {
   return {
     name: "OpenMark",
@@ -39,16 +54,29 @@ function getDomain(chainId: string): typedData.StarkNetDomain {
   };
 }
 
-function getTypedDataHash(myStruct: Order, chainId: string, owner: BigNumberish): string {
-  return typedData.getMessageHash(getTypedData(myStruct, chainId), owner);
+function getOrderHash(myStruct: Order, chainId: string, owner: BigNumberish): string {
+  return typedData.getMessageHash(getOrderData(myStruct, chainId), owner);
+}
+
+function getBidHash(myStruct: Bid, chainId: string, owner: BigNumberish): string {
+  return typedData.getMessageHash(getBidData(myStruct, chainId), owner);
 }
 
 // Needed to reproduce the same structure as:
 // https://github.com/0xs34n/starknet.js/blob/1a63522ef71eed2ff70f82a886e503adc32d4df9/__mocks__/typedDataStructArrayExample.json
-function getTypedData(myStruct: Order, chainId: string): typedData.TypedData {
+function getOrderData(myStruct: Order, chainId: string): typedData.TypedData {
   return {
     types,
     primaryType: "Order",
+    domain: getDomain(chainId),
+    message: { ...myStruct },
+  };
+}
+
+function getBidData(myStruct: Bid, chainId: string): typedData.TypedData {
+  return {
+    types,
+    primaryType: "Bid",
     domain: getDomain(chainId),
     message: { ...myStruct },
   };
@@ -63,16 +91,31 @@ const order: Order = {
   option: OrderType.Buy,
 };
 
+const bid: Bid = {
+  nftContract: "1",
+  amount: "2",
+  unitPrice: "3",
+  salt: "4",
+  expiry: "5",
+};
+
 const privateKey = '0x1234567890987654321';
 const starknetPublicKey = ec.starkCurve.getStarkKey(privateKey);
 const account: BigNumberish = starknetPublicKey;
-
-let msgHash = getTypedDataHash(order, "393402133025997798000961", account);
 console.log(`account: ${account};`);
-console.log(`test msgHash: ${msgHash};`);
 
-const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, privateKey);
+let orderHash = getOrderHash(order, "393402133025997798000961", account);
+console.log(`order hash: ${orderHash};`);
 
+let bidHash = getBidHash(bid, "393402133025997798000961", account);
+console.log(`bid hash: ${bidHash};`);
 
-console.log("signature r: ", signature.r.toString(16));
-console.log("signature s: ", signature.s.toString(16));
+const orderSign: WeierstrassSignatureType = ec.starkCurve.sign(orderHash, privateKey);
+
+console.log("order signature r: ", orderSign.r.toString(16));
+console.log("order  signature s: ", orderSign.s.toString(16));
+
+const bidSign: WeierstrassSignatureType = ec.starkCurve.sign(bidHash, privateKey);
+
+console.log("bid signature r: ", bidSign.r.toString(16));
+console.log("bid  signature s: ", bidSign.s.toString(16));

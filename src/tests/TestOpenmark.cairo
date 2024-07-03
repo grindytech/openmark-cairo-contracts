@@ -19,7 +19,7 @@ use starknet::{
 };
 
 use openmark::{
-    primitives::{Order, OrderType},
+    primitives::{Order, Bid, OrderType},
     interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
@@ -89,7 +89,7 @@ fn deploy_erc721_at(addr: ContractAddress) -> ContractAddress {
 
 #[test]
 #[available_gas(2000000)]
-fn get_message_hash_works() {
+fn get_order_hash_works() {
     let contract_address = deploy_openmark();
     // This value was computed using StarknetJS
     let message_hash = 0x4d5c7bf7d624d7ade7f8d4c73092ebcb9287e2be556ef15f65116dc94421bd1;
@@ -106,10 +106,34 @@ fn get_message_hash_works() {
     start_cheat_caller_address(contract_address, signer.try_into().unwrap());
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.get_message_hash(order, signer);
+    let result = dispatcher.get_order_hash(order, signer);
 
-    assert_eq!(result, message_hash,);
+    assert_eq!(result, message_hash);
 }
+
+#[test]
+#[available_gas(2000000)]
+fn get_bid_hash_works() {
+    let contract_address = deploy_openmark();
+    // This value was computed using StarknetJS
+    let message_hash = 0x494528c3fea34a10288c602ca2d1453c780dda745d9f5873b8f96ea7c3283db;
+    let bid = Bid {
+        nftContract: 1.try_into().unwrap(),
+        amount: 2,
+        unitPrice: 3,
+        salt: 4,
+        expiry: 5,
+    };
+    let signer = 0x20c29f1c98f3320d56f01c13372c923123c35828bce54f2153aa1cfe61c44f2;
+
+    start_cheat_caller_address(contract_address, signer.try_into().unwrap());
+    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
+
+    let result = dispatcher.get_bid_hash(bid, signer);
+
+    assert_eq!(result, message_hash);
+}
+
 #[test]
 #[available_gas(2000000)]
 fn verify_order_works() {
@@ -281,7 +305,6 @@ fn cancel_order_works() {
         option: OrderType::Buy,
     };
 
-    // buy and verify
     {
         start_cheat_caller_address(openmark_address, seller);
 
@@ -298,7 +321,6 @@ fn cancel_order_works() {
             1,
         );
 
-        let test: felt252 = *usedOrderSignatures.at(0);
-        assert_eq!(test, true.into());
+        assert_eq!( *usedOrderSignatures.at(0), true.into());
     }
 }
