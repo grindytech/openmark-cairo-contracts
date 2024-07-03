@@ -25,9 +25,9 @@ mod OpenMark {
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     mod Errors {
-        pub const SIGNATURE_USED: felt252 = 'OPENMARK: signature used';
-        pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid signature';
-        pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid signature len';
+        pub const SIGNATURE_USED: felt252 = 'OPENMARK: sig used';
+        pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid sig';
+        pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
         pub const INVALID_SELLER: felt252 = 'OPENMARK: invalid seller';
         pub const ZERO_ADDRESS_SELLER: felt252 = 'OPENMARK: caller is zero';
         pub const INVALID_PRICE: felt252 = 'OPENMARK: invalid price';
@@ -81,14 +81,14 @@ mod OpenMark {
             let price: u256 = order.price.into();
             assert(price > 0, Errors::INVALID_PRICE);
 
-            // verify signature
+            // 2. verify signature
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS_SELLER);
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
                 !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
                 Errors::SIGNATURE_USED
-            ); // signature already used
+            );
             assert(self.verifyOrder(order, seller.into(), signature), Errors::INVALID_SIGNATURE);
 
             // 3. make trade
@@ -97,6 +97,21 @@ mod OpenMark {
             self.eth_token.read().transfer(seller, price);
 
             // 4. change storage
+            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+        }
+
+        fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+
+            assert(
+                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                Errors::SIGNATURE_USED
+            );
+
+            assert(
+                self.verifyOrder(order, get_caller_address().into(), signature),
+                Errors::INVALID_SIGNATURE
+            );
             self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 

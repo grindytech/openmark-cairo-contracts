@@ -1,13 +1,18 @@
+use core::array::ArrayTrait;
+use core::option::OptionTrait;
+use core::traits::TryInto;
+
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
 use openmark::interface::IOM721TokenDispatcherTrait;
-use core::option::OptionTrait;
-use core::traits::TryInto;
-use snforge_std::signature::SignerTrait;
 use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address};
+
+use snforge_std::signature::SignerTrait;
+use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address};
+
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address};
+
 use openmark::{
     primitives::{Order, OrderType},
     interface::{
@@ -185,6 +190,49 @@ fn buy_works() {
         assert_eq!(ERC721Dispatcher.owner_of(2), buyer);
         assert_ne!(buyer_before_balance, buyer_after_balance - price.into());
         assert_ne!(seller_before_balance, seller_after_balance + price.into());
+    }
+}
+
+
+#[test]
+#[available_gas(2000000)]
+fn cancel_order_works() {
+    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+
+    let openmark_address = deploy_openmark();
+    let seller: ContractAddress = TEST_SELLER.try_into().unwrap();
+
+    let order = Order {
+        nftContract: erc721_address,
+        tokenId: 2,
+        price: 3,
+        salt: 4,
+        expiry: 5,
+        option: OrderType::Buy,
+    };
+
+    // buy and verify
+    {
+        start_cheat_caller_address(openmark_address, seller);
+
+        let mut signature = array![
+            0x5228d8ebab110b3038c328892e8293c49ef8777f02de0e094c1a902e91e0271,
+            0x72ac0a9ad3fd5ad9143a720148d174e724aa752dfedc6e4dce767b82cbbd913
+        ];
+        let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
+        OpenMarkDispatcher.cancelOrder(order, signature.span());
+
+        let usedOrderSignatures = load(
+            openmark_address,
+            map_entry_address(
+                selector!("usedOrderSignatures"),
+                signature.span(),
+            ),
+            1,
+        );
+
+        let test: felt252 = *usedOrderSignatures.at(0);
+        assert_eq!(test, true.into());
     }
 }
 
