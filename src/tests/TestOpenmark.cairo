@@ -3,7 +3,6 @@ use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDi
 use openmark::interface::IOM721TokenDispatcherTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
-use core::array::ArrayTrait;
 use snforge_std::signature::SignerTrait;
 use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;

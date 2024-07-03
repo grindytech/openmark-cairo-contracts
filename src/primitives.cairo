@@ -32,7 +32,7 @@ pub struct Order {
     pub option: OrderType,
 }
 
-#[derive(Copy, Drop, Serde, Hash)]
+#[derive(Copy, PartialEq, Drop, Serde, Hash)]
 pub enum OrderType {
     Buy,
     Offer,
