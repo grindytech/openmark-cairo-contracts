@@ -8,7 +8,7 @@ use snforge_std::signature::SignerTrait;
 use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address};
-use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
+use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address};
 use openmark::{
     primitives::{Order, OrderType},
     interface::{

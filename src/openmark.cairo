@@ -22,7 +22,9 @@ mod OpenMark {
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     mod Errors {
+        pub const SIGNATURE_USED: felt252 = 'OPENMARK: signature used';
         pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid signature';
+        pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid signature len';
         pub const INVALID_SELLER: felt252 = 'OPENMARK: invalid seller';
         pub const INVALID_PRICE: felt252 = 'OPENMARK: invalid price';
     }
@@ -42,7 +44,7 @@ mod OpenMark {
         eth_token: IERC20CamelDispatcher,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
-        usedOrderSignatures: LegacyMap<Signature, bool>,
+        usedOrderSignatures: LegacyMap<Signature, bool>, // store used signature
     }
 
     #[constructor]
@@ -66,10 +68,10 @@ mod OpenMark {
             // assert(!seller.is_zero(), Errors::INVALID_SELLER);
 
             assert(
-                self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
-                Errors::INVALID_SIGNATURE
+                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                Errors::SIGNATURE_USED
             ); // signature already used
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE);
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(self.verifyOrder(order, seller.into(), signature), Errors::INVALID_SIGNATURE);
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
@@ -84,7 +86,7 @@ mod OpenMark {
             self.eth_token.read().transfer(seller, price);
 
             // 3. change storage
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), false);
+            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 
         fn verifyOrder(
@@ -105,7 +107,6 @@ mod OpenMark {
             let mut state = PedersenTrait::new(0);
             state = state.update_with('StarkNet Message');
             state = state.update_with(domain.hash_struct());
-            // state = state.update_with(get_caller_address());
             state = state.update_with(signer);
             state = state.update_with(order.hash_struct());
             // Hashing with the amount of elements being hashed 

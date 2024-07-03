@@ -1,0 +1,26 @@
+{
+  "name": "openmark",
+  "version": "0.0.1",
+  "scripts": {
+    "openmark-tests": "ts-node scripts/run-tests.ts",
+    "test": "scarb test",
+    "compile": "scarb build"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/prettier": "^2",
+    "@types/yargs": "^17.0.32",
+    "ts-node": "^10.9.2",
+    "typescript": "^5",
+    "yargs": "^17.7.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "envfile": "^6.18.0",
+    "prettier": "^2.8.8",
+    "starknet": "5.25.0",
+    "starknet-dev": "npm:starknet@6.7.0",
+    "toml": "^3.0.0",
+    "tslib": "^2.6.2"
+  }
+}

@@ -5,6 +5,6 @@ mod openmark_nft;
 mod openmark_coin;
 
 #[cfg(test)]
-mod test {
+mod tests {
     mod TestOpenmark;
 }
