@@ -17,8 +17,8 @@ const types = {
 };
 
 enum OrderType {
-  Buy,
-  Sell,
+    Buy,
+    Offer,
 }
 
 
@@ -56,11 +56,11 @@ function getTypedData(myStruct: Order, chainId: string): typedData.TypedData {
 
 const order: Order = {
   nftContract: "2341477128991891436918010733589720897462482571482832085806644138878406121386",
-  tokenId: "2",
+  tokenId: "3",
   price: "3",
   salt: "4",
   expiry: "5",
-  option: OrderType.Buy,
+  option: OrderType.Offer,
 };
 
 const sellerPrivateKey = '0x1234567890987654321';
@@ -70,11 +70,11 @@ const buyerPublicKey = ec.starkCurve.getStarkKey(buyerPrivateKey);
 const seller: BigNumberish = sellerPublicKey;
 const buyer: BigNumberish = buyerPublicKey;
 
-let msgHash = getTypedDataHash(order, "393402133025997798000961", seller);
+let msgHash = getTypedDataHash(order, "393402133025997798000961", buyer);
 console.log(`seller: ${seller};`);
 console.log(`buyer: ${buyer};`);
 
-const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, sellerPrivateKey);
+const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, buyerPrivateKey);
 
 console.log("signature r: ", signature.r.toString(16));
 console.log("signature s: ", signature.s.toString(16));

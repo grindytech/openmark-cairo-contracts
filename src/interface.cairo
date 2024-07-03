@@ -3,11 +3,12 @@ use openmark::primitives::Order;
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
-    // fn acceptOffer(ref self:  TState);
     
     fn verifyOrder(self: @TState, order: Order, signer: felt252, signature: Span<felt252>) -> bool;
 
     fn buy(ref self: TState, seller: ContractAddress, order: Order, signature: Span<felt252>);
+
+    fn acceptOffer(ref self:  TState, buyer: ContractAddress, order: Order, signature: Span<felt252>);
 
     fn cancelOrder(ref self:  TState, order: Order, signature: Span<felt252>);
 }

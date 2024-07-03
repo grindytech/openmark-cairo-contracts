@@ -1,14 +1,13 @@
 #[starknet::contract]
 mod OpenMark {
     use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::token::erc20::interface::{IERC20CamelDispatcher, IERC20CamelDispatcherTrait};
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin::token::erc721::interface::{
         IERC721, IERC721Dispatcher, IERC721DispatcherTrait
     };
     use openzeppelin::account::utils::{is_valid_stark_signature};
     use starknet::{
-        contract_address_const, get_caller_address, get_contract_address, get_tx_info,
-        ContractAddress, get_block_timestamp
+        get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
     use core::pedersen::PedersenTrait;
     use core::num::traits::Zero;
@@ -29,10 +28,13 @@ mod OpenMark {
         pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid sig';
         pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
         pub const INVALID_SELLER: felt252 = 'OPENMARK: invalid seller';
-        pub const ZERO_ADDRESS_SELLER: felt252 = 'OPENMARK: caller is zero';
+        pub const ZERO_ADDRESS: felt252 = 'OPENMARK: caller is zero';
         pub const INVALID_PRICE: felt252 = 'OPENMARK: invalid price';
         pub const EXPIRED_OR_SOLD: felt252 = 'OPENMARK: expired or sold out';
         pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
+
+        pub const NOT_OWNER: felt252 = 'OPENMARK: not the owner';
+        pub const INVALID_BUYER: felt252 = 'OPENMARK: invalid buyer';
     }
 
     pub type Signature = (felt252, felt252);
@@ -47,7 +49,7 @@ mod OpenMark {
 
     #[storage]
     struct Storage {
-        eth_token: IERC20CamelDispatcher,
+        eth_token: IERC20Dispatcher,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         usedOrderSignatures: LegacyMap<Signature, bool>, // store used signature
@@ -55,7 +57,7 @@ mod OpenMark {
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress, eth_address: ContractAddress) {
-        self.eth_token.write(IERC20CamelDispatcher { contract_address: eth_address });
+        self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
 
         self.ownable.initializer(owner);
     }
@@ -82,7 +84,7 @@ mod OpenMark {
             assert(price > 0, Errors::INVALID_PRICE);
 
             // 2. verify signature
-            assert(!seller.is_zero(), Errors::ZERO_ADDRESS_SELLER);
+            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
@@ -95,6 +97,41 @@ mod OpenMark {
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
             self.eth_token.read().transfer(seller, price);
+
+            // 4. change storage
+            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+        }
+
+        fn acceptOffer(
+            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+        ) {
+            // 1. verify inputs
+            assert(order.expiry > get_block_timestamp().into(), Errors::EXPIRED_OR_SOLD);
+            assert(order.option == OrderType::Offer, Errors::INVALID_ORDER_TYPE);
+
+            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
+
+            assert(
+                nft_dispatcher.owner_of(order.tokenId.into()) == get_caller_address(),
+                Errors::NOT_OWNER
+            );
+
+            let price: u256 = order.price.into();
+            assert(price > 0, Errors::INVALID_PRICE);
+
+            // 2. verify signature
+            assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
+
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+            assert(
+                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                Errors::SIGNATURE_USED
+            );
+            assert(self.verifyOrder(order, buyer.into(), signature), Errors::INVALID_SIGNATURE);
+
+            // 3. make trade
+            nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
+            self.eth_token.read().transfer_from(buyer, get_caller_address(), price);
 
             // 4. change storage
             self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
