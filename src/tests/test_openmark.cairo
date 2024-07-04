@@ -309,16 +309,17 @@ fn confirm_bid_works() {
         start_cheat_caller_address(eth_address, openmark_address);
 
         let mut signature1 = array![
-            0x30d0ff9999d16df184f0c27c5ca7646a3790d7d96e9e5cd280560bdc64412c0,
-            0x52875732486bc5d269f38547be8e336db452590c31708ea21c332e56e1922e8
+            0x3c0ac7eca879533ffd6de6b6ef8630889a92b6f55844b4aefdb037443018c4d,
+            0x43ce88b1de27d39b8f8a88fc378792cacb39b67099161c835f66c5ddefe7ddd
         ];
+
         let mut signature2 = array![
-            0x14ee63feed832715195da40c7a1f139cb9e732be9e5939219a1ce6ea2d6f830,
-            0x305d96ddfab7808a079712b8858bdce90c195606e4ff4ecaeb389be62ae7513
+            0x7798f7bc30a529cc8e028fa9c6051830f2d93443aefe4c27a68d374c19f793b,
+            0x2edf5d0fb4fb82aa11d248be4e86131c61d4f36d9f1582b8cf6beba616a470e
         ];
         let mut signature3 = array![
-            0x2d9f9bb34b6bd1484fca92a969dda729cacf18ea16b581893ebf0b1c7ded802,
-            0x1c7439f91d54e352b14141e24af5afba7aa758686331ab0c1382c2ceb07d323
+            0x726519bf95b826c33780898daccbf9fe0c602371ad218dfa8f4ef669fa6f52d,
+            0x2d4ca8c22cff30189e5914db40107a12a2908fc958bbd3bd264c474a075436e
         ];
 
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };

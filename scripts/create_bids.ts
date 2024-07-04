@@ -1,50 +1,13 @@
-import { BigNumberish, WeierstrassSignatureType, ec, encode, typedData } from "starknet";
+import { BigNumberish, WeierstrassSignatureType, ec } from "starknet";
+import { Bid, getBidHash} from './utils';
 
-const types = {
-  StarkNetDomain: [
-    { name: "name", type: "felt" },
-    { name: "version", type: "felt" },
-    { name: "chainId", type: "felt" },
-  ],
-  Bid: [
-    { name: "nftContract", type: "ContractAddress" },
-    { name: "amount", type: "u128" },
-    { name: "unitPrice", type: "u128" },
-    { name: "salt", type: "felt" },
-    { name: "expiry", type: "u128" },
-  ],
-};
+const buyerPrivateKey1 = '0x1234567890123456789';
+const buyerPrivateKey2 = '0x12345678901234567891';
+const buyerPrivateKey3 = '0x12345678901234567892';
 
-
-interface Bid {
-  nftContract: string,
-  amount: string,
-  unitPrice: string,
-  salt: string,
-  expiry: string,
-}
-
-function getDomain(chainId: string): typedData.StarkNetDomain {
-  return {
-    name: "OpenMark",
-    version: "1",
-    chainId,
-  };
-}
-
-
-function getBidHash(myStruct: Bid, chainId: string, owner: BigNumberish): string {
-  return typedData.getMessageHash(getBidData(myStruct, chainId), owner);
-}
-
-function getBidData(myStruct: Bid, chainId: string): typedData.TypedData {
-  return {
-    types,
-    primaryType: "Bid",
-    domain: getDomain(chainId),
-    message: { ...myStruct },
-  };
-}
+const buyer1: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey1);
+const buyer2: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey2);
+const buyer3: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey3);
 
 const bid1: Bid = {
   nftContract: "2341477128991891436918010733589720897462482571482832085806644138878406121386",
@@ -70,19 +33,9 @@ const bid3: Bid = {
   expiry: "5",
 };
 
-
-
-const buyerPrivateKey1 = '0x1234567890123456789';
-const buyerPrivateKey2 = '0x12345678901234567891';
-const buyerPrivateKey3 = '0x12345678901234567892';
-
-const buyer1: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey1);
-const buyer2: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey2);
-const buyer3: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey3);
-
-let msgHash1 = getBidHash(bid1, "393402133025997798000961", buyerPrivateKey1);
-let msgHash2 = getBidHash(bid2, "393402133025997798000961", buyerPrivateKey2);
-let msgHash3 = getBidHash(bid3, "393402133025997798000961", buyerPrivateKey3);
+let msgHash1 = getBidHash(bid1, "393402133025997798000961", buyer1);
+let msgHash2 = getBidHash(bid2, "393402133025997798000961", buyer2);
+let msgHash3 = getBidHash(bid3, "393402133025997798000961", buyer3);
 
 console.log(`buyer1: ${buyer1};`);
 console.log(`buyer2: ${buyer2};`);

@@ -1,6 +1,7 @@
 use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
+use core::fmt::Debug;
 
 pub const ETH_CONTRACT_ADDRESS: felt252 =
     0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7;
@@ -29,7 +30,6 @@ pub enum OrderType {
     Offer,
 }
 
-
 #[derive(Copy, Drop, Serde, Hash)]
 pub struct Order {
     pub nftContract: ContractAddress,
@@ -47,7 +47,7 @@ pub struct SignedBid {
     pub signature: Span<felt252>,
 }
 
-#[derive(Copy, Drop, Serde, Hash)]
+#[derive(Copy, Drop, Serde, Hash, Debug)]
 pub struct Bid {
     pub nftContract: ContractAddress,
     pub amount: u128,
