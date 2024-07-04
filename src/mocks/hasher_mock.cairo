@@ -1,5 +1,5 @@
-#[starknet::component]
-pub mod HasherComponent {
+#[starknet::contract]
+pub mod HasherMock {
     use starknet::ContractAddress;
     use openmark::interface::{IOffchainMessageHash};
     use openmark::primitives::{Order, Bid, StarknetDomain, IStructHash};
@@ -16,12 +16,10 @@ pub mod HasherComponent {
     #[derive(Drop, PartialEq, starknet::Event)]
     pub enum Event {}
 
-    #[embeddable_as(HasherImpl)]
-    impl Hasher<
-        TContractState, +HasComponent<TContractState>
-    > of IOffchainMessageHash<ComponentState<TContractState>> {
+    #[abi(embed_v0)]
+    impl Hasher of IOffchainMessageHash<ContractState> {
         fn get_order_hash(
-            self: @ComponentState<TContractState>, order: Order, signer: felt252
+            self: @ContractState, order: Order, signer: felt252
         ) -> felt252 {
             let domain = StarknetDomain {
                 name: 'OpenMark', version: 1, chain_id: get_tx_info().unbox().chain_id
@@ -37,7 +35,7 @@ pub mod HasherComponent {
         }
 
         fn get_bid_hash(
-            self: @ComponentState<TContractState>, bid: Bid, signer: felt252
+            self: @ContractState, bid: Bid, signer: felt252
         ) -> felt252 {
             let domain = StarknetDomain {
                 name: 'OpenMark', version: 1, chain_id: get_tx_info().unbox().chain_id
@@ -53,7 +51,7 @@ pub mod HasherComponent {
         }
 
         fn verifyOrder(
-            self: @ComponentState<TContractState>,
+            self: @ContractState,
             order: Order,
             signer: felt252,
             signature: Span<felt252>
@@ -63,7 +61,7 @@ pub mod HasherComponent {
         }
 
         fn verifyBid(
-            self: @ComponentState<TContractState>,
+            self: @ContractState,
             bid: Bid,
             signer: felt252,
             signature: Span<felt252>
