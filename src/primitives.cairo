@@ -40,11 +40,11 @@ pub struct Order {
     pub option: OrderType,
 }
 
-#[derive(Drop, Serde)]
+#[derive(Copy, Drop, Serde)]
 pub struct SignedBid {
-    bidder: ContractAddress,
-    bid: Bid,
-    signature: Span<felt252>,
+    pub bidder: ContractAddress,
+    pub bid: Bid,
+    pub signature: Span<felt252>,
 }
 
 #[derive(Copy, Drop, Serde, Hash)]

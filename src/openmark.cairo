@@ -1,5 +1,6 @@
 #[starknet::contract]
 mod OpenMark {
+    use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin::token::erc721::interface::{
@@ -31,12 +32,20 @@ mod OpenMark {
         pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
         pub const INVALID_SELLER: felt252 = 'OPENMARK: invalid seller';
         pub const ZERO_ADDRESS: felt252 = 'OPENMARK: caller is zero';
-        pub const INVALID_PRICE: felt252 = 'OPENMARK: invalid price';
-        pub const EXPIRED_OR_SOLD: felt252 = 'OPENMARK: expired or sold out';
+        pub const PRICE_IS_ZERO: felt252 = 'OPENMARK: price is zero';
+        pub const SIGNATURE_EXPIRED: felt252 = 'OPENMARK: sig expired';
         pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 
         pub const NOT_OWNER: felt252 = 'OPENMARK: not the owner';
         pub const INVALID_BUYER: felt252 = 'OPENMARK: invalid buyer';
+        pub const INSUFFICIENT_NFTS: felt252 = 'OPENMARK: insufficient nfts';
+        pub const TOO_MANY_BIDS: felt252 = 'OPENMARK: too many bids';
+        pub const ZERO_BIDS: felt252 = 'OPENMARK: zero bids';
+        pub const ASKING_PRICE_TOO_HIGH: felt252 = 'OPENMARK: asking too high';
+
+        pub const INVALID_BID_NFT: felt252 = 'OPENMARK: invalid nft';
+        pub const TOO_MANY_BID_NFT: felt252 = 'OPENMARK: too many nfts';
+        pub const NOT_ENOUGH_BID_NFT: felt252 = 'OPENMARK: not enough nfts';
     }
 
     #[event]
@@ -69,7 +78,7 @@ mod OpenMark {
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             // 1. verify inputs
-            assert(order.expiry > get_block_timestamp().into(), Errors::EXPIRED_OR_SOLD);
+            assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == OrderType::Buy, Errors::INVALID_ORDER_TYPE);
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
@@ -77,7 +86,7 @@ mod OpenMark {
             assert(nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::INVALID_SELLER);
 
             let price: u256 = order.price.into();
-            assert(price > 0, Errors::INVALID_PRICE);
+            assert(price > 0, Errors::PRICE_IS_ZERO);
 
             // 2. verify signature
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
@@ -102,7 +111,7 @@ mod OpenMark {
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             // 1. verify inputs
-            assert(order.expiry > get_block_timestamp().into(), Errors::EXPIRED_OR_SOLD);
+            assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == OrderType::Offer, Errors::INVALID_ORDER_TYPE);
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
@@ -113,7 +122,7 @@ mod OpenMark {
             );
 
             let price: u256 = order.price.into();
-            assert(price > 0, Errors::INVALID_PRICE);
+            assert(price > 0, Errors::PRICE_IS_ZERO);
 
             // 2. verify signature
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
@@ -154,7 +163,71 @@ mod OpenMark {
             nftContract: ContractAddress,
             tokenIds: Span<felt252>,
             askPrice: u128
-        ) {}
+        ) {
+            // 1. Verify inputs
+            {
+                assert(bids.len() < 10, Errors::TOO_MANY_BIDS);
+
+                let mut i = 0;
+                while i < bids
+                    .len() {
+                        assert((*bids.at(i)).bid.amount > 0, Errors::ZERO_BIDS);
+                        assert((*bids.at(i)).bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
+                        assert(
+                            (*bids.at(i)).bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH
+                        );
+                        assert(
+                            (*bids.at(i)).bid.expiry > get_block_timestamp().into(),
+                            Errors::SIGNATURE_EXPIRED
+                        );
+                        assert(
+                            (*bids.at(i)).bid.nftContract == nftContract, Errors::INVALID_BID_NFT
+                        );
+
+                        i += 1;
+                    };
+
+                let mut total_bid_amount = 0;
+                let mut min_bid_amount = 0;
+                while i < bids
+                    .len() {
+                        total_bid_amount += (*bids.at(i)).bid.amount;
+                        if i < bids.len() - 1 {
+                            min_bid_amount += (*bids.at(i)).bid.amount;
+                        }
+                        i += 1;
+                    };
+
+                assert(tokenIds.len().into() <= total_bid_amount, Errors::TOO_MANY_BID_NFT);
+                assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFT);
+            }
+            // 2. Verify signatures
+            {
+
+            }
+            let mut i = 0;
+            while i < bids
+                .len() {
+                    let signature = (*bids.at(i)).signature;
+                    assert(
+                        !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                        Errors::SIGNATURE_USED
+                    );
+
+                    // assert(
+                    //     self.verifyBid((*bids.at(i)).bid, (*bids.at(i)).bidder.into(), signature),
+                    //     Errors::INVALID_SIGNATURE
+                    // );
+                    i += 1;
+                };
+
+        // 3. Make the trade
+
+        // 4. Change storage
+
+        // 5. Emit event
+
+        }
 
         fn verifyOrder(
             self: @ContractState, order: Order, signer: felt252, signature: Span<felt252>

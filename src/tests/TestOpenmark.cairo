@@ -17,7 +17,7 @@ use snforge_std::{
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
 
 use openmark::{
-    primitives::{Order, Bid, OrderType},
+    primitives::{Order, Bid, OrderType, SignedBid},
     interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
@@ -362,18 +362,19 @@ fn confirm_bid_works() {
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: eth_address };
 
     let unitPrice = 3_u128;
+    let total_amount = 6;
     let bid1 = Bid { nftContract: erc721_address, amount: 1, unitPrice, salt: 4, expiry: 5, };
     let bid2 = Bid { nftContract: erc721_address, amount: 2, unitPrice, salt: 4, expiry: 5, };
     let bid3 = Bid { nftContract: erc721_address, amount: 3, unitPrice, salt: 4, expiry: 5, };
 
     // create and approve nfts
     {
-        start_cheat_caller_address(erc721_address, seller);
-
         let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
-        IOM721Dispatcher.safe_mint(seller, 10);
-        let mut token_id = 1_u256;
-        while token_id <= 10 {
+        start_cheat_caller_address(erc721_address, seller);
+        IOM721Dispatcher.safe_mint(seller, total_amount);
+
+        let mut token_id = 0_u256;
+        while token_id < total_amount {
             ERC721Dispatcher.approve(openmark_address, token_id);
             token_id += 1;
         }
@@ -388,10 +389,10 @@ fn confirm_bid_works() {
 
         start_cheat_caller_address(eth_address, buyer1);
         ERC20Dispatcher.approve(openmark_address, approve_amount);
-        
+
         start_cheat_caller_address(eth_address, buyer2);
         ERC20Dispatcher.approve(openmark_address, approve_amount);
-        
+
         start_cheat_caller_address(eth_address, buyer3);
         ERC20Dispatcher.approve(openmark_address, approve_amount);
     }
@@ -416,23 +417,38 @@ fn confirm_bid_works() {
 
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
 
-        let buyer_before_balance = ERC20Dispatcher.balance_of(buyer1);
         let seller_before_balance = ERC20Dispatcher.balance_of(seller);
+        let buyer1_before_balance = ERC20Dispatcher.balance_of(buyer1);
+        let buyer2_before_balance = ERC20Dispatcher.balance_of(buyer2);
+        let buyer3_before_balance = ERC20Dispatcher.balance_of(buyer3);
 
         let signed_bids = array![
-
+            SignedBid { bidder: buyer1, bid: bid1, signature: signature1.span() },
+            SignedBid { bidder: buyer2, bid: bid2, signature: signature2.span() },
+            SignedBid { bidder: buyer3, bid: bid3, signature: signature3.span() },
         ];
-        let tokenIds = array![
 
-        ];
+        let tokenIds = array![0, 1, 2, 3, 4, 5];
 
-        OpenMarkDispatcher.confirmBid(signed_bids.span(), erc721_address, tokenIds.span(), unitPrice);
+        OpenMarkDispatcher
+            .confirmBid(signed_bids.span(), erc721_address, tokenIds.span(), unitPrice);
 
-        let buyer_after_balance = ERC20Dispatcher.balance_of(buyer1);
         let seller_after_balance = ERC20Dispatcher.balance_of(seller);
+        let buyer1_after_balance = ERC20Dispatcher.balance_of(buyer1);
+        let buyer2_after_balance = ERC20Dispatcher.balance_of(buyer2);
+        let buyer3_after_balance = ERC20Dispatcher.balance_of(buyer3);
 
-        assert_eq!(ERC721Dispatcher.owner_of(2), buyer1);
-        assert_eq!(buyer_after_balance, buyer_before_balance - unitPrice.into());
-        assert_eq!(seller_after_balance, seller_before_balance + unitPrice.into());
+        assert_eq!(ERC721Dispatcher.owner_of(0), buyer1);
+        assert_eq!(ERC721Dispatcher.owner_of(1), buyer2);
+        assert_eq!(ERC721Dispatcher.owner_of(2), buyer2);
+        assert_eq!(ERC721Dispatcher.owner_of(3), buyer3);
+        assert_eq!(ERC721Dispatcher.owner_of(4), buyer3);
+        assert_eq!(ERC721Dispatcher.owner_of(5), buyer3);
+
+        assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * total_amount));
+
+        assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
+        assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
+        assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
     }
 }
