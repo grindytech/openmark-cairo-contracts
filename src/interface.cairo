@@ -9,7 +9,6 @@ pub trait IOpenMark<TState> {
         ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-    fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
 
     fn confirmBid(
         ref self: TState,
@@ -18,6 +17,10 @@ pub trait IOpenMark<TState> {
         tokenIds: Span<felt252>,
         askPrice: u128
     );
+
+    fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
+
+    fn cancelBid(ref self: TState, bid: Bid, signature: Span<felt252>);
 }
 
 

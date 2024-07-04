@@ -359,3 +359,34 @@ fn confirm_bid_works() {
         assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
     }
 }
+
+#[test]
+#[available_gas(2000000)]
+fn cancel_bid_works() {
+    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+
+    let openmark_address = deploy_openmark();
+    let buyer1: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    let bid = Bid { nftContract: erc721_address, amount: 1, unitPrice: 3, salt: 4, expiry: 5 };
+
+    {
+        start_cheat_caller_address(openmark_address, buyer1);
+
+        let mut signature = array![
+            0x3c0ac7eca879533ffd6de6b6ef8630889a92b6f55844b4aefdb037443018c4d,
+            0x43ce88b1de27d39b8f8a88fc378792cacb39b67099161c835f66c5ddefe7ddd
+        ];
+
+        let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
+        OpenMarkDispatcher.cancelBid(bid, signature.span());
+
+        let usedOrderSignatures = load(
+            openmark_address,
+            map_entry_address(selector!("usedOrderSignatures"), signature.span(),),
+            1,
+        );
+
+        assert_eq!(*usedOrderSignatures.at(0), true.into());
+    }
+}

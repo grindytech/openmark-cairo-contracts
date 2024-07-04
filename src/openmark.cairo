@@ -154,21 +154,6 @@ mod OpenMark {
             self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 
-        fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
-
-            assert(
-                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
-                Errors::SIGNATURE_USED
-            );
-
-            assert(
-                self.hasher.verifyOrder(order, get_caller_address().into(), signature),
-                Errors::INVALID_SIGNATURE
-            );
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
-        }
-
         fn confirmBid(
             ref self: ContractState,
             bids: Span<SignedBid>,
@@ -222,7 +207,7 @@ mod OpenMark {
                         nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == get_caller_address(),
                         Errors::NOT_OWNER
                     );
-                    i+=1;
+                    i += 1;
                 }
             }
 
@@ -256,7 +241,7 @@ mod OpenMark {
                     let signature = *bids.at(i).signature;
                     self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
 
-                    i+=1;
+                    i += 1;
                 }
             }
             // 4. Separate logic for last bidder to handle remaining NFTs
@@ -295,6 +280,36 @@ mod OpenMark {
                 }
             }
         // 6. Emit Event
+        }
+
+        fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+
+            assert(
+                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                Errors::SIGNATURE_USED
+            );
+
+            assert(
+                self.hasher.verifyOrder(order, get_caller_address().into(), signature),
+                Errors::INVALID_SIGNATURE
+            );
+            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+        }
+
+        fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+
+            assert(
+                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                Errors::SIGNATURE_USED
+            );
+
+            assert(
+                self.hasher.verifyBid(bid, get_caller_address().into(), signature),
+                Errors::INVALID_SIGNATURE
+            );
+            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
     }
 }
