@@ -23,6 +23,13 @@ pub trait IOpenMark<TState> {
     fn cancelBid(ref self: TState, bid: Bid, signature: Span<felt252>);
 }
 
+#[starknet::interface]
+pub trait IOpenMarkProvider<TState> {
+    fn get_chain_id(self: @TState) -> felt252;
+    fn get_commission(self: @TState) -> u32;
+    fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
+}
+
 
 #[starknet::interface]
 pub trait IOffchainMessageHash<T> {

@@ -12,10 +12,8 @@ mod OpenMark {
     };
     use core::num::traits::Zero;
 
-    use openmark::primitives::{
-        Order, OrderType, ORDER_STRUCT_TYPE_HASH, StarknetDomain, IStructHash, Bid, SignedBid
-    };
-    use openmark::interface::{IOpenMark, IOffchainMessageHash};
+    use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
+    use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider};
     use openmark::hasher::HasherComponent;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -25,11 +23,12 @@ mod OpenMark {
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-
-    // #[abi(embed_v0)]
     impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
 
     pub type Signature = (felt252, felt252);
+
+    pub const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
+    pub const PERMYRIAD: u32 = 1000;
 
     mod Errors {
         pub const SIGNATURE_USED: felt252 = 'OPENMARK: sig used';
@@ -69,14 +68,15 @@ mod OpenMark {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         hasher: HasherComponent::Storage,
-        usedOrderSignatures: LegacyMap<Signature, bool>, // store used signature
+        commission: u32, // OpenMark's commission 
+        usedSignatures: LegacyMap<Signature, bool>, // store used signature
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress, eth_address: ContractAddress) {
         self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
-
         self.ownable.initializer(owner);
+        self.commission.write(0);
     }
 
 
@@ -101,7 +101,7 @@ mod OpenMark {
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
-                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                 Errors::SIGNATURE_USED
             );
             assert(
@@ -111,10 +111,13 @@ mod OpenMark {
             // 3. make trade
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
-            self.eth_token.read().transfer(seller, price);
+            let commission = calculate_commission(@self, price);
+            let payout = price - commission;
+            self.eth_token.read().transfer(seller, payout);
+            self.eth_token.read().transfer(get_contract_address(), commission);
 
             // 4. change storage
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 
         fn acceptOffer(
@@ -139,7 +142,7 @@ mod OpenMark {
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
-                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                 Errors::SIGNATURE_USED
             );
             assert(
@@ -148,10 +151,14 @@ mod OpenMark {
 
             // 3. make trade
             nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
-            self.eth_token.read().transfer_from(buyer, get_caller_address(), price);
+
+            let commission = calculate_commission(@self, price);
+            let payout = price - commission;
+            self.eth_token.read().transfer_from(buyer, get_caller_address(), payout);
+            self.eth_token.read().transfer_from(buyer, get_contract_address(), commission);
 
             // 4. change storage
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 
         fn confirmBid(
@@ -217,7 +224,7 @@ mod OpenMark {
                 while (i < bids.len()) {
                     let signature = (*bids.at(i)).signature;
                     assert(
-                        !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                        !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                         Errors::SIGNATURE_USED
                     );
 
@@ -232,14 +239,24 @@ mod OpenMark {
             {
                 let mut i = 0;
                 while (i < bids.len() - 1) {
-                    let price = (*bids.at(i)).bid.unitPrice * (*bids.at(i)).bid.amount;
+                    let price: u256 = ((*bids.at(i)).bid.unitPrice * (*bids.at(i)).bid.amount)
+                        .into();
+                    // let commission = calculate_commission(@self, price);
+                    let commission = 0;
+                    let payout = price - commission;
+
                     self
                         .eth_token
                         .read()
-                        .transfer_from((*bids.at(i)).bidder, get_caller_address(), price.into());
+                        .transfer_from((*bids.at(i)).bidder, get_caller_address(), payout);
+
+                    self
+                        .eth_token
+                        .read()
+                        .transfer_from((*bids.at(i)).bidder, get_contract_address(), commission);
 
                     let signature = *bids.at(i).signature;
-                    self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+                    self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
 
                     i += 1;
                 }
@@ -250,14 +267,20 @@ mod OpenMark {
 
                 let remaining_amount = last_bid.bid.amount
                     - (total_bid_amount - tokenIds.len().into());
-                let price = remaining_amount * last_bid.bid.unitPrice;
+                let price = (remaining_amount * last_bid.bid.unitPrice).into();
+
+                let commission = calculate_commission(@self, price);
+                let payout = price - commission;
+
+                self.eth_token.read().transfer_from(last_bid.bidder, get_caller_address(), payout);
+
                 self
                     .eth_token
                     .read()
-                    .transfer_from(last_bid.bidder, get_caller_address(), price.into());
+                    .transfer_from(last_bid.bidder, get_contract_address(), commission);
 
                 self
-                    .usedOrderSignatures
+                    .usedSignatures
                     .write((*last_bid.signature.at(0), *last_bid.signature.at(1)), true);
             }
             // 5. Iterate through tokenIds to transfer NFTs efficiently
@@ -286,7 +309,7 @@ mod OpenMark {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
-                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                 Errors::SIGNATURE_USED
             );
 
@@ -294,14 +317,14 @@ mod OpenMark {
                 self.hasher.verifyOrder(order, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
 
         fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
-                !self.usedOrderSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                 Errors::SIGNATURE_USED
             );
 
@@ -309,7 +332,28 @@ mod OpenMark {
                 self.hasher.verifyBid(bid, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
-            self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
+    }
+
+    #[abi(embed_v0)]
+    impl OpenMarkProviderImpl of IOpenMarkProvider<ContractState> {
+        fn get_chain_id(self: @ContractState) -> felt252 {
+            get_tx_info().unbox().chain_id
+        }
+
+        fn get_commission(self: @ContractState) -> u32 {
+            0
+        }
+
+        fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
+            false
+        }
+    }
+
+    #[abi(embed_v0)]
+    fn calculate_commission(self: @ContractState, price: u256) -> u256 {
+        // need safe math
+        self.commission.read().into() * price / PERMYRIAD.into()
     }
 }

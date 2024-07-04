@@ -241,13 +241,13 @@ fn cancel_order_works() {
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
         OpenMarkDispatcher.cancelOrder(order, signature.span());
 
-        let usedOrderSignatures = load(
+        let usedSignatures = load(
             openmark_address,
-            map_entry_address(selector!("usedOrderSignatures"), signature.span(),),
+            map_entry_address(selector!("usedSignatures"), signature.span(),),
             1,
         );
 
-        assert_eq!(*usedOrderSignatures.at(0), true.into());
+        assert_eq!(*usedSignatures.at(0), true.into());
     }
 }
 
@@ -381,12 +381,12 @@ fn cancel_bid_works() {
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
         OpenMarkDispatcher.cancelBid(bid, signature.span());
 
-        let usedOrderSignatures = load(
+        let usedSignatures = load(
             openmark_address,
-            map_entry_address(selector!("usedOrderSignatures"), signature.span(),),
+            map_entry_address(selector!("usedSignatures"), signature.span(),),
             1,
         );
 
-        assert_eq!(*usedOrderSignatures.at(0), true.into());
+        assert_eq!(*usedSignatures.at(0), true.into());
     }
 }
