@@ -112,10 +112,10 @@ console.log(`bid hash: ${bidHash};`);
 
 const orderSign: WeierstrassSignatureType = ec.starkCurve.sign(orderHash, privateKey);
 
-console.log("order signature r: ", orderSign.r.toString(16));
-console.log("order  signature s: ", orderSign.s.toString(16));
+console.log("order signature r: 0x", orderSign.r.toString(16));
+console.log("order  signature s: 0x", orderSign.s.toString(16));
 
 const bidSign: WeierstrassSignatureType = ec.starkCurve.sign(bidHash, privateKey);
 
-console.log("bid signature r: ", bidSign.r.toString(16));
-console.log("bid  signature s: ", bidSign.s.toString(16));
+console.log("bid signature r: 0x", bidSign.r.toString(16));
+console.log("bid  signature s: 0x", bidSign.s.toString(16));

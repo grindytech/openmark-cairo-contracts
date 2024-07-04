@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use openmark::primitives::{Order, Bid};
+use openmark::primitives::{Order, Bid, SignedBid};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
@@ -13,6 +13,8 @@ pub trait IOpenMark<TState> {
     fn acceptOffer(ref self:  TState, buyer: ContractAddress, order: Order, signature: Span<felt252>);
 
     fn cancelOrder(ref self:  TState, order: Order, signature: Span<felt252>);
+
+    fn confirmBid(ref self: TState, bids: Span<SignedBid>, nftContract: ContractAddress, tokenIds: Span<felt252>, askPrice: u128);
 }
 
 

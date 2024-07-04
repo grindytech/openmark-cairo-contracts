@@ -14,9 +14,7 @@ pub const ORDER_STRUCT_TYPE_HASH: felt252 =
     );
 
 pub const BID_STRUCT_TYPE_HASH: felt252 =
-    selector!(
-        "Bid(nftContract:ContractAddress,amount:u128,unitPrice:u128,salt:felt,expiry:u128)"
-    );
+    selector!("Bid(nftContract:ContractAddress,amount:u128,unitPrice:u128,salt:felt,expiry:u128)");
 
 #[derive(Drop, Copy, Hash)]
 pub struct StarknetDomain {
@@ -40,6 +38,13 @@ pub struct Order {
     pub salt: felt252,
     pub expiry: u128,
     pub option: OrderType,
+}
+
+#[derive(Drop, Serde)]
+pub struct SignedBid {
+    bidder: ContractAddress,
+    bid: Bid,
+    signature: Span<felt252>,
 }
 
 #[derive(Copy, Drop, Serde, Hash)]

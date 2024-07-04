@@ -76,5 +76,5 @@ console.log(`buyer: ${buyer};`);
 
 const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, buyerPrivateKey);
 
-console.log("signature r: ", signature.r.toString(16));
-console.log("signature s: ", signature.s.toString(16));
+console.log("signature r: ", "0x" + signature.r.toString(16));
+console.log("signature s: ", "0x" + signature.s.toString(16));

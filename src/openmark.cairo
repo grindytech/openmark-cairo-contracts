@@ -14,7 +14,7 @@ mod OpenMark {
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::ecdsa::check_ecdsa_signature;
     use openmark::primitives::{
-        Order, OrderType, ORDER_STRUCT_TYPE_HASH, StarknetDomain, IStructHash, Bid
+        Order, OrderType, ORDER_STRUCT_TYPE_HASH, StarknetDomain, IStructHash, Bid, SignedBid
     };
     use openmark::interface::{IOpenMark, IOffchainMessageHash};
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -65,10 +65,6 @@ mod OpenMark {
 
     #[abi(embed_v0)]
     impl OpenMarkImpl of IOpenMark<ContractState> {
-        // fn acceptOffer(self: @ContractState) {}
-
-        // fn cancelOrder(self: @ContractState) {}
-
         fn buy(
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
@@ -151,6 +147,14 @@ mod OpenMark {
             );
             self.usedOrderSignatures.write((*signature.at(0), *signature.at(1)), true);
         }
+
+        fn confirmBid(
+            ref self: ContractState,
+            bids: Span<SignedBid>,
+            nftContract: ContractAddress,
+            tokenIds: Span<felt252>,
+            askPrice: u128
+        ) {}
 
         fn verifyOrder(
             self: @ContractState, order: Order, signer: felt252, signature: Span<felt252>
