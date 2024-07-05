@@ -18,4 +18,5 @@ mod mocks {
 mod tests {
     mod test_hasher;
     mod test_openmark;
+    mod common;
 }
