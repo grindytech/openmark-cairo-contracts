@@ -105,7 +105,7 @@ pub mod OpenMark {
                 Errors::SIGNATURE_USED
             );
             assert(
-                self.hasher.verifyOrder(order, seller.into(), signature), Errors::INVALID_SIGNATURE
+                self.hasher.verify_order(order, seller.into(), signature), Errors::INVALID_SIGNATURE
             );
 
             // 3. make trade
@@ -123,7 +123,7 @@ pub mod OpenMark {
             self.emit(OrderFilled { seller, buyer: get_caller_address(), order });
         }
 
-        fn acceptOffer(
+        fn accept_offer(
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             // 1. verify inputs
@@ -149,7 +149,7 @@ pub mod OpenMark {
                 Errors::SIGNATURE_USED
             );
             assert(
-                self.hasher.verifyOrder(order, buyer.into(), signature), Errors::INVALID_SIGNATURE
+                self.hasher.verify_order(order, buyer.into(), signature), Errors::INVALID_SIGNATURE
             );
 
             // 3. make trade
@@ -166,7 +166,7 @@ pub mod OpenMark {
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
         }
 
-        fn confirmBid(
+        fn fill_bids(
             ref self: ContractState,
             bids: Span<SignedBid>,
             nftContract: ContractAddress,
@@ -234,7 +234,7 @@ pub mod OpenMark {
                     );
 
                     assert(
-                        hasher.verifyBid((*bids.at(i)).bid, (*bids.at(i)).bidder.into(), signature),
+                        hasher.verify_bid((*bids.at(i)).bid, (*bids.at(i)).bidder.into(), signature),
                         Errors::INVALID_SIGNATURE
                     );
                     i += 1;
@@ -325,7 +325,7 @@ pub mod OpenMark {
                 );
         }
 
-        fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
+        fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
@@ -334,7 +334,7 @@ pub mod OpenMark {
             );
 
             assert(
-                self.hasher.verifyOrder(order, get_caller_address().into(), signature),
+                self.hasher.verify_order(order, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
@@ -342,7 +342,7 @@ pub mod OpenMark {
             self.emit(OrderCancelled { who: get_caller_address(), order, });
         }
 
-        fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
+        fn cancel_bid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
@@ -351,7 +351,7 @@ pub mod OpenMark {
             );
 
             assert(
-                self.hasher.verifyBid(bid, get_caller_address().into(), signature),
+                self.hasher.verify_bid(bid, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);

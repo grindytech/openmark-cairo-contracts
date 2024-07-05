@@ -210,7 +210,7 @@ fn accept_offer_works() {
         let seller_before_balance = ERC20Dispatcher.balance_of(seller);
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
-        OpenMarkDispatcher.acceptOffer(buyer, order, signature.span());
+        OpenMarkDispatcher.accept_offer(buyer, order, signature.span());
 
         let buyer_after_balance = ERC20Dispatcher.balance_of(buyer);
         let seller_after_balance = ERC20Dispatcher.balance_of(seller);
@@ -253,7 +253,7 @@ fn cancel_order_works() {
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
-        OpenMarkDispatcher.cancelOrder(order, signature.span());
+        OpenMarkDispatcher.cancel_order(order, signature.span());
 
         let usedSignatures = load(
             openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,
@@ -269,7 +269,7 @@ fn cancel_order_works() {
 
 #[test]
 #[available_gas(2000000)]
-fn confirm_bid_works() {
+fn fill_bids_works() {
     let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
@@ -354,7 +354,7 @@ fn confirm_bid_works() {
         let tokenIds = array![0, 1, 2, 3, 4, 5].span();
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
-        OpenMarkDispatcher.confirmBid(signed_bids.span(), erc721_address, tokenIds, unitPrice);
+        OpenMarkDispatcher.fill_bids(signed_bids.span(), erc721_address, tokenIds, unitPrice);
 
         let seller_after_balance = ERC20Dispatcher.balance_of(seller);
         let buyer1_after_balance = ERC20Dispatcher.balance_of(buyer1);
@@ -407,7 +407,7 @@ fn cancel_bid_works() {
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
-        OpenMarkDispatcher.cancelBid(bid, signature.span());
+        OpenMarkDispatcher.cancel_bid(bid, signature.span());
 
         let usedSignatures = load(
             openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,

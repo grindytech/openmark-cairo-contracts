@@ -5,12 +5,11 @@ use openmark::primitives::{Order, Bid, SignedBid};
 pub trait IOpenMark<TState> {
     fn buy(ref self: TState, seller: ContractAddress, order: Order, signature: Span<felt252>);
 
-    fn acceptOffer(
+    fn accept_offer(
         ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-
-    fn confirmBid(
+    fn fill_bids(
         ref self: TState,
         bids: Span<SignedBid>,
         nftContract: ContractAddress,
@@ -18,9 +17,9 @@ pub trait IOpenMark<TState> {
         askPrice: u128
     );
 
-    fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
+    fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
 
-    fn cancelBid(ref self: TState, bid: Bid, signature: Span<felt252>);
+    fn cancel_bid(ref self: TState, bid: Bid, signature: Span<felt252>);
 }
 
 #[starknet::interface]
@@ -41,8 +40,8 @@ pub trait IOffchainMessageHash<T> {
     fn get_order_hash(self: @T, order: Order, signer: felt252) -> felt252;
     fn get_bid_hash(self: @T, bid: Bid, signer: felt252) -> felt252;
 
-    fn verifyOrder(self: @T, order: Order, signer: felt252, signature: Span<felt252>) -> bool;
-    fn verifyBid(self: @T, bid: Bid, signer: felt252, signature: Span<felt252>) -> bool;
+    fn verify_order(self: @T, order: Order, signer: felt252, signature: Span<felt252>) -> bool;
+    fn verify_bid(self: @T, bid: Bid, signer: felt252, signature: Span<felt252>) -> bool;
 }
 
 #[starknet::interface]

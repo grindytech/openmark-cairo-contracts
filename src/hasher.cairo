@@ -62,7 +62,7 @@ pub mod HasherComponent {
             state.finalize()
         }
 
-        fn verifyOrder(
+        fn verify_order(
             self: @ComponentState<TContractState>,
             order: Order,
             signer: felt252,
@@ -72,7 +72,7 @@ pub mod HasherComponent {
             is_valid_stark_signature(hash, signer, signature)
         }
 
-        fn verifyBid(
+        fn verify_bid(
             self: @ComponentState<TContractState>,
             bid: Bid,
             signer: felt252,

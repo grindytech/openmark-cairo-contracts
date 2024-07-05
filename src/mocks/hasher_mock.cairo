@@ -50,7 +50,7 @@ pub mod HasherMock {
             state.finalize()
         }
 
-        fn verifyOrder(
+        fn verify_order(
             self: @ContractState,
             order: Order,
             signer: felt252,
@@ -60,7 +60,7 @@ pub mod HasherMock {
             is_valid_stark_signature(hash, signer, signature)
         }
 
-        fn verifyBid(
+        fn verify_bid(
             self: @ContractState,
             bid: Bid,
             signer: felt252,

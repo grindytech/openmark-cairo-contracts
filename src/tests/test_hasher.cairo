@@ -96,7 +96,7 @@ fn verify_order_works() {
 
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.verifyOrder(order, TEST_SIGNER, signature.span());
+    let result = dispatcher.verify_order(order, TEST_SIGNER, signature.span());
 
     assert_eq!(result, true);
 }
@@ -117,7 +117,7 @@ fn verify_bid_works() {
 
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.verifyBid(bid, TEST_SIGNER, signature.span());
+    let result = dispatcher.verify_bid(bid, TEST_SIGNER, signature.span());
 
     assert_eq!(result, true);
 }
