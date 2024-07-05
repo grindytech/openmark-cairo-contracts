@@ -30,7 +30,7 @@ pub enum OrderType {
     Offer,
 }
 
-#[derive(Copy, Drop, Serde, Hash)]
+#[derive(Copy, PartialEq, Drop, Serde, Hash)]
 pub struct Order {
     pub nftContract: ContractAddress,
     pub tokenId: u128,
@@ -47,7 +47,7 @@ pub struct SignedBid {
     pub signature: Span<felt252>,
 }
 
-#[derive(Copy, Drop, Serde, Hash, Debug)]
+#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug)]
 pub struct Bid {
     pub nftContract: ContractAddress,
     pub amount: u128,
