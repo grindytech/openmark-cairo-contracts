@@ -13,7 +13,7 @@ pub const SIGNATURE_EXPIRED: felt252 = 'OPENMARK: sig expired';
 /// Seller is not the owner of nft.
 pub const SELLER_NOT_OWNER: felt252 = 'OPENMARK: seller not owner'; 
 
-pub const ZERO_ADDRESS: felt252 = 'OPENMARK: caller is zero';
+pub const ZERO_ADDRESS: felt252 = 'OPENMARK: address is zero';
 
 /// Not allow trade with zero price
 pub const PRICE_IS_ZERO: felt252 = 'OPENMARK: price is zero'; 
