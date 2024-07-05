@@ -17,7 +17,8 @@ pub mod OpenMark {
     use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
     use openmark::hasher::HasherComponent;
     use openmark::events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled};
-
+    use openmark::errors as Errors;
+    
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
     component!(path: HasherComponent, storage: hasher, event: HasherEvent);
@@ -32,29 +33,7 @@ pub mod OpenMark {
     pub const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
     pub const PERMYRIAD: u32 = 1000;
 
-    mod Errors {
-        pub const SIGNATURE_USED: felt252 = 'OPENMARK: sig used';
-        pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid sig';
-        pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
-        pub const INVALID_SELLER: felt252 = 'OPENMARK: invalid seller';
-        pub const ZERO_ADDRESS: felt252 = 'OPENMARK: caller is zero';
-        pub const PRICE_IS_ZERO: felt252 = 'OPENMARK: price is zero';
-        pub const SIGNATURE_EXPIRED: felt252 = 'OPENMARK: sig expired';
-        pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 
-        pub const NOT_OWNER: felt252 = 'OPENMARK: not the owner';
-        pub const INVALID_BUYER: felt252 = 'OPENMARK: invalid buyer';
-        pub const INSUFFICIENT_NFTS: felt252 = 'OPENMARK: insufficient nfts';
-        pub const TOO_MANY_BIDS: felt252 = 'OPENMARK: too many bids';
-        pub const ZERO_BIDS: felt252 = 'OPENMARK: zero bids';
-        pub const ASKING_PRICE_TOO_HIGH: felt252 = 'OPENMARK: asking too high';
-
-        pub const INVALID_BID_NFT: felt252 = 'OPENMARK: invalid nft';
-        pub const TOO_MANY_BID_NFT: felt252 = 'OPENMARK: too many nfts';
-        pub const NOT_ENOUGH_BID_NFT: felt252 = 'OPENMARK: not enough nfts';
-
-        pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
-    }
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -119,7 +98,7 @@ pub mod OpenMark {
             // 3. make trade
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
-            let commission = calculate_commission(@self, price);
+            let commission = calculate_commission(price, self.commission.read());
             let payout = price - commission;
             self.eth_token.read().transfer(seller, payout);
             self.eth_token.read().transfer(get_contract_address(), commission);
@@ -163,7 +142,7 @@ pub mod OpenMark {
             // 3. make trade
             nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
 
-            let commission = calculate_commission(@self, price);
+            let commission = calculate_commission(price, self.commission.read());
             let payout = price - commission;
             self.eth_token.read().transfer_from(buyer, get_caller_address(), payout);
             self.eth_token.read().transfer_from(buyer, get_contract_address(), commission);
@@ -250,12 +229,13 @@ pub mod OpenMark {
             }
             // 3. Efficient loop for fee calculation and payout to wholesale bidders
             {
+                let commission = self.commission.read();
+
                 let mut i = 0;
                 while (i < bids.len() - 1) {
                     let price: u256 = ((*bids.at(i)).bid.unitPrice * (*bids.at(i)).bid.amount)
                         .into();
-                    // let commission = calculate_commission(@self, price);
-                    let commission = 0;
+                    let commission = calculate_commission(price, commission);
                     let payout = price - commission;
 
                     self
@@ -282,7 +262,7 @@ pub mod OpenMark {
                     - (total_bid_amount - tokenIds.len().into());
                 let price = (remaining_amount * last_bid.bid.unitPrice).into();
 
-                let commission = calculate_commission(@self, price);
+                let commission = calculate_commission(price, self.commission.read());
                 let payout = price - commission;
 
                 self.eth_token.read().transfer_from(last_bid.bidder, get_caller_address(), payout);
@@ -373,11 +353,11 @@ pub mod OpenMark {
         }
 
         fn get_commission(self: @ContractState) -> u32 {
-            0
+            self.commission.read()
         }
 
         fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
-            false
+            self.usedSignatures.read((*signature.at(0), *signature.at(1)))
         }
     }
 
@@ -391,8 +371,8 @@ pub mod OpenMark {
     }
 
     #[abi(embed_v0)]
-    fn calculate_commission(self: @ContractState, price: u256) -> u256 {
+    fn calculate_commission(price: u256, commission: u32) -> u256 {
         // need safe math
-        self.commission.read().into() * price / PERMYRIAD.into()
+        price * commission.into() / PERMYRIAD.into()
     }
 }
