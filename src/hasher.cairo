@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: MIT
+// OpenMark Contracts for Cairo
+
+/// # Hasher Component
+///
+/// This component provides implementations for cryptographic hashing functions,
+/// specifically designed for use with the EIP-712 standard. EIP-712 is used to
+/// create typed structured data hashes, enabling secure and user-friendly
+/// off-chain signature verification. This is crucial for ensuring data integrity
+/// and authenticity in decentralized applications (dApps) on StarkNet.
 #[starknet::component]
 pub mod HasherComponent {
     use starknet::ContractAddress;

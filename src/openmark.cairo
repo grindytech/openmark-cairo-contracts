@@ -1,3 +1,15 @@
+// SPDX-License-Identifier: MIT
+// OpenMark Contracts for Cairo
+
+/// # OpenMark Contract
+///
+/// # This contract implements the OpenMark NFT marketplace on StarkNet, allowing users to:
+/// - Buy: Purchase listed NFTs directly from sellers.
+/// - Sell: List NFTs for sale with desired prices.
+/// - Bid: Place competitive bids on listed NFTs.
+/// - Auction: Conduct auctions where NFTs are sold to the highest bidder.
+/// - Random NFT Mining: Engage in random NFT mining for discovery.
+
 #[starknet::contract]
 pub mod OpenMark {
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
