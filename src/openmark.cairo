@@ -170,15 +170,15 @@ pub mod OpenMark {
 
             // 4. change storage
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
-        // 5. emit events
-
+            // 5. emit events
+            self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
         }
 
         fn confirmBid(
             ref self: ContractState,
             bids: Span<SignedBid>,
             nftContract: ContractAddress,
-            tokenIds: Span<felt252>,
+            tokenIds: Span<u128>,
             askPrice: u128
         ) {
             let hasher = @(self).hasher;
@@ -315,7 +315,21 @@ pub mod OpenMark {
                     i += 1;
                 }
             }
-        // 6. Emit Event
+            // 6. emit events
+            let mut raw_bids = ArrayTrait::new();
+            {
+                let mut i = 0;
+                while (i < bids.len()) {
+                    raw_bids.append(*bids.at(i).bid);
+                    i += 1;
+                }
+            }
+            self
+                .emit(
+                    BidFilled {
+                        seller: get_caller_address(), bids: raw_bids.span(), nftContract, tokenIds,
+                    }
+                );
         }
 
         fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
@@ -331,6 +345,8 @@ pub mod OpenMark {
                 Errors::INVALID_SIGNATURE
             );
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+
+            self.emit(OrderCancelled { who: get_caller_address(), order, });
         }
 
         fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
@@ -346,6 +362,7 @@ pub mod OpenMark {
                 Errors::INVALID_SIGNATURE
             );
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.emit(BidCancelled { who: get_caller_address(), bid, });
         }
     }
 

@@ -14,7 +14,7 @@ pub trait IOpenMark<TState> {
         ref self: TState,
         bids: Span<SignedBid>,
         nftContract: ContractAddress,
-        tokenIds: Span<felt252>,
+        tokenIds: Span<u128>,
         askPrice: u128
     );
 
