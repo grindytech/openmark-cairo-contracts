@@ -2,6 +2,9 @@ use starknet::{ContractAddress};
 use openmark::primitives::{OrderType, Order, Bid};
 use core::array::{ArrayTrait};
 
+
+/// Emitted when a trade is filled. This event is triggered when an order is made,
+/// which can be either a buy_nft or accept_offer.
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct OrderFilled {
     #[key]
@@ -12,6 +15,7 @@ pub struct OrderFilled {
     pub order: Order,
 }
 
+/// Emitted when an order is canceled.
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct OrderCancelled {
     #[key]
@@ -20,8 +24,9 @@ pub struct OrderCancelled {
     pub order: Order,
 }
 
+/// Emit when bids is filled
 #[derive(Drop, PartialEq, starknet::Event)]
-pub struct BidFilled {
+pub struct BidsFilled {
     #[key]
     pub seller: ContractAddress,
     #[key]
@@ -32,6 +37,7 @@ pub struct BidFilled {
     pub tokenIds: Span<u128>,
 }
 
+/// Emitted when a bid is canceled.
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct BidCancelled {
     #[key]

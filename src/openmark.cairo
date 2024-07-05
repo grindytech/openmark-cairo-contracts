@@ -16,9 +16,9 @@ pub mod OpenMark {
     use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
     use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
     use openmark::hasher::HasherComponent;
-    use openmark::events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled};
+    use openmark::events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled};
     use openmark::errors as Errors;
-    
+
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
     component!(path: HasherComponent, storage: hasher, event: HasherEvent);
@@ -33,8 +33,6 @@ pub mod OpenMark {
     pub const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
     pub const PERMYRIAD: u32 = 1000;
 
-
-
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
@@ -43,7 +41,7 @@ pub mod OpenMark {
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
-        BidFilled: BidFilled,
+        BidsFilled: BidsFilled,
         BidCancelled: BidCancelled,
     }
 
@@ -56,6 +54,8 @@ pub mod OpenMark {
         #[substorage(v0)]
         hasher: HasherComponent::Storage, // hash provider
         commission: u32, // OpenMark's commission (per mille)
+        maxBids: u32, // Maximum number of bids allowed in fillBids
+
         usedSignatures: LegacyMap<Signature, bool>, // store used signature
     }
 
@@ -64,6 +64,7 @@ pub mod OpenMark {
         self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
         self.ownable.initializer(owner);
         self.commission.write(0);
+        self.maxBids.write(10);
     }
 
 
@@ -78,7 +79,7 @@ pub mod OpenMark {
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
 
-            assert(nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::INVALID_SELLER);
+            assert(nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::SELLER_NOT_OWNER);
 
             let price: u256 = order.price.into();
             assert(price > 0, Errors::PRICE_IS_ZERO);
@@ -121,7 +122,7 @@ pub mod OpenMark {
 
             assert(
                 nft_dispatcher.owner_of(order.tokenId.into()) == get_caller_address(),
-                Errors::NOT_OWNER
+                Errors::NOT_NFT_OWNER
             );
 
             let price: u256 = order.price.into();
@@ -164,7 +165,7 @@ pub mod OpenMark {
 
             // 1. Verify inputs
             let mut total_bid_amount = 0;
-            assert(bids.len() < 10, Errors::TOO_MANY_BIDS);
+            assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
             {
                 let mut i = 0;
                 while (i < bids.len()) {
@@ -175,7 +176,7 @@ pub mod OpenMark {
                         (*bids.at(i)).bid.expiry > get_block_timestamp().into(),
                         Errors::SIGNATURE_EXPIRED
                     );
-                    assert((*bids.at(i)).bid.nftContract == nftContract, Errors::INVALID_BID_NFT);
+                    assert((*bids.at(i)).bid.nftContract == nftContract, Errors::NFT_MISMATH);
 
                     i += 1;
                 };
@@ -194,7 +195,7 @@ pub mod OpenMark {
                 };
             }
 
-            assert(tokenIds.len().into() <= total_bid_amount, Errors::TOO_MANY_BID_NFT);
+            assert(tokenIds.len().into() <= total_bid_amount, Errors::EXCEED_BID_NFTS);
             assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFT);
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
@@ -204,7 +205,7 @@ pub mod OpenMark {
                 while (i < tokenIds.len()) {
                     assert(
                         nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == get_caller_address(),
-                        Errors::NOT_OWNER
+                        Errors::NOT_NFT_OWNER
                     );
                     i += 1;
                 }
@@ -306,7 +307,7 @@ pub mod OpenMark {
             }
             self
                 .emit(
-                    BidFilled {
+                    BidsFilled {
                         seller: get_caller_address(), bids: raw_bids.span(), nftContract, tokenIds,
                     }
                 );

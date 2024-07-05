@@ -23,7 +23,7 @@ use openmark::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
     openmark::OpenMark::Event as OpenMarkEvent,
-    events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled},
+    events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled},
 };
 
 const TEST_ETH_ADDRESS: felt252 = 0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
@@ -375,8 +375,8 @@ fn confirm_bid_works() {
         assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
 
         // events
-        let expected_event = OpenMarkEvent::BidFilled(
-            BidFilled {
+        let expected_event = OpenMarkEvent::BidsFilled(
+            BidsFilled {
                 seller,
                 bids: array![bid1, bid2, bid3].span(),
                 nftContract: erc721_address,
