@@ -1,7 +1,7 @@
 #[starknet::contract]
-mod OpenMark {
+pub mod OpenMark {
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-use core::traits::Into;
+    use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -16,6 +16,7 @@ use core::traits::Into;
     use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
     use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
     use openmark::hasher::HasherComponent;
+    use openmark::events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -51,16 +52,20 @@ use core::traits::Into;
         pub const INVALID_BID_NFT: felt252 = 'OPENMARK: invalid nft';
         pub const TOO_MANY_BID_NFT: felt252 = 'OPENMARK: too many nfts';
         pub const NOT_ENOUGH_BID_NFT: felt252 = 'OPENMARK: not enough nfts';
-        
+
         pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         HasherEvent: HasherComponent::Event,
+        OrderFilled: OrderFilled,
+        OrderCancelled: OrderCancelled,
+        BidFilled: BidFilled,
+        BidCancelled: BidCancelled,
     }
 
 
@@ -71,7 +76,6 @@ use core::traits::Into;
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         hasher: HasherComponent::Storage, // hash provider
-        
         commission: u32, // OpenMark's commission (per mille)
         usedSignatures: LegacyMap<Signature, bool>, // store used signature
     }
@@ -122,6 +126,9 @@ use core::traits::Into;
 
             // 4. change storage
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+
+            // 5. emit events
+            self.emit(OrderFilled { seller, buyer: get_caller_address(), order });
         }
 
         fn acceptOffer(
@@ -163,6 +170,8 @@ use core::traits::Into;
 
             // 4. change storage
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+        // 5. emit events
+
         }
 
         fn confirmBid(

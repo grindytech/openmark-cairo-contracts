@@ -11,7 +11,7 @@ use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::signature::SignerTrait;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address
+    start_cheat_account_contract_address, spy_events, SpyOn, EventAssertions, EventSpy
 };
 
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
@@ -22,6 +22,8 @@ use openmark::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
+    openmark::OpenMark::Event as OpenMarkEvent,
+    events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled},
 };
 
 const TEST_ETH_ADDRESS: felt252 = 0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
@@ -136,6 +138,7 @@ fn buy_works() {
 
         let buyer_before_balance = ERC20Dispatcher.balance_of(buyer);
         let seller_before_balance = ERC20Dispatcher.balance_of(seller);
+        let mut spy = spy_events(SpyOn::One(openmark_address));
 
         OpenMarkDispatcher.buy(seller, order, signature.span());
         let buyer_after_balance = ERC20Dispatcher.balance_of(buyer);
@@ -144,6 +147,12 @@ fn buy_works() {
         assert_eq!(ERC721Dispatcher.owner_of(2), buyer);
         assert_eq!(buyer_after_balance, buyer_before_balance - price.into());
         assert_eq!(seller_after_balance, seller_before_balance + price.into());
+
+        // events
+        let expected_event = OpenMarkEvent::OrderFilled(
+            OrderFilled { seller, buyer, order }
+        );
+        spy.assert_emitted(@array![(openmark_address, expected_event)]);
     }
 }
 
@@ -242,9 +251,7 @@ fn cancel_order_works() {
         OpenMarkDispatcher.cancelOrder(order, signature.span());
 
         let usedSignatures = load(
-            openmark_address,
-            map_entry_address(selector!("usedSignatures"), signature.span(),),
-            1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -382,9 +389,7 @@ fn cancel_bid_works() {
         OpenMarkDispatcher.cancelBid(bid, signature.span());
 
         let usedSignatures = load(
-            openmark_address,
-            map_entry_address(selector!("usedSignatures"), signature.span(),),
-            1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
