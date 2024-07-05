@@ -30,6 +30,11 @@ pub trait IOpenMarkProvider<TState> {
     fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
 }
 
+#[starknet::interface]
+pub trait IOpenMarkManager<TState> {
+    fn set_commission(ref self: TState, new_commission: u32);
+}
+
 
 #[starknet::interface]
 pub trait IOffchainMessageHash<T> {

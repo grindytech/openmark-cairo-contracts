@@ -1,6 +1,7 @@
 #[starknet::contract]
 mod OpenMark {
-    use core::traits::Into;
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -13,7 +14,7 @@ mod OpenMark {
     use core::num::traits::Zero;
 
     use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
-    use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider};
+    use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
     use openmark::hasher::HasherComponent;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -50,6 +51,8 @@ mod OpenMark {
         pub const INVALID_BID_NFT: felt252 = 'OPENMARK: invalid nft';
         pub const TOO_MANY_BID_NFT: felt252 = 'OPENMARK: too many nfts';
         pub const NOT_ENOUGH_BID_NFT: felt252 = 'OPENMARK: not enough nfts';
+        
+        pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
     }
 
     #[event]
@@ -67,8 +70,9 @@ mod OpenMark {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
-        hasher: HasherComponent::Storage,
-        commission: u32, // OpenMark's commission 
+        hasher: HasherComponent::Storage, // hash provider
+        
+        commission: u32, // OpenMark's commission (per mille)
         usedSignatures: LegacyMap<Signature, bool>, // store used signature
     }
 
@@ -348,6 +352,15 @@ mod OpenMark {
 
         fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
             false
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl OpenMarkManagerImpl of IOpenMarkManager<ContractState> {
+        fn set_commission(ref self: ContractState, new_commission: u32) {
+            self.ownable.assert_only_owner();
+            assert(new_commission < MAX_COMMISSION, Errors::COMMISSION_TOO_HIGH);
+            self.commission.write(new_commission);
         }
     }
 
