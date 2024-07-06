@@ -1,3 +1,4 @@
+use core::array::SpanTrait;
 use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
@@ -220,6 +221,89 @@ fn fill_bids_works() {
             BidsFilled { seller, bids, nftContract: erc721_address, tokenIds, }
         );
         spy.assert_emitted(@array![(openmark_address, expected_event)]);
+    }
+}
+
+#[test]
+#[available_gas(2000000)]
+fn fill_bids_partial_works() {
+    let (
+        signed_bids,
+        _bids,
+        OpenMarkDispatcher,
+        openmark_address,
+        ERC721Dispatcher,
+        erc721_address,
+        ERC20Dispatcher,
+        eth_address,
+        seller,
+        buyers,
+        mut tokenIds,
+        unitPrice
+    ) =
+        create_bids();
+
+    // accept bids and verify
+    {
+        start_cheat_caller_address(openmark_address, seller);
+        start_cheat_caller_address(eth_address, openmark_address);
+
+        let seller_before_balance = ERC20Dispatcher.balance_of(seller);
+        let buyer1_before_balance = ERC20Dispatcher.balance_of(*buyers.at(0));
+        let buyer2_before_balance = ERC20Dispatcher.balance_of(*buyers.at(1));
+        let buyer3_before_balance = ERC20Dispatcher.balance_of(*buyers.at(2));
+
+        let _ = tokenIds.pop_back();
+        OpenMarkDispatcher.fill_bids(signed_bids, erc721_address, tokenIds, unitPrice);
+
+        let seller_after_balance = ERC20Dispatcher.balance_of(seller);
+        let buyer1_after_balance = ERC20Dispatcher.balance_of(*buyers.at(0));
+        let buyer2_after_balance = ERC20Dispatcher.balance_of(*buyers.at(1));
+        let buyer3_after_balance = ERC20Dispatcher.balance_of(*buyers.at(2));
+
+        assert_eq!(ERC721Dispatcher.owner_of(0), *buyers.at(0));
+        assert_eq!(ERC721Dispatcher.owner_of(1), *buyers.at(1));
+        assert_eq!(ERC721Dispatcher.owner_of(2), *buyers.at(1));
+        assert_eq!(ERC721Dispatcher.owner_of(3), *buyers.at(2));
+        assert_eq!(ERC721Dispatcher.owner_of(4), *buyers.at(2));
+
+        assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * 5));
+
+        assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
+        assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
+        assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 2));
+
+        let partialBidSignatures = load(
+            openmark_address,
+            map_entry_address(selector!("partialBidSignatures"), (*signed_bids.at(2)).signature,),
+            1,
+        );
+        assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 1_u128);
+
+        OpenMarkDispatcher
+            .fill_bids(
+                array![*signed_bids.at(2)].span(), erc721_address, array![5].span(), unitPrice
+            );
+
+        assert_eq!(ERC721Dispatcher.owner_of(5), *buyers.at(2));
+
+        let seller_after_balance = ERC20Dispatcher.balance_of(seller);
+        let buyer3_after_balance = ERC20Dispatcher.balance_of(*buyers.at(2));
+        assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * 6));
+        assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
+
+        let partialBidSignatures = load(
+            openmark_address,
+            map_entry_address(selector!("partialBidSignatures"), (*signed_bids.at(2)).signature),
+            1,
+        );
+        assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 0_u128);
+        let usedSignatures = load(
+            openmark_address,
+            map_entry_address(selector!("usedSignatures"), (*signed_bids.at(2)).signature),
+            1,
+        );
+        assert_eq!(*usedSignatures.at(0), true.into());
     }
 }
 
