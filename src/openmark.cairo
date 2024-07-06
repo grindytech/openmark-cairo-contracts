@@ -67,7 +67,6 @@ pub mod OpenMark {
         hasher: HasherComponent::Storage, // hash provider
         commission: u32, // OpenMark's commission (per mille)
         maxBids: u32, // Maximum number of bids allowed in fillBids
-
         usedSignatures: LegacyMap<Signature, bool>, // store used signature
     }
 
@@ -91,13 +90,15 @@ pub mod OpenMark {
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
 
-            assert(nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::SELLER_NOT_OWNER);
+            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
+            assert(
+                nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::SELLER_NOT_OWNER
+            );
 
             let price: u256 = order.price.into();
             assert(price > 0, Errors::PRICE_IS_ZERO);
 
             // 2. verify signature
-            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
@@ -129,19 +130,18 @@ pub mod OpenMark {
             // 1. verify inputs
             assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == OrderType::Offer, Errors::INVALID_ORDER_TYPE);
+            assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
 
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
-
             assert(
                 nft_dispatcher.owner_of(order.tokenId.into()) == get_caller_address(),
-                Errors::NOT_NFT_OWNER
+                Errors::SELLER_NOT_OWNER
             );
 
             let price: u256 = order.price.into();
             assert(price > 0, Errors::PRICE_IS_ZERO);
 
             // 2. verify signature
-            assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
@@ -177,19 +177,19 @@ pub mod OpenMark {
 
             // 1. Verify inputs
             let mut total_bid_amount = 0;
+            assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
             {
                 let mut i = 0;
                 while (i < bids.len()) {
-                    assert((*bids.at(i)).bid.amount > 0, Errors::ZERO_BIDS);
-                    assert((*bids.at(i)).bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
-                    assert((*bids.at(i)).bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
-                    assert(
-                        (*bids.at(i)).bid.expiry > get_block_timestamp().into(),
-                        Errors::SIGNATURE_EXPIRED
-                    );
-                    assert((*bids.at(i)).bid.nftContract == nftContract, Errors::NFT_MISMATH);
+                    assert(!(*bids.at(i)).bidder.is_zero(), Errors::ZERO_ADDRESS);
+                    let bid = (*bids.at(i)).bid;
 
+                    assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
+                    assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
+                    assert(bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
+                    assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
+                    assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
                     i += 1;
                 };
             }
@@ -217,7 +217,7 @@ pub mod OpenMark {
                 while (i < tokenIds.len()) {
                     assert(
                         nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == get_caller_address(),
-                        Errors::NOT_NFT_OWNER
+                        Errors::SELLER_NOT_OWNER
                     );
                     i += 1;
                 }
@@ -228,13 +228,15 @@ pub mod OpenMark {
                 let mut i = 0;
                 while (i < bids.len()) {
                     let signature = (*bids.at(i)).signature;
+                    assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
                     assert(
                         !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                         Errors::SIGNATURE_USED
                     );
 
                     assert(
-                        hasher.verify_bid((*bids.at(i)).bid, (*bids.at(i)).bidder.into(), signature),
+                        hasher
+                            .verify_bid((*bids.at(i)).bid, (*bids.at(i)).bidder.into(), signature),
                         Errors::INVALID_SIGNATURE
                     );
                     i += 1;
@@ -246,22 +248,24 @@ pub mod OpenMark {
 
                 let mut i = 0;
                 while (i < bids.len() - 1) {
-                    let price: u256 = ((*bids.at(i)).bid.unitPrice * (*bids.at(i)).bid.amount)
-                        .into();
+                    let signed_bid = (*bids.at(i));
+                    let bid = signed_bid.bid;
+
+                    let price: u256 = (bid.unitPrice * bid.amount).into();
                     let commission = calculate_commission(price, commission);
                     let payout = price - commission;
 
                     self
                         .eth_token
                         .read()
-                        .transfer_from((*bids.at(i)).bidder, get_caller_address(), payout);
+                        .transfer_from(signed_bid.bidder, get_caller_address(), payout);
 
                     self
                         .eth_token
                         .read()
-                        .transfer_from((*bids.at(i)).bidder, get_contract_address(), commission);
+                        .transfer_from(signed_bid.bidder, get_contract_address(), commission);
 
-                    let signature = *bids.at(i).signature;
+                    let signature = signed_bid.signature;
                     self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
 
                     i += 1;
