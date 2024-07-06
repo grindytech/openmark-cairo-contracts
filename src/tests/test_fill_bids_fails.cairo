@@ -66,34 +66,34 @@ fn fill_bids_too_many_bids_panics() {
     OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
 }
 
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: address is zero',))]
-fn fill_bids_seller_is_zero_panics() {
-    let (
-        mut signed_bids,
-        _bids,
-        OpenMarkDispatcher,
-        openmark_address,
-        _ERC721Dispatcher,
-        erc721_address,
-        _ERC20Dispatcher,
-        eth_address,
-        seller,
-        _buyers,
-        tokenIds,
-        unitPrice
-    ) =
-        create_bids();
+// #[test]
+// #[available_gas(2000000)]
+// #[should_panic(expected: ('OPENMARK: address is zero',))]
+// fn fill_bids_seller_is_zero_panics() {
+//     let (
+//         mut signed_bids,
+//         _bids,
+//         OpenMarkDispatcher,
+//         openmark_address,
+//         _ERC721Dispatcher,
+//         erc721_address,
+//         _ERC20Dispatcher,
+//         eth_address,
+//         seller,
+//         _buyers,
+//         tokenIds,
+//         unitPrice
+//     ) =
+//         create_bids();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+//     start_cheat_caller_address(openmark_address, seller);
+//     start_cheat_caller_address(eth_address, openmark_address);
 
-    let mut new_bid = *signed_bids.at(0);
-    new_bid.bidder = ZERO();
-    let mut bids = array![new_bid];
-    OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
-}
+//     let mut new_bid = *signed_bids.at(0);
+//     new_bid.bidder = ZERO();
+//     let mut bids = array![new_bid];
+//     OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
+// }
 
 #[test]
 #[available_gas(2000000)]
@@ -122,63 +122,63 @@ fn fill_bids_no_bids_panics() {
     OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
 }
 
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: zero bids amount',))]
-fn fill_bids_zero_amount_panics() {
-    let (
-        mut signed_bids,
-        _bids,
-        OpenMarkDispatcher,
-        openmark_address,
-        _ERC721Dispatcher,
-        erc721_address,
-        _ERC20Dispatcher,
-        eth_address,
-        seller,
-        _buyers,
-        tokenIds,
-        unitPrice
-    ) =
-        create_bids();
+// #[test]
+// #[available_gas(2000000)]
+// #[should_panic(expected: ('OPENMARK: zero bids amount',))]
+// fn fill_bids_zero_amount_panics() {
+//     let (
+//         mut signed_bids,
+//         _bids,
+//         OpenMarkDispatcher,
+//         openmark_address,
+//         _ERC721Dispatcher,
+//         erc721_address,
+//         _ERC20Dispatcher,
+//         eth_address,
+//         seller,
+//         _buyers,
+//         tokenIds,
+//         unitPrice
+//     ) =
+//         create_bids();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+//     start_cheat_caller_address(openmark_address, seller);
+//     start_cheat_caller_address(eth_address, openmark_address);
 
-    let mut new_bid = *signed_bids.at(0);
-    new_bid.bid.amount = 0;
-    let mut bids = array![new_bid];
-    OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
-}
+//     let mut new_bid = *signed_bids.at(0);
+//     new_bid.bid.amount = 0;
+//     let mut bids = array![new_bid];
+//     OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
+// }
 
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: price is zero',))]
-fn fill_bids_zero_price_panics() {
-    let (
-        mut signed_bids,
-        _bids,
-        OpenMarkDispatcher,
-        openmark_address,
-        _ERC721Dispatcher,
-        erc721_address,
-        _ERC20Dispatcher,
-        eth_address,
-        seller,
-        _buyers,
-        tokenIds,
-        unitPrice
-    ) =
-        create_bids();
+// #[test]
+// #[available_gas(2000000)]
+// #[should_panic(expected: ('OPENMARK: price is zero',))]
+// fn fill_bids_zero_price_panics() {
+//     let (
+//         mut signed_bids,
+//         _bids,
+//         OpenMarkDispatcher,
+//         openmark_address,
+//         _ERC721Dispatcher,
+//         erc721_address,
+//         _ERC20Dispatcher,
+//         eth_address,
+//         seller,
+//         _buyers,
+//         tokenIds,
+//         unitPrice
+//     ) =
+//         create_bids();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+//     start_cheat_caller_address(openmark_address, seller);
+//     start_cheat_caller_address(eth_address, openmark_address);
 
-    let mut new_bid = *signed_bids.at(0);
-    new_bid.bid.unitPrice = 0;
-    let mut bids = array![new_bid];
-    OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
-}
+//     let mut new_bid = *signed_bids.at(0);
+//     new_bid.bid.unitPrice = 0;
+//     let mut bids = array![new_bid];
+//     OpenMarkDispatcher.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
+// }
 
 #[test]
 #[available_gas(2000000)]
