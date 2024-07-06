@@ -135,7 +135,7 @@ pub mod OpenMark {
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
             assert(
                 nft_dispatcher.owner_of(order.tokenId.into()) == get_caller_address(),
-                Errors::NOT_NFT_OWNER
+                Errors::SELLER_NOT_OWNER
             );
 
             let price: u256 = order.price.into();
@@ -216,7 +216,7 @@ pub mod OpenMark {
                 while (i < tokenIds.len()) {
                     assert(
                         nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == get_caller_address(),
-                        Errors::NOT_NFT_OWNER
+                        Errors::SELLER_NOT_OWNER
                     );
                     i += 1;
                 }

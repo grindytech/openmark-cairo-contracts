@@ -21,9 +21,6 @@ pub const PRICE_IS_ZERO: felt252 = 'OPENMARK: price is zero';
 /// Invalid order type.
 pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type'; 
 
-/// Not nft owner.
-pub const NOT_NFT_OWNER: felt252 = 'OPENMARK: not nft owner'; 
-
 /// Exceeds number of bids allowd in 'fillBids'.
 pub const TOO_MANY_BIDS: felt252 = 'OPENMARK: too many bids';
 
