@@ -177,6 +177,7 @@ pub mod OpenMark {
 
             // 1. Verify inputs
             let mut total_bid_amount = 0;
+            assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
             {
                 let mut i = 0;
@@ -184,11 +185,11 @@ pub mod OpenMark {
                     assert(!(*bids.at(i)).bidder.is_zero(), Errors::ZERO_ADDRESS);
                     let bid = (*bids.at(i)).bid;
 
-                    assert(bid.amount > 0, Errors::ZERO_BIDS);
+                    assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
                     assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
                     assert(bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
                     assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
-                    assert(bid.nftContract == nftContract, Errors::NFT_MISMATH);
+                    assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
                     i += 1;
                 };
             }
@@ -227,6 +228,7 @@ pub mod OpenMark {
                 let mut i = 0;
                 while (i < bids.len()) {
                     let signature = (*bids.at(i)).signature;
+                    assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
                     assert(
                         !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
                         Errors::SIGNATURE_USED
