@@ -24,17 +24,29 @@ pub struct OrderCancelled {
     pub order: Order,
 }
 
-/// Emit when bids is filled
+/// Event emitted when a bid is filled in OpenMark.
+/// 
+/// Variables:
+/// - `seller`: The address of the seller who accepted the bid.
+/// - `bidder`: The address of the bidder who placed the bid.
+/// - `bid`: The details of the bid, encapsulated in the `Bid` struct.
+/// - `tokenIds`: A list of token IDs were traded.
+/// - `askingPrice`: The price at which the bid was accepted.
+///
+/// This event provides key information about the transaction, enabling listeners to
+/// track successful bids and their associated details.
 #[derive(Drop, PartialEq, starknet::Event)]
-pub struct BidsFilled {
+pub struct BidFilled {
     #[key]
     pub seller: ContractAddress,
     #[key]
-    pub bids: Span<Bid>,
+    pub bidder: ContractAddress,
     #[key]
-    pub nftContract: ContractAddress,
+    pub bid: Bid,
     #[key]
     pub tokenIds: Span<u128>,
+    #[key]
+    pub askingPrice: u128,
 }
 
 /// Emitted when a bid is canceled.

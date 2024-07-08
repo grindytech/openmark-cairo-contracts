@@ -24,7 +24,7 @@ use openmark::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
     openmark::OpenMark::Event as OpenMarkEvent, openmark::OpenMark::{validate_order},
-    events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled}, errors as Errors,
+    events::{OrderFilled, OrderCancelled, BidCancelled}, errors as Errors,
 };
 use openmark::tests::common::{
     create_offer, create_buy, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
