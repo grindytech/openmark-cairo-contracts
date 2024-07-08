@@ -86,10 +86,7 @@ pub mod OpenMark {
         fn buy(
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
-            // 1. verify order
-            validate_order(@self, order, seller, get_caller_address(), OrderType::Buy);
-
-            // 2. verify signature
+            // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
                 !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
@@ -98,6 +95,9 @@ pub mod OpenMark {
             assert(
                 self.hasher.verify_order(order, seller.into(), signature), Errors::INVALID_SIGNATURE
             );
+
+            // 2. verify order
+            validate_order(@self, order, seller, get_caller_address(), OrderType::Buy);
 
             // 3. make trade
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
@@ -119,10 +119,7 @@ pub mod OpenMark {
         fn accept_offer(
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
-            // 1. verify order
-            validate_order(@self, order, get_caller_address(), buyer, OrderType::Offer);
-
-            // 2. verify signature
+            // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
                 !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
@@ -131,6 +128,9 @@ pub mod OpenMark {
             assert(
                 self.hasher.verify_order(order, buyer.into(), signature), Errors::INVALID_SIGNATURE
             );
+
+            // 2. verify order
+            validate_order(@self, order, get_caller_address(), buyer, OrderType::Offer);
 
             // 3. make trade
             let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
