@@ -24,6 +24,7 @@ use openmark::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
     openmark::OpenMark::Event as OpenMarkEvent,
+    openmark::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
     events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled}, errors as Errors,
 };
 
@@ -257,7 +258,7 @@ pub fn create_bids() -> (
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: eth_address };
 
     let unitPrice = 3_u128;
-    let total_amount = 6;
+    let total_amount = 10;
     let bid1 = Bid { nftContract: erc721_address, amount: 1, unitPrice, salt: 4, expiry: 5, };
     let bid2 = Bid { nftContract: erc721_address, amount: 2, unitPrice, salt: 4, expiry: 5, };
     let bid3 = Bid { nftContract: erc721_address, amount: 3, unitPrice, salt: 4, expiry: 5, };
@@ -334,4 +335,11 @@ pub fn create_bids() -> (
         tokenIds,
         unitPrice
     )
+}
+
+pub fn get_contract_state_for_testing() -> ContractState {
+    let mut state = openmark::openmark::OpenMark::contract_state_for_testing();
+    state.maxBids.write(10);
+
+    state
 }

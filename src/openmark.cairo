@@ -87,10 +87,9 @@ pub mod OpenMark {
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             // 1. verify order
-            validate_order(order, seller, get_caller_address(), OrderType::Buy);
+            validate_order(@self, order, seller, get_caller_address(), OrderType::Buy);
 
             // 2. verify signature
-
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
                 !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
@@ -121,7 +120,7 @@ pub mod OpenMark {
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             // 1. verify order
-            validate_order(order, get_caller_address(), buyer, OrderType::Offer);
+            validate_order(@self, order, get_caller_address(), buyer, OrderType::Offer);
 
             // 2. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
@@ -178,70 +177,15 @@ pub mod OpenMark {
                 };
             }
 
-            // 2. Verify inputs
-            assert(bids.len() > 0, Errors::NO_BIDS);
-            assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
-            {
-                let mut i = 0;
-                while (i < bids.len()) {
-                    let signed_bid = *bids.at(i);
-                    assert(!signed_bid.bidder.is_zero(), Errors::ZERO_ADDRESS);
-                    let bid = signed_bid.bid;
+            // 2. Validate Bids
+            let total_bid_amount = validate_bids(
+                @self, bids, get_caller_address(), nftContract, tokenIds, askPrice
+            );
 
-                    assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
-                    assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
-                    assert(bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
-                    assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
-                    assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
-                    i += 1;
-                };
-            }
-
-            let mut min_bid_amount = 0;
-            let mut total_bid_amount = 0;
-            {
-                let mut i = 0;
-                while (i < bids.len()) {
-                    let bid = (*bids.at(i)).bid;
-                    let signature = (
-                        *(*bids.at(i)).signature.at(0), *(*bids.at(i)).signature.at(1)
-                    );
-
-                    let mut amount = bid.amount;
-                    {
-                        let partial_signature_amount = self.partialBidSignatures.read(signature);
-                        if partial_signature_amount > 0 {
-                            amount = partial_signature_amount;
-                        }
-                    }
-
-                    total_bid_amount += amount;
-                    if i < bids.len() - 1 {
-                        min_bid_amount += amount;
-                    }
-
-                    i += 1;
-                };
-            }
-
-            assert(tokenIds.len().into() <= total_bid_amount, Errors::EXCEED_BID_NFTS);
-            assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFT);
-
+            // 3. Efficient loop for fee calculation and payout to wholesale bidders
             let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
-            // 3. Verify token owner
-            {
-                let mut i = 0;
-                while (i < tokenIds.len()) {
-                    assert(
-                        nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == get_caller_address(),
-                        Errors::SELLER_NOT_OWNER
-                    );
-                    i += 1;
-                }
-            }
-
-            // 4. Efficient loop for fee calculation and payout to wholesale bidders
             let mut trade_token_ids = tokenIds;
+
             {
                 let commission = self.commission.read();
 
@@ -289,7 +233,7 @@ pub mod OpenMark {
                     i += 1;
                 }
             }
-            // 5. Separate logic for last bidder to handle remaining NFTs
+            // 4. Separate logic for last bidder to handle remaining NFTs
             {
                 let signed_bid = *bids.at(bids.len() - 1);
                 let signature = (*signed_bid.signature.at(0), *signed_bid.signature.at(1));
@@ -332,7 +276,7 @@ pub mod OpenMark {
                 }
             }
 
-            // 6. emit events
+            // 5. emit events
             let mut raw_bids = ArrayTrait::new();
             {
                 let mut i = 0;
@@ -409,12 +353,16 @@ pub mod OpenMark {
 
     #[abi(embed_v0)]
     fn calculate_commission(price: u256, commission: u32) -> u256 {
-        // need safe math
         price * commission.into() / PERMYRIAD.into()
     }
 
-    fn validate_order(
-        order: Order, seller: ContractAddress, buyer: ContractAddress, order_type: OrderType
+    #[abi(embed_v0)]
+    pub fn validate_order(
+        self: @ContractState,
+        order: Order,
+        seller: ContractAddress,
+        buyer: ContractAddress,
+        order_type: OrderType
     ) {
         assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
         assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
@@ -429,5 +377,76 @@ pub mod OpenMark {
         assert(price > 0, Errors::PRICE_IS_ZERO);
     }
 
-    
+    #[abi(embed_v0)]
+    pub fn validate_bids(
+        self: @ContractState,
+        bids: Span<SignedBid>,
+        seller: ContractAddress,
+        nftContract: ContractAddress,
+        tokenIds: Span<u128>,
+        askPrice: u128
+    ) -> u128 {
+        assert(bids.len() > 0, Errors::NO_BIDS);
+        assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
+        assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
+
+        {
+            let mut i = 0;
+            while (i < bids.len()) {
+                let signed_bid = *bids.at(i);
+                assert(!signed_bid.bidder.is_zero(), Errors::ZERO_ADDRESS);
+                let bid = signed_bid.bid;
+
+                assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
+                assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
+                assert(bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
+                assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
+                assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
+                i += 1;
+            };
+        }
+
+        // 3. Verify token owner
+        let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
+        {
+            let mut i = 0;
+            while (i < tokenIds.len()) {
+                assert(
+                    nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == seller,
+                    Errors::SELLER_NOT_OWNER
+                );
+                i += 1;
+            }
+        }
+
+        let mut min_bid_amount = 0;
+        let mut total_bid_amount = 0;
+        {
+            let mut i = 0;
+            while (i < bids.len()) {
+                let bid = (*bids.at(i)).bid;
+                let signature = (*(*bids.at(i)).signature.at(0), *(*bids.at(i)).signature.at(1));
+
+                let mut amount = bid.amount;
+                {
+                    let partial_signature_amount = self.partialBidSignatures.read(signature);
+                    if partial_signature_amount > 0 {
+                        amount = partial_signature_amount;
+                    }
+                }
+
+                total_bid_amount += amount;
+                if i < bids.len() - 1 {
+                    min_bid_amount += amount;
+                }
+
+                i += 1;
+            };
+        }
+
+        assert(tokenIds.len().into() <= total_bid_amount, Errors::EXCEED_BID_NFTS);
+        assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFT);
+
+        total_bid_amount
+    }
 }
