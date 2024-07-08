@@ -29,7 +29,7 @@ pub mod OpenMark {
     use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
     use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
     use openmark::hasher::HasherComponent;
-    use openmark::events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled};
+    use openmark::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
     use openmark::errors as Errors;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -54,7 +54,7 @@ pub mod OpenMark {
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
-        BidsFilled: BidsFilled,
+        BidFilled: BidFilled,
         BidCancelled: BidCancelled,
     }
 
@@ -153,7 +153,7 @@ pub mod OpenMark {
             bids: Span<SignedBid>,
             nftContract: ContractAddress,
             tokenIds: Span<u128>,
-            askPrice: u128
+            askingPrice: u128
         ) {
             let hasher = @(self).hasher;
 
@@ -179,7 +179,7 @@ pub mod OpenMark {
 
             // 2. Validate Bids
             let total_bid_amount = validate_bids(
-                @self, bids, get_caller_address(), nftContract, tokenIds, askPrice
+                @self, bids, get_caller_address(), nftContract, tokenIds, askingPrice
             );
 
             // 3. Efficient loop for fee calculation and payout to wholesale bidders
@@ -203,32 +203,45 @@ pub mod OpenMark {
                         }
                     }
 
-                    {
-                        let price: u256 = (bid.unitPrice * amount).into();
-                        let commission = calculate_commission(price, commission);
-                        let payout = price - commission;
+                    let price: u256 = (bid.unitPrice * amount).into();
+                    let commission = calculate_commission(price, commission);
+                    let payout = price - commission;
 
-                        self
-                            .eth_token
-                            .read()
-                            .transfer_from(signed_bid.bidder, get_caller_address(), payout);
+                    self
+                        .eth_token
+                        .read()
+                        .transfer_from(signed_bid.bidder, get_caller_address(), payout);
 
-                        self
-                            .eth_token
-                            .read()
-                            .transfer_from(signed_bid.bidder, get_contract_address(), commission);
+                    self
+                        .eth_token
+                        .read()
+                        .transfer_from(signed_bid.bidder, get_contract_address(), commission);
 
-                        let mut token_index: u128 = 0;
-                        while (token_index < amount) {
-                            let token_id: u256 = (*trade_token_ids.pop_front().unwrap()).into();
-                            nft_dispatcher
-                                .transfer_from(get_caller_address(), *bids.at(i).bidder, token_id);
-                            token_index += 1;
-                        };
-                    }
+                    let mut traded_ids = ArrayTrait::new();
+                    let mut token_index: u128 = 0;
+                    while (token_index < amount) {
+                        let token_id: u128 = *trade_token_ids.pop_front().unwrap();
+                        nft_dispatcher
+                            .transfer_from(
+                                get_caller_address(), *bids.at(i).bidder, token_id.into()
+                            );
+                        traded_ids.append(token_id);
+                        token_index += 1;
+                    };
 
                     self.usedSignatures.write(signature, true);
                     self.partialBidSignatures.write(signature, 0);
+
+                    self
+                        .emit(
+                            BidFilled {
+                                seller: get_caller_address(),
+                                bidder: signed_bid.bidder,
+                                bid: bid,
+                                tokenIds: traded_ids.span(),
+                                askingPrice
+                            }
+                        );
 
                     i += 1;
                 }
@@ -264,9 +277,12 @@ pub mod OpenMark {
                     .transfer_from(signed_bid.bidder, get_contract_address(), commission);
 
                 let mut token_index: u128 = 0;
+                let mut traded_ids = ArrayTrait::new();
                 while (token_index < amount) {
-                    let token_id: u256 = (*trade_token_ids.pop_front().unwrap()).into();
-                    nft_dispatcher.transfer_from(get_caller_address(), signed_bid.bidder, token_id);
+                    let token_id: u128 = *trade_token_ids.pop_front().unwrap();
+                    nft_dispatcher
+                        .transfer_from(get_caller_address(), signed_bid.bidder, token_id.into());
+                    traded_ids.append(token_id);
                     token_index += 1;
                 };
 
@@ -274,23 +290,18 @@ pub mod OpenMark {
                 if (remaining_amount == 0) {
                     self.usedSignatures.write(signature, true);
                 }
-            }
 
-            // 5. emit events
-            let mut raw_bids = ArrayTrait::new();
-            {
-                let mut i = 0;
-                while (i < bids.len()) {
-                    raw_bids.append(*bids.at(i).bid);
-                    i += 1;
-                }
+                self
+                    .emit(
+                        BidFilled {
+                            seller: get_caller_address(),
+                            bidder: signed_bid.bidder,
+                            bid: signed_bid.bid,
+                            tokenIds: traded_ids.span(),
+                            askingPrice
+                        }
+                    );
             }
-            self
-                .emit(
-                    BidsFilled {
-                        seller: get_caller_address(), bids: raw_bids.span(), nftContract, tokenIds,
-                    }
-                );
         }
 
         fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
@@ -384,7 +395,7 @@ pub mod OpenMark {
         seller: ContractAddress,
         nftContract: ContractAddress,
         tokenIds: Span<u128>,
-        askPrice: u128
+        askingPrice: u128
     ) -> u128 {
         assert(bids.len() > 0, Errors::NO_BIDS);
         assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
@@ -399,7 +410,7 @@ pub mod OpenMark {
 
                 assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
                 assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
-                assert(bid.unitPrice >= askPrice, Errors::ASKING_PRICE_TOO_HIGH);
+                assert(bid.unitPrice >= askingPrice, Errors::ASKING_PRICE_TOO_HIGH);
                 assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
                 assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
                 i += 1;

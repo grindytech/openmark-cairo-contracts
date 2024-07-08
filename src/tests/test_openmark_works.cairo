@@ -12,8 +12,8 @@ use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::signature::SignerTrait;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address, spy_events, SpyOn, EventAssertions, EventSpy,
-    start_cheat_block_timestamp
+    start_cheat_account_contract_address, spy_events, SpyOn, EventAssertions, EventSpy, Event,
+    start_cheat_block_timestamp,
 };
 
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
@@ -25,7 +25,7 @@ use openmark::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
     openmark::OpenMark::Event as OpenMarkEvent,
-    events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled}, errors as Errors,
+    events::{OrderFilled, OrderCancelled, BidFilled, BidCancelled}, errors as Errors,
 };
 use openmark::tests::common::{
     create_buy, create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
@@ -217,10 +217,41 @@ fn fill_bids_works() {
         assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
 
         // events
-        let expected_event = OpenMarkEvent::BidsFilled(
-            BidsFilled { seller, bids, nftContract: erc721_address, tokenIds, }
+        let expected_event1 = OpenMarkEvent::BidFilled(
+            BidFilled {
+                seller,
+                bidder: *buyers.at(0),
+                bid: *bids.at(0),
+                tokenIds: array![0].span(),
+                askingPrice: unitPrice
+            }
         );
-        spy.assert_emitted(@array![(openmark_address, expected_event)]);
+        let expected_event2 = OpenMarkEvent::BidFilled(
+            BidFilled {
+                seller,
+                bidder: *buyers.at(1),
+                bid: *bids.at(1),
+                tokenIds: array![1, 2].span(),
+                askingPrice: unitPrice
+            }
+        );
+        let expected_event3 = OpenMarkEvent::BidFilled(
+            BidFilled {
+                seller,
+                bidder: *buyers.at(2),
+                bid: *bids.at(2),
+                tokenIds: array![3, 4, 5].span(),
+                askingPrice: unitPrice
+            }
+        );
+        spy
+            .assert_emitted(
+                @array![
+                    (openmark_address, expected_event1),
+                    (openmark_address, expected_event2),
+                    (openmark_address, expected_event3)
+                ]
+            );
     }
 }
 

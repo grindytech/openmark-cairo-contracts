@@ -25,7 +25,7 @@ use openmark::{
     },
     openmark::OpenMark::Event as OpenMarkEvent,
     openmark::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
-    events::{OrderFilled, OrderCancelled, BidsFilled, BidCancelled}, errors as Errors,
+    events::{OrderFilled, OrderCancelled, BidCancelled}, errors as Errors,
 };
 
 pub const TEST_ETH_ADDRESS: felt252 =

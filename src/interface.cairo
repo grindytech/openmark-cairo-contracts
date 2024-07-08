@@ -14,7 +14,7 @@ pub trait IOpenMark<TState> {
         bids: Span<SignedBid>,
         nftContract: ContractAddress,
         tokenIds: Span<u128>,
-        askPrice: u128
+        askingPrice: u128
     );
 
     fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
