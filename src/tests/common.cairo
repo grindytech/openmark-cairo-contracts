@@ -31,12 +31,58 @@ use openmark::{
 pub const TEST_ETH_ADDRESS: felt252 =
     0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
 pub const TEST_ERC721_ADDRESS: felt252 =
-    0x52D3AA5AF7D5A5D024F99EF80645C32B0E94C9CC4645CDA09A36BE2696257AA;
+    0x55FE20463A398171FBDEF9A8DC692E9500D2EBEB8C96D7601D706A253DD8303;
 pub const TEST_SELLER: felt252 = 0x20c29f1c98f3320d56f01c13372c923123c35828bce54f2153aa1cfe61c44f2;
 
 pub const TEST_BUYER1: felt252 = 0x913b4e904ab75554db59b64e1d26116d1ba1c033ce57519b53e35d374ef2dd;
 pub const TEST_BUYER2: felt252 = 0x30f0a5f5311ad0fa15cf1f8c22677c366ad0fd66d9e5ca588957ada394430f8;
 pub const TEST_BUYER3: felt252 = 0x4136107a5d3c1a6cd4c28693ea6a0e5bb9ffa648467629a9900183cf623c40a;
+
+pub fn SELL_SIGNATURES() -> Span<felt252> {
+    array![
+        0x7cdfb9010d274c820449ed9992fe536b5f39bd7f9895ffc4b03890e7d223609,
+        0x4aef0200250ccd0c035b44deed85143afc7cb73bfb231ea313e74049221d1a9
+    ]
+        .span()
+}
+pub fn OFFER_SIGNATURES() -> Span<felt252> {
+    array![
+        0x8e4f2e62cd2f90e03dd3bf11dfb386ebbbf055e73da762ab38ae32a30fe4df,
+        0x52dabad9e0e9a446f1e2ab4d4519ca308008ee43cb1c8e8e4a6f1d358cdca1d
+    ]
+        .span()
+}
+pub fn BID_SIGNATURES() -> (Span<felt252>, Span<felt252>, Span<felt252>) {
+    (
+        array![
+            0x592161e15972fe40f0eb72af55ab43f5348b6a2547a276758920eb6ed805882,
+            0x7c4d82030882a2d980e02b53e39a91822e5e45f2d13a05c4515678bf536bfff
+        ]
+            .span(),
+        array![
+            0x3b7322829b23e6bc68cf7eda509451f43fff6707dd06f48b622796093f17204,
+            0x3d2a4aef4ebac578454e50a5437006a2b7b2cfcb77dda430836830ee437b75e
+        ]
+            .span(),
+        array![
+            0x5d27957bc6b9d4960e284e6b104e1b8992ed0fbad1f316b7c6c7aa9d33e2724,
+            0xbf102f4a8acbe4309742dd1222ef25310e3d82344a1701a64d719aa47c4fd6
+        ]
+            .span(),
+    )
+}
+
+pub fn OPENMARK_NFT_NAME() -> ByteArray {
+    "OpenMark NFT"
+}
+
+pub fn OPENMARK_NFT_SYMBOL() -> ByteArray {
+    "OM"
+}
+
+pub fn OPENMARK_NFT_BASE_URI() -> ByteArray {
+    "https://nft-api.openmark.io/"
+}
 
 pub fn deploy_openmark() -> ContractAddress {
     let contract = declare("OpenMark").unwrap();
@@ -79,16 +125,25 @@ pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
 
 pub fn deploy_erc721() -> ContractAddress {
     let contract = declare("OpenMarkNFT").unwrap();
-
     let mut constructor_calldata = array![];
+    constructor_calldata.append_serde(TEST_SELLER);
+    constructor_calldata.append_serde(OPENMARK_NFT_NAME());
+    constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
+    constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
+
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+
+    println!("nft contract_address: {:?}", contract_address);
     contract_address
 }
 
 pub fn deploy_erc721_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkNFT").unwrap();
-
     let mut constructor_calldata = array![];
+    constructor_calldata.append_serde(TEST_SELLER);
+    constructor_calldata.append_serde(OPENMARK_NFT_NAME());
+    constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
+    constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
 }
@@ -128,7 +183,7 @@ pub fn create_buy() -> (
         start_cheat_caller_address(erc721_address, seller);
 
         let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
-        IOM721Dispatcher.safe_mint(seller, 5);
+        IOM721Dispatcher.safe_batch_mint(seller, 5);
 
         ERC721Dispatcher.approve(openmark_address, 2);
     }
@@ -138,15 +193,11 @@ pub fn create_buy() -> (
 
     ERC20Dispatcher.approve(openmark_address, 3);
 
-    let mut signature = array![
-        0x5228d8ebab110b3038c328892e8293c49ef8777f02de0e094c1a902e91e0271,
-        0x72ac0a9ad3fd5ad9143a720148d174e724aa752dfedc6e4dce767b82cbbd913
-    ];
     let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
 
     (
         order,
-        signature.span(),
+        SELL_SIGNATURES(),
         OpenMarkDispatcher,
         openmark_address,
         ERC721Dispatcher,
@@ -195,7 +246,7 @@ pub fn create_offer() -> (
         start_cheat_caller_address(erc721_address, seller);
 
         let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
-        IOM721Dispatcher.safe_mint(seller, 5);
+        IOM721Dispatcher.safe_batch_mint(seller, 5);
 
         ERC721Dispatcher.approve(openmark_address, token_id.into());
     }
@@ -210,15 +261,11 @@ pub fn create_offer() -> (
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
 
-    let mut signature = array![
-        0x431ba689471acd01b7642947c74f4048beb2232ab214f85c667d9328c5067c0,
-        0x57a29a567e6240506f8d03682f4ac7d970afc3f228da7a96b942306d8b966f1
-    ];
     let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
 
     (
         order,
-        signature.span(),
+        OFFER_SIGNATURES(),
         OpenMarkDispatcher,
         openmark_address,
         ERC721Dispatcher,
@@ -267,7 +314,7 @@ pub fn create_bids() -> (
     {
         let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
         start_cheat_caller_address(erc721_address, seller);
-        IOM721Dispatcher.safe_mint(seller, total_amount);
+        IOM721Dispatcher.safe_batch_mint(seller, total_amount);
 
         let mut token_id = 0_u256;
         while token_id < total_amount {
@@ -297,26 +344,12 @@ pub fn create_bids() -> (
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
 
-    let mut signature1 = array![
-        0x3c0ac7eca879533ffd6de6b6ef8630889a92b6f55844b4aefdb037443018c4d,
-        0x43ce88b1de27d39b8f8a88fc378792cacb39b67099161c835f66c5ddefe7ddd
-    ];
-
-    let mut signature2 = array![
-        0x7798f7bc30a529cc8e028fa9c6051830f2d93443aefe4c27a68d374c19f793b,
-        0x2edf5d0fb4fb82aa11d248be4e86131c61d4f36d9f1582b8cf6beba616a470e
-    ];
-    let mut signature3 = array![
-        0x726519bf95b826c33780898daccbf9fe0c602371ad218dfa8f4ef669fa6f52d,
-        0x2d4ca8c22cff30189e5914db40107a12a2908fc958bbd3bd264c474a075436e
-    ];
-
     let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
-
+    let (sig1, sig2, sig3) = BID_SIGNATURES();
     let signed_bids = array![
-        SignedBid { bidder: buyer1, bid: bid1, signature: signature1.span() },
-        SignedBid { bidder: buyer2, bid: bid2, signature: signature2.span() },
-        SignedBid { bidder: buyer3, bid: bid3, signature: signature3.span() },
+        SignedBid { bidder: buyer1, bid: bid1, signature: sig1 },
+        SignedBid { bidder: buyer2, bid: bid2, signature: sig2 },
+        SignedBid { bidder: buyer3, bid: bid3, signature: sig3 },
     ];
 
     let tokenIds = array![0, 1, 2, 3, 4, 5].span();

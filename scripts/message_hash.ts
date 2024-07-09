@@ -2,7 +2,7 @@ import { BigNumberish, WeierstrassSignatureType, ec } from "starknet";
 import {Order, Bid, OrderType, getOrderHash, getBidHash} from './utils';
 
 const order: Order = {
-  nftContract: "2341477128991891436918010733589720897462482571482832085806644138878406121386",
+  nftContract: "2430974627077655374827931444984473429257053957362777049136691086629713838851",
   tokenId: "2",
   price: "3",
   salt: "4",
@@ -11,7 +11,7 @@ const order: Order = {
 };
 
 const bid: Bid = {
-  nftContract: "2341477128991891436918010733589720897462482571482832085806644138878406121386",
+  nftContract: "2430974627077655374827931444984473429257053957362777049136691086629713838851",
   amount: "1",
   unitPrice: "3",
   salt: "4",

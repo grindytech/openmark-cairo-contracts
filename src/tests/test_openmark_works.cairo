@@ -29,7 +29,7 @@ use openmark::{
 };
 use openmark::tests::common::{
     create_buy, create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
-    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3,
+    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES
 };
 
 #[test]
@@ -81,7 +81,7 @@ fn buy_works() {
 fn accept_offer_works() {
     let (
         order,
-        _signature,
+        signature,
         _OpenMarkDispatcher,
         openmark_address,
         ERC721Dispatcher,
@@ -98,17 +98,13 @@ fn accept_offer_works() {
         start_cheat_caller_address(openmark_address, seller);
         start_cheat_caller_address(eth_address, openmark_address);
 
-        let mut signature = array![
-            0x431ba689471acd01b7642947c74f4048beb2232ab214f85c667d9328c5067c0,
-            0x57a29a567e6240506f8d03682f4ac7d970afc3f228da7a96b942306d8b966f1
-        ];
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
 
         let buyer_before_balance = ERC20Dispatcher.balance_of(buyer);
         let seller_before_balance = ERC20Dispatcher.balance_of(seller);
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
-        OpenMarkDispatcher.accept_offer(buyer, order, signature.span());
+        OpenMarkDispatcher.accept_offer(buyer, order, signature);
 
         let buyer_after_balance = ERC20Dispatcher.balance_of(buyer);
         let seller_after_balance = ERC20Dispatcher.balance_of(seller);
@@ -127,34 +123,18 @@ fn accept_offer_works() {
 #[test]
 #[available_gas(2000000)]
 fn cancel_order_works() {
-    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
-
-    let openmark_address = deploy_openmark();
-    let seller: ContractAddress = TEST_SELLER.try_into().unwrap();
-
-    let order = Order {
-        nftContract: erc721_address,
-        tokenId: 2,
-        price: 3,
-        salt: 4,
-        expiry: 5,
-        option: OrderType::Buy,
-    };
+    let (order, signature, _, openmark_address, _, _, _, _, seller, _,) = create_buy();
 
     {
         start_cheat_caller_address(openmark_address, seller);
 
-        let mut signature = array![
-            0x5228d8ebab110b3038c328892e8293c49ef8777f02de0e094c1a902e91e0271,
-            0x72ac0a9ad3fd5ad9143a720148d174e724aa752dfedc6e4dce767b82cbbd913
-        ];
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
-        OpenMarkDispatcher.cancel_order(order, signature.span());
+        OpenMarkDispatcher.cancel_order(order, signature);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), signature,), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -351,17 +331,15 @@ fn cancel_bid_works() {
     {
         start_cheat_caller_address(openmark_address, buyer1);
 
-        let mut signature = array![
-            0x3c0ac7eca879533ffd6de6b6ef8630889a92b6f55844b4aefdb037443018c4d,
-            0x43ce88b1de27d39b8f8a88fc378792cacb39b67099161c835f66c5ddefe7ddd
-        ];
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
-        OpenMarkDispatcher.cancel_bid(bid, signature.span());
+        let (sig1, _, _) = BID_SIGNATURES();
+
+        OpenMarkDispatcher.cancel_bid(bid, sig1);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), signature.span(),), 1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), sig1,), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -370,3 +348,4 @@ fn cancel_bid_works() {
         spy.assert_emitted(@array![(openmark_address, expected_event)]);
     }
 }
+

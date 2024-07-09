@@ -8,6 +8,7 @@ mod errors;
 mod utils {
     mod openmark_nft;
     mod openmark_coin;
+    mod openmark_factory;
 }
 
 mod mocks {

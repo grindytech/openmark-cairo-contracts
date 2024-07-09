@@ -2,7 +2,7 @@ import { BigNumberish, WeierstrassSignatureType, ec, encode, typedData } from "s
 import {Order, OrderType, getOrderHash} from './utils';
 
 const order: Order = {
-  nftContract: "2341477128991891436918010733589720897462482571482832085806644138878406121386",
+  nftContract: "2430974627077655374827931444984473429257053957362777049136691086629713838851",
   tokenId: "3",
   price: "3",
   salt: "4",
@@ -22,9 +22,6 @@ console.log(`seller: ${seller};`);
 console.log(`buyer: ${buyer};`);
 
 const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, buyerPrivateKey);
-
-console.log("signature r: ", "0x" + signature.r.toString(16));
-console.log("signature s: ", "0x" + signature.r.toString(16));
 
 console.log("signature r: ", "0x" + signature.r.toString(16));
 console.log("signature s: ", "0x" + signature.s.toString(16));
