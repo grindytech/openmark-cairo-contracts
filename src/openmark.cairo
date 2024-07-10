@@ -21,6 +21,9 @@ pub mod OpenMark {
     use openzeppelin::token::erc721::interface::{
         IERC721, IERC721Dispatcher, IERC721DispatcherTrait
     };
+    use openzeppelin::security::ReentrancyGuardComponent;
+
+
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
@@ -36,10 +39,16 @@ pub mod OpenMark {
 
     component!(path: HasherComponent, storage: hasher, event: HasherEvent);
 
+    component!(
+        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent
+    );
+
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
     impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
+    impl InternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
+
 
     pub type Signature = (felt252, felt252);
 
@@ -51,6 +60,7 @@ pub mod OpenMark {
     pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
@@ -64,6 +74,8 @@ pub mod OpenMark {
         eth_token: IERC20Dispatcher,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        reentrancy_guard: ReentrancyGuardComponent::Storage,
         #[substorage(v0)]
         hasher: HasherComponent::Storage, // hash provider
         commission: u32, // OpenMark's commission (per mille)
@@ -86,6 +98,8 @@ pub mod OpenMark {
         fn buy(
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
+            self.reentrancy_guard.start();
+
             // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
@@ -114,11 +128,13 @@ pub mod OpenMark {
 
             // 5. emit events
             self.emit(OrderFilled { seller, buyer: get_caller_address(), order });
+            self.reentrancy_guard.end();
         }
 
         fn accept_offer(
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
+            self.reentrancy_guard.start();
             // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
@@ -146,6 +162,7 @@ pub mod OpenMark {
             self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
             // 5. emit events
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
+            self.reentrancy_guard.end();
         }
 
         fn fill_bids(
@@ -155,6 +172,7 @@ pub mod OpenMark {
             tokenIds: Span<u128>,
             askingPrice: u128
         ) {
+            self.reentrancy_guard.start();
             let hasher = @(self).hasher;
 
             // 1. Verify signatures
@@ -302,6 +320,7 @@ pub mod OpenMark {
                         }
                     );
             }
+            self.reentrancy_guard.end();
         }
 
         fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
