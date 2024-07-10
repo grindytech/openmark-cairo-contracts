@@ -22,11 +22,14 @@ pub mod OpenMark {
         IERC721, IERC721Dispatcher, IERC721DispatcherTrait
     };
     use openzeppelin::security::ReentrancyGuardComponent;
+    use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
 
 
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
+    use starknet::ClassHash;
     use core::num::traits::Zero;
 
     use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
@@ -35,19 +38,27 @@ pub mod OpenMark {
     use openmark::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
     use openmark::errors as Errors;
 
+    /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-
-    component!(path: HasherComponent, storage: hasher, event: HasherEvent);
-
+    /// Reentrancy
     component!(
         path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent
     );
+    /// Upgradeable
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
+    /// Hasher
+    component!(path: HasherComponent, storage: hasher, event: HasherEvent);
 
     #[abi(embed_v0)]
+    /// Ownable
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-    impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
+    /// Reentrancy
     impl InternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
+    /// Upgradeable
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+    /// Hasher
+    impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
 
 
     pub type Signature = (felt252, felt252);
@@ -60,7 +71,10 @@ pub mod OpenMark {
     pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
         ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
@@ -76,6 +90,8 @@ pub mod OpenMark {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         reentrancy_guard: ReentrancyGuardComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
         hasher: HasherComponent::Storage, // hash provider
         commission: u32, // OpenMark's commission (per mille)
@@ -378,6 +394,17 @@ pub mod OpenMark {
             self.ownable.assert_only_owner();
             assert(new_commission < MAX_COMMISSION, Errors::COMMISSION_TOO_HIGH);
             self.commission.write(new_commission);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
+
+            // Replace the class hash upgrading the contract
+            self.upgradeable._upgrade(new_class_hash);
         }
     }
 
