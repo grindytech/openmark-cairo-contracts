@@ -1,13 +1,13 @@
 # OpenMark Cairo Smart Contracts
 
-## Requirements
+## Quickstart
 
 Before you begin, ensure you have the following tools installed:
 
 - [Node (>= v18.17)](https://nodejs.org/en/download/)
 - Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
 
-### Scarb
+### Install Scarb
 
 ```sh
 scarb --version
@@ -42,6 +42,10 @@ curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh
 ```bash
 scarb test
 ```
+
+## API Document
+
+For a detailed API reference, please see the [API.md](./API.md) file.
 
 ## License
 
