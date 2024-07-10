@@ -1,4 +1,4 @@
-import { BigNumberish, typedData } from "starknet";
+import { BigNumberish, StarknetDomain, typedData, TypedData } from "starknet";
 
 const types = {
   StarkNetDomain: [
@@ -46,7 +46,7 @@ export interface Bid {
   expiry: string,
 }
 
-function getDomain(chainId: string): typedData.StarkNetDomain {
+function getDomain(chainId: string): StarknetDomain {
   return {
     name: "OpenMark",
     version: "1",
@@ -64,7 +64,7 @@ export function getBidHash(myStruct: Bid, chainId: string, owner: BigNumberish):
 
 // Needed to reproduce the same structure as:
 // https://github.com/0xs34n/starknet.js/blob/1a63522ef71eed2ff70f82a886e503adc32d4df9/__mocks__/typedDataStructArrayExample.json
-function getOrderData(myStruct: Order, chainId: string): typedData.TypedData {
+function getOrderData(myStruct: Order, chainId: string): TypedData {
   return {
     types,
     primaryType: "Order",
@@ -73,7 +73,7 @@ function getOrderData(myStruct: Order, chainId: string): typedData.TypedData {
   };
 }
 
-function getBidData(myStruct: Bid, chainId: string): typedData.TypedData {
+function getBidData(myStruct: Bid, chainId: string): TypedData {
   return {
     types,
     primaryType: "Bid",

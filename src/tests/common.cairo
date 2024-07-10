@@ -126,6 +126,7 @@ pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
 pub fn deploy_erc721() -> ContractAddress {
     let contract = declare("OpenMarkNFT").unwrap();
     let mut constructor_calldata = array![];
+
     constructor_calldata.append_serde(TEST_SELLER);
     constructor_calldata.append_serde(OPENMARK_NFT_NAME());
     constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
@@ -133,17 +134,23 @@ pub fn deploy_erc721() -> ContractAddress {
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
-    println!("nft contract_address: {:?}", contract_address);
     contract_address
 }
 
 pub fn deploy_erc721_at(addr: ContractAddress) -> ContractAddress {
+    // let name: felt252 = OPENMARK_NFT_NAME();
+    // let symbol: felt252 = OPENMARK_NFT_SYMBOL();
+    // let base_uri: felt252 = OPENMARK_NFT_BASE_URI();
+
+
     let contract = declare("OpenMarkNFT").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(TEST_SELLER);
     constructor_calldata.append_serde(OPENMARK_NFT_NAME());
     constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
     constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
+    println!("constructor_calldata: {:?}", constructor_calldata);
+
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
 }
