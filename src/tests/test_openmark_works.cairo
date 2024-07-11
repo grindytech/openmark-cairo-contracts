@@ -6,7 +6,6 @@ use core::traits::TryInto;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openmark::interface::IOM721TokenDispatcherTrait;
-use openzeppelin::tests::utils::constants::{OWNER, ZERO};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::signature::SignerTrait;
@@ -29,7 +28,7 @@ use openmark::{
 };
 use openmark::tests::common::{
     create_buy, create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
-    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES
+    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES, ZERO
 };
 
 #[test]

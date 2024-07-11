@@ -404,7 +404,7 @@ pub mod OpenMark {
             self.ownable.assert_only_owner();
 
             // Replace the class hash upgrading the contract
-            self.upgradeable._upgrade(new_class_hash);
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 
@@ -502,7 +502,7 @@ pub mod OpenMark {
         }
 
         assert(tokenIds.len().into() <= total_bid_amount, Errors::EXCEED_BID_NFTS);
-        assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFT);
+        assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFTS);
 
         total_bid_amount
     }

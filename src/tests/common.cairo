@@ -5,7 +5,6 @@ use core::traits::TryInto;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openmark::interface::IOM721TokenDispatcherTrait;
-use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::signature::SignerTrait;
@@ -27,6 +26,10 @@ use openmark::{
     openmark::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
     events::{OrderFilled, OrderCancelled, BidCancelled}, errors as Errors,
 };
+
+pub fn ZERO() -> ContractAddress {
+    contract_address_const::<0>()
+}
 
 pub const TEST_ETH_ADDRESS: felt252 =
     0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
@@ -90,7 +93,7 @@ pub fn deploy_openmark() -> ContractAddress {
 
     let mut constructor_calldata = array![];
 
-    constructor_calldata.append_serde(OWNER());
+    constructor_calldata.append_serde(TEST_SELLER);
     constructor_calldata.append_serde(eth_address);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();

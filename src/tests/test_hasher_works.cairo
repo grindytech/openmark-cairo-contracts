@@ -1,7 +1,6 @@
 use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
-use openzeppelin::tests::utils::constants::OWNER;
 use openzeppelin::utils::serde::SerializedAppend;
 
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
