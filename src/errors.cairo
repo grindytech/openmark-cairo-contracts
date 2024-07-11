@@ -40,7 +40,7 @@ pub const NFT_MISMATCH: felt252 = 'OPENMARK: nft mismatch';
 pub const EXCEED_BID_NFTS: felt252 = 'OPENMARK: exceed bid nfts';
 
 /// Number of NFTs provided is less than the minimum required by the bid.
-pub const NOT_ENOUGH_BID_NFT: felt252 = 'OPENMARK: not enough nfts';
+pub const NOT_ENOUGH_BID_NFTS: felt252 = 'OPENMARK: not enough nfts';
 
 /// Commission exceeds maximum allowed.
 pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';

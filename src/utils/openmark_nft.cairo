@@ -59,7 +59,7 @@ pub mod OpenMarkNFT {
     impl OM721TokenImpl of IOM721Token<ContractState> {
         fn safe_mint(ref self: ContractState, to: ContractAddress) -> u256 {
             let token_id = next_token_id(ref self);
-            self.erc721._mint(to, token_id);
+            self.erc721.mint(to, token_id);
             token_id
         }
 
@@ -71,7 +71,7 @@ pub mod OpenMarkNFT {
             let mut i = 0;
             while i < quantity {
                 let token_id = next_token_id(ref self);
-                self.erc721._mint(to, token_id);
+                self.erc721.mint(to, token_id);
                 token_ids.append(token_id);
                 i += 1;
             };
