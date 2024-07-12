@@ -75,6 +75,7 @@ pub mod OpenMark {
         ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,

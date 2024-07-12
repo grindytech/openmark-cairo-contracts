@@ -24,7 +24,7 @@ use openmark::{
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::common::{
-    create_offer, create_buy, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
+    create_offer, create_buy, create_openmark_nft_at, deploy_openmark, TEST_ETH_ADDRESS,
     TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3,
     get_contract_state_for_testing, ZERO
 };
