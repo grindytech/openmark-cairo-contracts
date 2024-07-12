@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[derive(Drop, PartialEq, starknet::Event)]
-pub struct NFTMinted {
+pub struct TokenMinted {
     #[key]
     pub caller: ContractAddress,
     #[key]

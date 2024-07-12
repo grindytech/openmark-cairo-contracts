@@ -10,7 +10,7 @@ pub mod OpenMarkNFT {
     };
     use openzeppelin::access::ownable::OwnableComponent;
 
-    use openmark::token::events::{NFTMinted, TokenURIUpdated};
+    use openmark::token::events::{TokenMinted, TokenURIUpdated};
 
     use starknet::ContractAddress;
     use openmark::token::interface::IOpenMarkNFT;
@@ -48,7 +48,7 @@ pub mod OpenMarkNFT {
         ERC721Event: ERC721Component::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
-        NFTMinted: NFTMinted,
+        TokenMinted: TokenMinted,
         TokenURIUpdated: TokenURIUpdated,
     }
 
@@ -73,7 +73,7 @@ pub mod OpenMarkNFT {
 
             self
                 .emit(
-                    NFTMinted { caller: get_caller_address(), to, token_id: token_index, uri: "" }
+                    TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri: "" }
                 );
         }
 
@@ -81,7 +81,7 @@ pub mod OpenMarkNFT {
             let token_index = next_token_index(ref self);
             self.erc721.mint(to, token_index);
             self.token_uris.write(token_index, uri.clone());
-            self.emit(NFTMinted { caller: get_caller_address(), to, token_id: token_index, uri });
+            self.emit(TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri });
         }
 
 
@@ -94,7 +94,7 @@ pub mod OpenMarkNFT {
                 token_indexs.append(token_index);
                 self
                     .emit(
-                        NFTMinted {
+                        TokenMinted {
                             caller: get_caller_address(), to, token_id: token_index, uri: ""
                         }
                     );
@@ -115,7 +115,7 @@ pub mod OpenMarkNFT {
                     self.token_uris.write(token_index, uris.at(i).clone());
                     self
                         .emit(
-                            NFTMinted {
+                            TokenMinted {
                                 caller: get_caller_address(),
                                 to,
                                 token_id: token_index,

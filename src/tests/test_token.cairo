@@ -17,7 +17,7 @@ use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_
 
 use openmark::{
     token::interface::{IOpenMarkNFTDispatcher, IOpenMarkNFTDispatcherTrait},
-    token::events::{NFTMinted, TokenURIUpdated},
+    token::events::{TokenMinted, TokenURIUpdated},
     token::openmark_nft::OpenMarkNFT::Event as NFTEvents,
 };
 use openmark::tests::common::{create_openmark_nft, TEST_BUYER1, TEST_SELLER};
@@ -40,8 +40,8 @@ fn safe_mint_works() {
     assert_eq!(ERC721.owner_of(0), to);
     assert_eq!(ERC721.owner_of(1), to);
 
-    let expected_event = NFTEvents::NFTMinted(
-        NFTMinted { caller: owner, to, token_id: 1, uri: "" }
+    let expected_event = NFTEvents::TokenMinted(
+        TokenMinted { caller: owner, to, token_id: 1, uri: "" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -62,8 +62,8 @@ fn safe_mint_with_uri_works() {
 
     assert_eq!(ERC721.owner_of(0), to);
 
-    let expected_event = NFTEvents::NFTMinted(
-        NFTMinted { caller: owner, to, token_id: 0, uri: "hello" }
+    let expected_event = NFTEvents::TokenMinted(
+        TokenMinted { caller: owner, to, token_id: 0, uri: "hello" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -84,8 +84,8 @@ fn safe_batch_mint_works() {
 
     assert_eq!(ERC721.owner_of(9), to);
 
-    let expected_event = NFTEvents::NFTMinted(
-        NFTMinted { caller: owner, to, token_id: 9, uri: "" }
+    let expected_event = NFTEvents::TokenMinted(
+        TokenMinted { caller: owner, to, token_id: 9, uri: "" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -107,8 +107,8 @@ fn safe_batch_mint_with_uris_works() {
 
     assert_eq!(ERC721.owner_of(2), to);
 
-    let expected_event = NFTEvents::NFTMinted(
-        NFTMinted { caller: owner, to, token_id: 2, uri: "ccc" }
+    let expected_event = NFTEvents::TokenMinted(
+        TokenMinted { caller: owner, to, token_id: 2, uri: "ccc" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }

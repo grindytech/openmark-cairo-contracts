@@ -14,7 +14,7 @@ Mints a new token to the specified address.
 - `to` (ContractAddress): The address to receive the newly minted token.
 
 #### Events
-- `NFTMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted.
+- `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted.
 
 #### Example
 ```rust
@@ -32,7 +32,7 @@ Mints a new token with a specific URI to the specified address.
 - `uri` (ByteArray): The URI to assign to the newly minted token.
 
 #### Events
-- `NFTMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted with a URI.
+- `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted with a URI.
 
 #### Example
 ```rust
@@ -50,7 +50,7 @@ Mints multiple tokens to the specified address.
 - `quantity` (u256): The number of tokens to mint.
 
 #### Events
-- `NFTMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
+- `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
 
 #### Example
 ```rust
@@ -68,7 +68,7 @@ Mints multiple tokens with specific URIs to the specified address.
 - `uris` (Span<ByteArray>): An array of URIs to assign to the newly minted tokens.
 
 #### Events
-- `NFTMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
+- `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
 
 #### Example
 ```rust
