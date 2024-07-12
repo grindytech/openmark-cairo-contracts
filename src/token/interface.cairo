@@ -17,4 +17,6 @@ pub trait IOpenMarkNFT<T> {
 
     fn set_token_uri(ref self: T, token_id: u256, uri: ByteArray);
     fn get_token_uri(self: @T, token_id: u256) -> ByteArray;
+
+    fn set_base_uri(ref self: T, base_uri: ByteArray);
 }

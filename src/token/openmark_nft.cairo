@@ -41,7 +41,7 @@ pub mod OpenMarkNFT {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -142,6 +142,11 @@ pub mod OpenMarkNFT {
             } else {
                 IERC721Metadata::token_uri(self.erc721, token_id)
             }
+        }
+
+        fn set_base_uri(ref self: ContractState, base_uri: ByteArray) {
+            self.ownable.assert_only_owner();
+            self.erc721._set_base_uri(base_uri);
         }
     }
 

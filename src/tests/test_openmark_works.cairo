@@ -26,7 +26,7 @@ use openmark::{
     core::events::{OrderFilled, BidFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::common::{
-    create_buy, create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
+    create_buy, create_offer, create_bids, create_openmark_nft_at, deploy_openmark, TEST_ETH_ADDRESS,
     TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES, ZERO
 };
 
@@ -319,7 +319,7 @@ fn fill_bids_partial_works() {
 #[test]
 #[available_gas(2000000)]
 fn cancel_bid_works() {
-    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
 
     let openmark_address = deploy_openmark();
     let buyer1: ContractAddress = TEST_BUYER1.try_into().unwrap();

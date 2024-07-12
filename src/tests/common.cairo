@@ -126,7 +126,7 @@ pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_erc721() -> ContractAddress {
+pub fn create_openmark_nft() -> ContractAddress {
     let contract = declare("OpenMarkNFT").unwrap();
     let mut constructor_calldata = array![];
 
@@ -140,7 +140,7 @@ pub fn deploy_erc721() -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_erc721_at(addr: ContractAddress) -> ContractAddress {
+pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkNFT").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(TEST_SELLER);
@@ -163,7 +163,7 @@ pub fn create_buy() -> (
     ContractAddress,
     ContractAddress,
 ) {
-    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
@@ -224,7 +224,7 @@ pub fn create_offer() -> (
     ContractAddress,
     ContractAddress,
 ) {
-    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
@@ -294,7 +294,7 @@ pub fn create_bids() -> (
     Span<u128>,
     u128
 ) {
-    let erc721_address: ContractAddress = deploy_erc721_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
