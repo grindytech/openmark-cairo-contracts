@@ -5,7 +5,7 @@ mod OpenMarkFactory {
     use openzeppelin::utils::serde::SerializedAppend;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
-    use openmark::interface::IOpenMarkFactory;
+    use openmark::token::interface::IOpenMarkFactory;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 

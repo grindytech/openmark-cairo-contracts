@@ -6,7 +6,6 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openmark::interface::IOM721TokenDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::signature::SignerTrait;
@@ -19,13 +18,12 @@ use snforge_std::{
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
 
 use openmark::{
-    primitives::{Order, Bid, OrderType, SignedBid},
-    interface::{
-        IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
-        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher,
+    primitives::types::{OrderType},
+    openmark::interface::{
+        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark
     },
-    openmark::OpenMark::Event as OpenMarkEvent, openmark::OpenMark::{validate_bids, validate_order},
-    events::{OrderFilled, OrderCancelled, BidCancelled}, errors as Errors,
+    openmark::OpenMark::Event as OpenMarkEvent, openmark::OpenMark::{validate_bids},
+    openmark::events::{OrderFilled, OrderCancelled, BidCancelled}, openmark::errors as Errors,
 };
 use openmark::tests::common::{
     create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
