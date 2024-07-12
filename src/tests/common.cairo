@@ -4,7 +4,7 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openmark::token::interface::IOM721TokenDispatcherTrait;
+use openmark::token::interface::IOpenMarkNFTDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::signature::SignerTrait;
@@ -22,7 +22,7 @@ use openmark::{
     hasher::interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
     },
-    token::interface::{IOM721TokenDispatcher}, core::OpenMark::Event as OpenMarkEvent,
+    token::interface::{IOpenMarkNFTDispatcher}, core::OpenMark::Event as OpenMarkEvent,
     core::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
@@ -185,7 +185,7 @@ pub fn create_buy() -> (
     {
         start_cheat_caller_address(erc721_address, seller);
 
-        let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
+        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: erc721_address };
         IOM721Dispatcher.safe_batch_mint(seller, 5);
 
         ERC721Dispatcher.approve(openmark_address, 2);
@@ -248,7 +248,7 @@ pub fn create_offer() -> (
     {
         start_cheat_caller_address(erc721_address, seller);
 
-        let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
+        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: erc721_address };
         IOM721Dispatcher.safe_batch_mint(seller, 5);
 
         ERC721Dispatcher.approve(openmark_address, token_id.into());
@@ -315,7 +315,7 @@ pub fn create_bids() -> (
 
     // create and approve nfts
     {
-        let IOM721Dispatcher = IOM721TokenDispatcher { contract_address: erc721_address };
+        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: erc721_address };
         start_cheat_caller_address(erc721_address, seller);
         IOM721Dispatcher.safe_batch_mint(seller, total_amount);
 
