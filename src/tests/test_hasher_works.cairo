@@ -2,18 +2,21 @@ use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 use openzeppelin::utils::serde::SerializedAppend;
+use openzeppelin::tests::utils;
+use openzeppelin::introspection::interface::ISRC5_ID;
 
-use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
+use starknet::{
+    ContractAddress, ClassHash, contract_address_const, get_tx_info, get_caller_address,
+};
 
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address
+    start_cheat_account_contract_address,
 };
 use openmark::{
-    primitives::{Order, Bid, OrderType, SignedBid},
-    interface::{
+    primitives::types::{Order, Bid, OrderType, SignedBid},
+    hasher::interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
-        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
     },
 };
 
@@ -22,6 +25,8 @@ const TEST_ETH_ADDRESS: felt252 = 0x64948D425BCD9983F21E80124AFE95D1D6987717380B
 const TEST_SIGNER: felt252 = 0x913b4e904ab75554db59b64e1d26116d1ba1c033ce57519b53e35d374ef2dd;
 const TEST_ERC721_ADDRESS: felt252 =
     0x52D3AA5AF7D5A5D024F99EF80645C32B0E94C9CC4645CDA09A36BE2696257AA;
+
+const HASHER_MOCK_CLASS_HASH: felt252 = 0x1626CDE5974259837361B6EB3F3B8D48DEAF7F5BA9C5B14BC1CC2C0B63DFEC3;
 
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
@@ -61,7 +66,11 @@ fn get_bid_hash_works() {
     // This value was computed using StarknetJS
     let message_hash = 0x6508e40ab567863c5d768e30c6d35aa5837c7150588e1794ec76f3675a8d151;
     let bid = Bid {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(), amount: 1, unitPrice: 3, salt: 4, expiry: 5,
+        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        amount: 1,
+        unitPrice: 3,
+        salt: 4,
+        expiry: 5,
     };
 
     start_cheat_caller_address(contract_address, TEST_SIGNER.try_into().unwrap());
@@ -106,7 +115,11 @@ fn verify_bid_works() {
     let contract_address = deploy_mock_hasher();
 
     let bid = Bid {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(), amount: 1, unitPrice: 3, salt: 4, expiry: 5,
+        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        amount: 1,
+        unitPrice: 3,
+        salt: 4,
+        expiry: 5,
     };
 
     let mut signature = array![

@@ -6,7 +6,7 @@ pub mod OpenMarkNFT {
     use openzeppelin::access::ownable::OwnableComponent;
 
     use starknet::ContractAddress;
-    use openmark::interface::IOM721Token;
+    use openmark::token::interface::IOM721Token;
     use starknet::{get_caller_address};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);

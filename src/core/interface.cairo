@@ -1,5 +1,5 @@
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::{Order, Bid, SignedBid};
+use openmark::primitives::types::{Order, Bid, SignedBid};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
@@ -32,30 +32,4 @@ pub trait IOpenMarkProvider<TState> {
 #[starknet::interface]
 pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
-}
-
-
-#[starknet::interface]
-pub trait IOffchainMessageHash<T> {
-    fn get_order_hash(self: @T, order: Order, signer: felt252) -> felt252;
-    fn get_bid_hash(self: @T, bid: Bid, signer: felt252) -> felt252;
-
-    fn verify_order(self: @T, order: Order, signer: felt252, signature: Span<felt252>) -> bool;
-    fn verify_bid(self: @T, bid: Bid, signer: felt252, signature: Span<felt252>) -> bool;
-}
-
-#[starknet::interface]
-pub trait IOM721Token<T> {
-    fn safe_mint(ref self: T, to: ContractAddress) -> u256;
-    fn safe_batch_mint(ref self: T, to: ContractAddress, quantity: u256) -> Span<u256>;
-
-    fn set_base_uri(ref self: T, base_uri: ByteArray);
-    fn get_base_uri(self: @T) -> ByteArray;
-}
-
-#[starknet::interface]
-pub trait IOpenMarkFactory<T> {
-    fn deploy_contract(
-        ref self: T, class_hash: ClassHash, calldata: Span<felt252>, salt: felt252
-    ) -> ContractAddress;
 }

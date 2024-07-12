@@ -1,5 +1,5 @@
 use starknet::{ContractAddress};
-use openmark::primitives::{OrderType, Order, Bid};
+use openmark::primitives::types::{OrderType, Order, Bid};
 use core::array::{ArrayTrait};
 
 

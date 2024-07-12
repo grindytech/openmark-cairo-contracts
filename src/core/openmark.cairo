@@ -32,11 +32,11 @@ pub mod OpenMark {
     use starknet::ClassHash;
     use core::num::traits::Zero;
 
-    use openmark::primitives::{Order, OrderType, IStructHash, Bid, SignedBid};
-    use openmark::interface::{IOpenMark, IOffchainMessageHash, IOpenMarkProvider, IOpenMarkManager};
+    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid};
     use openmark::hasher::HasherComponent;
-    use openmark::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
-    use openmark::errors as Errors;
+    use openmark::core::interface::{IOpenMark, IOpenMarkProvider, IOpenMarkManager};
+    use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
+    use openmark::core::errors as Errors;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);

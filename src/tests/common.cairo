@@ -4,7 +4,7 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openmark::interface::IOM721TokenDispatcherTrait;
+use openmark::token::interface::IOM721TokenDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::signature::SignerTrait;
@@ -17,14 +17,14 @@ use snforge_std::{
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
 
 use openmark::{
-    primitives::{Order, Bid, OrderType, SignedBid},
-    interface::{
-        IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
-        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOM721TokenDispatcher
+    primitives::types::{Order, Bid, OrderType, SignedBid},
+    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark},
+    hasher::interface::{
+        IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
     },
-    openmark::OpenMark::Event as OpenMarkEvent,
-    openmark::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
-    events::{OrderFilled, OrderCancelled, BidCancelled}, errors as Errors,
+    token::interface::{IOM721TokenDispatcher}, core::OpenMark::Event as OpenMarkEvent,
+    core::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
+    core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 
 pub fn ZERO() -> ContractAddress {
@@ -374,7 +374,7 @@ pub fn create_bids() -> (
 }
 
 pub fn get_contract_state_for_testing() -> ContractState {
-    let mut state = openmark::openmark::OpenMark::contract_state_for_testing();
+    let mut state = openmark::core::OpenMark::contract_state_for_testing();
     state.maxBids.write(10);
 
     state

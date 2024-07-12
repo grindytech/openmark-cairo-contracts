@@ -1,5 +1,5 @@
 #[starknet::contract]
-pub mod HasherMock {
+pub(crate) mod HasherMock {
     use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};

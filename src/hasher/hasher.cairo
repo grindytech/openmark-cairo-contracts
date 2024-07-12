@@ -1,5 +1,15 @@
-#[starknet::contract]
-pub mod HasherMock {
+// SPDX-License-Identifier: MIT
+// OpenMark Contracts for Cairo
+
+/// # Hasher Component
+///
+/// This component provides implementations for cryptographic hashing functions,
+/// specifically designed for use with the EIP-712 standard. EIP-712 is used to
+/// create typed structured data hashes, enabling secure and user-friendly
+/// off-chain signature verification. This is crucial for ensuring data integrity
+/// and authenticity in decentralized applications (dApps) on StarkNet.
+#[starknet::component]
+pub mod HasherComponent {
     use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
@@ -8,30 +18,21 @@ pub mod HasherMock {
     use core::ecdsa::check_ecdsa_signature;
     use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
     use openzeppelin::account::utils::{is_valid_stark_signature};
-    use openzeppelin::introspection::src5::SRC5Component;
-
-    component!(path: SRC5Component, storage: src5, event: SRC5Event);
-
-    // SCR5
-    #[abi(embed_v0)]
-    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
     #[storage]
-    struct Storage {
-        #[substorage(v0)]
-        src5: SRC5Component::Storage
-    }
+    struct Storage {}
 
     #[event]
-    #[derive(Drop, starknet::Event)]
-    pub enum Event {
-        #[flat]
-        SRC5Event: SRC5Component::Event
-    }
+    #[derive(Drop, PartialEq, starknet::Event)]
+    pub enum Event {}
 
-    #[abi(embed_v0)]
-    impl Hasher of IOffchainMessageHash<ContractState> {
-        fn get_order_hash(self: @ContractState, order: Order, signer: felt252) -> felt252 {
+    #[embeddable_as(HasherImpl)]
+    impl Hasher<
+        TContractState, +HasComponent<TContractState>
+    > of IOffchainMessageHash<ComponentState<TContractState>> {
+        fn get_order_hash(
+            self: @ComponentState<TContractState>, order: Order, signer: felt252
+        ) -> felt252 {
             let domain = StarknetDomain {
                 name: 'OpenMark', version: 1, chain_id: get_tx_info().unbox().chain_id
             };
@@ -45,7 +46,9 @@ pub mod HasherMock {
             state.finalize()
         }
 
-        fn get_bid_hash(self: @ContractState, bid: Bid, signer: felt252) -> felt252 {
+        fn get_bid_hash(
+            self: @ComponentState<TContractState>, bid: Bid, signer: felt252
+        ) -> felt252 {
             let domain = StarknetDomain {
                 name: 'OpenMark', version: 1, chain_id: get_tx_info().unbox().chain_id
             };
@@ -60,14 +63,20 @@ pub mod HasherMock {
         }
 
         fn verify_order(
-            self: @ContractState, order: Order, signer: felt252, signature: Span<felt252>
+            self: @ComponentState<TContractState>,
+            order: Order,
+            signer: felt252,
+            signature: Span<felt252>
         ) -> bool {
             let hash = self.get_order_hash(order, signer);
             is_valid_stark_signature(hash, signer, signature)
         }
 
         fn verify_bid(
-            self: @ContractState, bid: Bid, signer: felt252, signature: Span<felt252>
+            self: @ComponentState<TContractState>,
+            bid: Bid,
+            signer: felt252,
+            signature: Span<felt252>
         ) -> bool {
             let hash = self.get_bid_hash(bid, signer);
             is_valid_stark_signature(hash, signer, signature)
