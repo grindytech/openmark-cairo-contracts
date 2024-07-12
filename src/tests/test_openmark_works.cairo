@@ -19,11 +19,11 @@ use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_
 
 use openmark::{
     primitives::types::{OrderType, Bid},
-    openmark::interface::{
+    core::interface::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark
     },
-    openmark::OpenMark::Event as OpenMarkEvent, openmark::OpenMark::{validate_order},
-    openmark::events::{OrderFilled, BidFilled, OrderCancelled, BidCancelled}, openmark::errors as Errors,
+    core::OpenMark::Event as OpenMarkEvent, core::OpenMark::{validate_order},
+    core::events::{OrderFilled, BidFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::common::{
     create_buy, create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,

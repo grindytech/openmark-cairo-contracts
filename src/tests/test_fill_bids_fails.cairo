@@ -19,11 +19,11 @@ use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_
 
 use openmark::{
     primitives::types::{OrderType},
-    openmark::interface::{
+    core::interface::{
         IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark
     },
-    openmark::OpenMark::Event as OpenMarkEvent, openmark::OpenMark::{validate_bids},
-    openmark::events::{OrderFilled, OrderCancelled, BidCancelled}, openmark::errors as Errors,
+    core::OpenMark::Event as OpenMarkEvent, core::OpenMark::{validate_bids},
+    core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::common::{
     create_offer, create_bids, deploy_erc721_at, deploy_openmark, TEST_ETH_ADDRESS,
@@ -37,15 +37,15 @@ use openmark::tests::common::{
 fn fill_bids_invalid_signature_len_panics() {
     let (
         mut signed_bids,
-        _bids,
+        _,
         OpenMarkDispatcher,
         openmark_address,
-        _ERC721Dispatcher,
+        _,
         erc721_address,
-        _ERC20Dispatcher,
+        _,
         eth_address,
         seller,
-        _buyers,
+        _,
         tokenIds,
         unitPrice
     ) =

@@ -1,6 +1,6 @@
 pub mod primitives;
 pub mod hasher;
-pub mod openmark;
+pub mod core;
 pub mod token;
 
 pub mod mocks {

@@ -34,9 +34,9 @@ pub mod OpenMark {
 
     use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid};
     use openmark::hasher::HasherComponent;
-    use openmark::openmark::interface::{IOpenMark, IOpenMarkProvider, IOpenMarkManager};
-    use openmark::openmark::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
-    use openmark::openmark::errors as Errors;
+    use openmark::core::interface::{IOpenMark, IOpenMarkProvider, IOpenMarkManager};
+    use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
+    use openmark::core::errors as Errors;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
