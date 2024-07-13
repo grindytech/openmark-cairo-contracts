@@ -108,23 +108,22 @@ pub mod OpenMarkNFT {
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) {
             let mut i = 0;
-            while i < uris
-                .len() {
-                    let token_index = next_token_index(ref self);
-                    self.erc721.mint(to, token_index);
-                    self.token_uris.write(token_index, uris.at(i).clone());
-                    self
-                        .emit(
-                            TokenMinted {
-                                caller: get_caller_address(),
-                                to,
-                                token_id: token_index,
-                                uri: uris.at(i).clone()
-                            }
-                        );
+            while (i < uris.len()) {
+                let token_index = next_token_index(ref self);
+                self.erc721.mint(to, token_index);
+                self.token_uris.write(token_index, uris.at(i).clone());
+                self
+                    .emit(
+                        TokenMinted {
+                            caller: get_caller_address(),
+                            to,
+                            token_id: token_index,
+                            uri: uris.at(i).clone()
+                        }
+                    );
 
-                    i += 1;
-                };
+                i += 1;
+            };
         }
 
         fn set_token_uri(ref self: ContractState, token_id: u256, uri: ByteArray) {

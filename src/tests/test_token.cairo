@@ -154,3 +154,32 @@ fn set_base_uri_works() {
 
     assert_eq!(OpenMarkNFT.get_token_uri(0), "https://api.openmark.io/0");
 }
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('ERC721: unauthorized caller',))]
+fn set_token_uri_unauthorized_panics() {
+    let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.safe_mint(to);
+
+    OpenMarkNFT.set_token_uri(0, "ccc");
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn set_base_uri_unauthorized_panics() {
+    let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    start_cheat_caller_address(contract_address, to);
+    OpenMarkNFT.set_base_uri("ccc");
+}

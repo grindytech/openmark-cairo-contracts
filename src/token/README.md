@@ -16,10 +16,6 @@ Mints a new token to the specified address.
 #### Events
 - `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted.
 
-#### Example
-```rust
-openMarkNFT.safe_mint(receiver_address);
-```
 
 ---
 
@@ -34,11 +30,6 @@ Mints a new token with a specific URI to the specified address.
 #### Events
 - `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when a new token is minted with a URI.
 
-#### Example
-```rust
-openMarkNFT.safe_mint_with_uri(receiver_address, uri);
-```
-
 ---
 
 ### 3. `safe_batch_mint(to: ContractAddress, quantity: u256)`
@@ -52,11 +43,6 @@ Mints multiple tokens to the specified address.
 #### Events
 - `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
 
-#### Example
-```rust
-openMarkNFT.safe_batch_mint(receiver_address, 5);
-```
-
 ---
 
 ### 4. `safe_batch_mint_with_uris(to: ContractAddress, uris: Span<ByteArray>)`
@@ -69,12 +55,6 @@ Mints multiple tokens with specific URIs to the specified address.
 
 #### Events
 - `TokenMinted { caller: ContractAddress, to: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted for each token minted.
-
-#### Example
-```rust
-let uris = vec![uri1, uri2, uri3];
-openMarkNFT.safe_batch_mint_with_uris(receiver_address, uris);
-```
 
 ---
 
@@ -92,11 +72,6 @@ Sets the URI for a specific token.
 #### Events
 - `TokenURIUpdated { who: ContractAddress, token_id: u256, uri: ByteArray }`: Emitted when the token URI is updated.
 
-#### Example
-```rust
-openMarkNFT.set_token_uri(token_id, new_uri);
-```
-
 ---
 
 ### 6. `get_token_uri(token_id: u256) -> ByteArray`
@@ -109,11 +84,6 @@ Returns the URI for a specific token. If a specific URI for `token_id` is not se
 #### Returns
 - `ByteArray`: The URI of the specified token.
 
-#### Example
-```rust
-let uri = openMarkNFT.get_token_uri(token_id);
-```
-
 ---
 
 ### 7. `set_base_uri(base_uri: ByteArray)`
@@ -122,11 +92,6 @@ Sets a new base URI for the token collection. Can only be called by the owner.
 
 #### Parameters
 - `base_uri` (ByteArray): The new base URI to set.
-
-#### Example
-```rust
-openMarkNFT.set_base_uri(new_base_uri);
-```
 
 ---
 

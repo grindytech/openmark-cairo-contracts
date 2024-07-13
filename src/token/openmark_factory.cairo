@@ -30,7 +30,6 @@ mod OpenMarkFactory {
         salt: felt252,
     }
 
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
