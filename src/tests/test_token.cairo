@@ -16,7 +16,10 @@ use snforge_std::{
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
 
 use openmark::{
-    token::interface::{IOpenMarkNFTDispatcher, IOpenMarkNFTDispatcherTrait},
+    token::interface::{
+        IOpenMarkNFTDispatcher, IOpenMarkNFTDispatcherTrait, IOpenMarNFTkMetadataDispatcher,
+        IOpenMarNFTkMetadataDispatcherTrait
+    },
     token::events::{TokenMinted, TokenURIUpdated},
     token::openmark_nft::OpenMarkNFT::Event as NFTEvents,
 };
@@ -130,8 +133,8 @@ fn set_token_uri_works() {
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.set_token_uri(0, "ccc");
 
-
-    assert_eq!(OpenMarkNFT.get_token_uri(0), "ccc");
+    let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
+    assert_eq!(OpenMarkNFT.token_uri(0), "ccc");
 
     let expected_event = NFTEvents::TokenURIUpdated(
         TokenURIUpdated { who: to, token_id: 0, uri: "ccc" }
@@ -151,8 +154,8 @@ fn set_base_uri_works() {
     start_cheat_caller_address(contract_address, owner);
     OpenMarkNFT.safe_mint(to);
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
-
-    assert_eq!(OpenMarkNFT.get_token_uri(0), "https://api.openmark.io/0");
+    let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
+    assert_eq!(OpenMarkNFT.token_uri(0), "https://api.openmark.io/0");
 }
 
 #[test]

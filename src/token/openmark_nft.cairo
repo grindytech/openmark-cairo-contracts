@@ -13,7 +13,9 @@ pub mod OpenMarkNFT {
     use openmark::token::events::{TokenMinted, TokenURIUpdated};
 
     use starknet::ContractAddress;
-    use openmark::token::interface::IOpenMarkNFT;
+    use openmark::token::interface::{
+        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamelOnly
+    };
     use starknet::{get_caller_address};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
@@ -22,8 +24,11 @@ pub mod OpenMarkNFT {
 
     // ERC721 Mixin
     #[abi(embed_v0)]
-    impl ERC721MixinImpl = ERC721Component::ERC721MixinImpl<ContractState>;
+    impl ERC721ImplImpl = ERC721Component::ERC721Impl<ContractState>;
+    impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
@@ -134,7 +139,21 @@ pub mod OpenMarkNFT {
             self.emit(TokenURIUpdated { who: get_caller_address(), token_id, uri, });
         }
 
-        fn get_token_uri(self: @ContractState, token_id: u256) -> ByteArray {
+        fn set_base_uri(ref self: ContractState, base_uri: ByteArray) {
+            self.ownable.assert_only_owner();
+            self.erc721._set_base_uri(base_uri);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl IOpenMarNFTkMetadataImpl of IOpenMarNFTkMetadata<ContractState> {
+        fn name(self: @ContractState) -> ByteArray {
+            self.erc721.ERC721_name.read()
+        }
+        fn symbol(self: @ContractState) -> ByteArray {
+            self.erc721.ERC721_symbol.read()
+        }
+        fn token_uri(self: @ContractState, token_id: u256) -> ByteArray {
             let uri = self.token_uris.read(token_id);
             if (uri.len() != 0) {
                 uri
@@ -142,10 +161,12 @@ pub mod OpenMarkNFT {
                 IERC721Metadata::token_uri(self.erc721, token_id)
             }
         }
+    }
 
-        fn set_base_uri(ref self: ContractState, base_uri: ByteArray) {
-            self.ownable.assert_only_owner();
-            self.erc721._set_base_uri(base_uri);
+    #[abi(embed_v0)]
+    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamelOnly<ContractState> {
+        fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
+            self.token_uri(tokenId)
         }
     }
 
