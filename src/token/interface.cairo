@@ -3,12 +3,14 @@ use starknet::{ClassHash, ContractAddress};
 #[starknet::interface]
 pub trait IOpenMarkFactory<T> {
     fn create_collection(
-        ref self: T,
+       ref self: T,
         owner: ContractAddress,
         name: ByteArray,
         symbol: ByteArray,
         base_uri: ByteArray,
     );
+
+    fn set_openmark_nft(ref self: T, classhash: ClassHash);
 }
 
 #[starknet::interface]

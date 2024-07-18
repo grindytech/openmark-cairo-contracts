@@ -24,6 +24,7 @@ mod OpenMarkFactory {
 
     #[derive(Drop, PartialEq, starknet::Event)]
     struct CollectionCreated {
+        id: u256,
         address: ContractAddress,
         owner: ContractAddress,
         name: ByteArray,
@@ -68,7 +69,12 @@ mod OpenMarkFactory {
 
             let id = next_id(ref self);
             self.factory.write(id, address);
-            self.emit(CollectionCreated { address, owner, name, symbol, base_uri });
+            self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri });
+        }
+
+        fn set_openmark_nft(ref self: ContractState, classhash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.openmark_nft.write(classhash);
         }
     }
 
