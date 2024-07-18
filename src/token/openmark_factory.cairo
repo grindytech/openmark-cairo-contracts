@@ -62,6 +62,31 @@ mod OpenMarkFactory {
 
             return address;
         }
+
+        fn create_collection(
+            ref self: ContractState,
+            class_hash: ClassHash,
+            salt: felt252,
+            owner: felt252,
+            name: felt252,
+            symbol: felt252,
+            base_uri: felt252,
+        ) -> ContractAddress {
+            let deployer: ContractAddress = get_caller_address();
+            let mut _salt: felt252 = salt;
+
+            let calldata: Span<felt252> = array![owner, name, symbol, base_uri].span();
+
+            let (address, _) = core::starknet::syscalls::deploy_syscall(
+                class_hash, _salt, calldata, false
+            )
+                .unwrap_syscall();
+            let id = next_id(ref self);
+            self.factory.write(id, address);
+            self.emit(ContractDeployed { address, deployer, class_hash, calldata, salt });
+
+            return address;
+        }
     }
 
 
