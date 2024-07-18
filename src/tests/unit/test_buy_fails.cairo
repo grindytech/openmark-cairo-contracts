@@ -23,112 +23,110 @@ use openmark::{
     core::OpenMark::Event as OpenMarkEvent, core::OpenMark::{validate_order},
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
-use openmark::tests::common::{
+use openmark::tests::unit::common::{
     create_offer, create_buy, create_openmark_nft_at, deploy_openmark, TEST_ETH_ADDRESS,
     TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3,
     get_contract_state_for_testing, ZERO
 };
 
-
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: invalid sig len',))]
-fn order_invalid_signature_len_panics() {
+fn buy_invalid_signature_len_panics() {
     let (order, _, OpenMarkDispatcher, openmark_address, _, _, _, eth_address, seller, buyer,) =
-        create_offer();
+        create_buy();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(eth_address, buyer);
 
-    OpenMarkDispatcher.accept_offer(buyer, order, array![].span());
+    OpenMarkDispatcher.buy(seller, order, array![].span());
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: sig used',))]
-fn order_signature_used_panics() {
+fn buy_signature_used_panics() {
     let (
         order, signature, OpenMarkDispatcher, openmark_address, _, _, _, eth_address, seller, buyer,
     ) =
-        create_offer();
+        create_buy();
 
-    start_cheat_caller_address(eth_address, openmark_address);
-    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(eth_address, buyer);
+    start_cheat_caller_address(openmark_address, seller);
     OpenMarkDispatcher.cancel_order(order, signature);
 
-    start_cheat_caller_address(openmark_address, seller);
-    OpenMarkDispatcher.accept_offer(buyer, order, signature);
+    start_cheat_caller_address(openmark_address, buyer);
+    OpenMarkDispatcher.buy(seller, order, signature);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: invalid sig',))]
-fn order_invalid_signature_panics() {
+fn buy_invalid_signature_panics() {
     let (order, _, OpenMarkDispatcher, openmark_address, _, _, _, eth_address, seller, buyer,) =
-        create_offer();
+        create_buy();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(eth_address, buyer);
 
-    OpenMarkDispatcher.accept_offer(buyer, order, array![1, 2].span());
+    OpenMarkDispatcher.buy(seller, order, array![1, 2].span());
 }
-
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: sig expired',))]
-fn order_sig_expired_panics() {
+fn buy_sig_expired_panics() {
     let (
         order, signature, OpenMarkDispatcher, openmark_address, _, _, _, eth_address, seller, buyer,
     ) =
-        create_offer();
+        create_buy();
 
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(eth_address, buyer);
     start_cheat_block_timestamp(openmark_address, order.expiry.try_into().unwrap());
-    OpenMarkDispatcher.accept_offer(buyer, order, signature);
+    OpenMarkDispatcher.buy(seller, order, signature);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: invalid order type',))]
-fn order_invalid_order_type_panics() {
-    let (mut order, _, _, _, _, _, _, _, seller, buyer,) = create_buy();
+fn buy_invalid_order_type_panics() {
+    let (mut order, _, _, _, _, _, _, _, seller, buyer,) = create_offer();
 
     let mut state = get_contract_state_for_testing();
-    validate_order(@state, order, seller, buyer, OrderType::Offer);
+    validate_order(@state, order, seller, buyer, OrderType::Buy);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: address is zero',))]
-fn order_seller_is_zero_panics() {
-    let (order, _, _, _, _, _, _, _, _, buyer,) = create_offer();
+fn buy_seller_is_zero_panics() {
+    let (order, _, _, _, _, _, _, _, _, buyer,) = create_buy();
 
     let mut state = get_contract_state_for_testing();
-    validate_order(@state, order, ZERO(), buyer, OrderType::Offer);
+    validate_order(@state, order, ZERO(), buyer, OrderType::Buy);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: seller not owner',))]
-fn order_seller_not_owner_panics() {
-    let (order, _, _, _, ERC721Dispatcher, erc721_address, _, _, seller, buyer,) = create_offer();
+fn buy_seller_not_owner_panics() {
+    let (order, _, _, _, ERC721Dispatcher, erc721_address, _, _, seller, buyer,) = create_buy();
 
     start_cheat_caller_address(erc721_address, seller);
     ERC721Dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
     let mut state = get_contract_state_for_testing();
-    validate_order(@state, order, seller, buyer, OrderType::Offer);
+    validate_order(@state, order, seller, buyer, OrderType::Buy);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: price is zero',))]
-fn order_price_is_zero_panics() {
-    let (mut order, _, _, _, _, _, _, _, seller, buyer,) = create_offer();
+fn buy_price_is_zero_panics() {
+    let (mut order, _, _, _, _, _, _, _, seller, buyer,) = create_buy();
 
     order.price = 0;
     let mut state = get_contract_state_for_testing();
-    validate_order(@state, order, seller, buyer, OrderType::Offer);
+    validate_order(@state, order, seller, buyer, OrderType::Buy);
 }

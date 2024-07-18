@@ -2,7 +2,6 @@
   "name": "openmark",
   "version": "0.0.1",
   "scripts": {
-    "openmark-tests": "ts-node scripts/run-tests.ts",
     "test": "scarb test",
     "compile": "scarb build"
   },
