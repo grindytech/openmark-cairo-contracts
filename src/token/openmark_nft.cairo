@@ -154,12 +154,18 @@ pub mod OpenMarkNFT {
             self.erc721.ERC721_symbol.read()
         }
         fn token_uri(self: @ContractState, token_id: u256) -> ByteArray {
-            let uri = self.token_uris.read(token_id);
-            if (uri.len() != 0) {
-                uri
-            } else {
-                IERC721Metadata::token_uri(self.erc721, token_id)
+            self.erc721._require_owned(token_id);
+
+            let token_uri = self.token_uris.read(token_id);
+            let base_uri = self.erc721._base_uri();
+
+            if base_uri.len() == 0 {
+                return token_uri;
             }
+            if token_uri.len() > 0 {
+                return base_uri + token_uri;
+            }
+            IERC721Metadata::token_uri(self.erc721, token_id)
         }
     }
 

@@ -121,9 +121,10 @@ fn safe_batch_mint_with_uris_works() {
 fn set_token_uri_works() {
     let contract_address = create_openmark_nft();
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-
     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.set_base_uri("");
 
     let mut spy = spy_events(SpyOn::One(contract_address));
 
@@ -156,6 +157,38 @@ fn set_base_uri_works() {
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
     let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(OpenMarkNFT.token_uri(0), "https://api.openmark.io/0");
+}
+
+#[test]
+#[available_gas(2000000)]
+fn get_token_uri_works() {
+    let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    start_cheat_caller_address(contract_address, owner);
+
+    // 1. Set the base URI and mint a token without a specific URI
+    // If only base URI is set, the token URI should concatenate the base URI and token ID
+    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.set_base_uri("https://api.openmark.io/");
+    let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
+    assert_eq!(MetadataDispatcher.token_uri(0), "https://api.openmark.io/0");
+
+    // 2. Set an empty base URI and mint a token with a specific URI
+    // If there is no base URI, the token URI should be the specific URI set during minting
+    OpenMarkNFT.set_base_uri("");
+    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN1");
+    let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
+    assert_eq!(MetadataDispatcher.token_uri(1), "TOKEN1");
+
+    // 3. Set the base URI again and mint a token with a specific URI
+    // If both base URI and specific token URI are set, the token URI should concatenate the base URI and specific token URI
+    OpenMarkNFT.set_base_uri("https://api.openmark.io/");
+    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN2");
+    let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
+    assert_eq!(MetadataDispatcher.token_uri(2), "https://api.openmark.io/TOKEN2");
 }
 
 #[test]
