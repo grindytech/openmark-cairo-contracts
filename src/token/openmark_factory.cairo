@@ -18,16 +18,17 @@ mod OpenMarkFactory {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         factory: LegacyMap<u256, ContractAddress>,
-        id: u256,
+        contract_index: u256,
+        openmark_nft: ClassHash,
     }
 
     #[derive(Drop, PartialEq, starknet::Event)]
-    struct ContractDeployed {
+    struct CollectionCreated {
         address: ContractAddress,
-        deployer: ContractAddress,
-        class_hash: ClassHash,
-        calldata: Span<felt252>,
-        salt: felt252,
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        base_uri: ByteArray,
     }
 
     #[event]
@@ -35,65 +36,47 @@ mod OpenMarkFactory {
     enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
-        ContractDeployed: ContractDeployed
+        CollectionCreated: CollectionCreated
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        self.ownable.initializer(get_caller_address());
-        self.id.write(0);
+    fn constructor(ref self: ContractState, owner: ContractAddress, openmark_nft: ClassHash) {
+        self.ownable.initializer(owner);
+        self.openmark_nft.write(openmark_nft);
+        self.contract_index.write(0);
     }
 
     #[abi(embed_v0)]
     impl OpenMarkFactoryImpl of IOpenMarkFactory<ContractState> {
-        fn deploy_contract(
-            ref self: ContractState, class_hash: ClassHash, calldata: Span<felt252>, salt: felt252
-        ) -> ContractAddress {
-            let deployer: ContractAddress = get_caller_address();
-            let mut _salt: felt252 = salt;
-
-            let (address, _) = core::starknet::syscalls::deploy_syscall(
-                class_hash, _salt, calldata, false
-            )
-                .unwrap_syscall();
-            let id = next_id(ref self);
-            self.factory.write(id, address);
-            self.emit(ContractDeployed { address, deployer, class_hash, calldata, salt });
-
-            return address;
-        }
-
         fn create_collection(
             ref self: ContractState,
-            class_hash: ClassHash,
-            salt: felt252,
-            owner: felt252,
-            name: felt252,
-            symbol: felt252,
-            base_uri: felt252,
-        ) -> ContractAddress {
-            let deployer: ContractAddress = get_caller_address();
-            let mut _salt: felt252 = salt;
-
-            let calldata: Span<felt252> = array![owner, name, symbol, base_uri].span();
+            owner: ContractAddress,
+            name: ByteArray,
+            symbol: ByteArray,
+            base_uri: ByteArray,
+        ) {
+            let mut constructor_calldata = ArrayTrait::new();
+            owner.serialize(ref constructor_calldata);
+            name.serialize(ref constructor_calldata);
+            symbol.serialize(ref constructor_calldata);
+            base_uri.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
-                class_hash, _salt, calldata, false
+                self.openmark_nft.read(), 0, constructor_calldata.span(), false
             )
                 .unwrap_syscall();
+
             let id = next_id(ref self);
             self.factory.write(id, address);
-            self.emit(ContractDeployed { address, deployer, class_hash, calldata, salt });
-
-            return address;
+            self.emit(CollectionCreated { address, owner, name, symbol, base_uri });
         }
     }
 
 
     /// Returns the current id and increments it for the next use.
     fn next_id(ref self: ContractState) -> u256 {
-        let current_id = self.id.read();
-        self.id.write(current_id + 1);
+        let current_id = self.contract_index.read();
+        self.contract_index.write(current_id + 1);
         current_id
     }
 }

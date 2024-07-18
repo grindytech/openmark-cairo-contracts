@@ -2,19 +2,13 @@ use starknet::{ClassHash, ContractAddress};
 
 #[starknet::interface]
 pub trait IOpenMarkFactory<T> {
-    fn deploy_contract(
-        ref self: T, class_hash: ClassHash, calldata: Span<felt252>, salt: felt252
-    ) -> ContractAddress;
-
     fn create_collection(
         ref self: T,
-        class_hash: ClassHash,
-        salt: felt252,
-        owner: felt252,
-        name: felt252,
-        symbol: felt252,
-        base_uri: felt252,
-    ) -> ContractAddress;
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        base_uri: ByteArray,
+    );
 }
 
 #[starknet::interface]
