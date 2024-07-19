@@ -23,7 +23,7 @@ use openmark::{
     token::events::{TokenMinted, TokenURIUpdated},
     token::openmark_nft::OpenMarkNFT::Event as NFTEvents,
 };
-use openmark::tests::common::{create_openmark_nft, TEST_BUYER1, TEST_SELLER};
+use openmark::tests::unit::common::{create_openmark_nft, TEST_BUYER1, TEST_SELLER};
 
 #[test]
 #[available_gas(2000000)]
