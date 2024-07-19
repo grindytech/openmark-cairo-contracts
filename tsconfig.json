@@ -2,13 +2,18 @@
   "compilerOptions": {
     "module": "CommonJS",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": false,
     "target": "ES2020",
     "moduleResolution": "node",
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "*": ["node_modules/*", "src/types/*"]
+      "*": [
+        "node_modules/*",
+        "src/types/*"
+      ]
     }
   },
-  "include": ["scripts-ts/**/*"]
+  "include": ["src/**/*.ts"]
 }
