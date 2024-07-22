@@ -3,6 +3,8 @@ use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 use core::fmt::Debug;
 
+pub type Signature = (felt252, felt252);
+
 pub const ETH_CONTRACT_ADDRESS: felt252 =
     0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7;
 
@@ -88,4 +90,8 @@ impl StructHashBid of IStructHash<Bid> {
         state = state.update_with(6);
         state.finalize()
     }
+}
+
+pub trait ISignatureHash {
+    fn hash_struct() -> felt252;
 }

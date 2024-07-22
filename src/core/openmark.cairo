@@ -12,7 +12,7 @@
 
 #[starknet::contract]
 pub mod OpenMark {
-    use core::option::OptionTrait;
+    // use core::option::OptionTrait;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
@@ -25,6 +25,8 @@ pub mod OpenMark {
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
 
+    use core::poseidon::PoseidonTrait;
+    use core::hash::{HashStateTrait, HashStateExTrait};
 
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
@@ -32,7 +34,7 @@ pub mod OpenMark {
     use starknet::ClassHash;
     use core::num::traits::Zero;
 
-    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid};
+    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid, Signature};
     use openmark::hasher::HasherComponent;
     use openmark::core::interface::{IOpenMark, IOpenMarkProvider, IOpenMarkManager};
     use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
@@ -60,11 +62,8 @@ pub mod OpenMark {
     /// Hasher
     impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
 
-
-    pub type Signature = (felt252, felt252);
-
-    pub const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
-    pub const PERMYRIAD: u32 = 1000;
+    const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
+    const PERMYRIAD: u32 = 1000;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -97,8 +96,8 @@ pub mod OpenMark {
         hasher: HasherComponent::Storage, // hash provider
         commission: u32, // OpenMark's commission (per mille)
         maxBids: u32, // Maximum number of bids allowed in fillBids
-        usedSignatures: LegacyMap<Signature, bool>, // store used order signatures
-        partialBidSignatures: LegacyMap<Signature, u128>, // store partial bid signatures
+        usedSignatures: LegacyMap<felt252, bool>, // store used order signatures
+        partialBidSignatures: LegacyMap<felt252, u128>, // store partial bid signatures
     }
 
     #[constructor]
@@ -120,7 +119,7 @@ pub mod OpenMark {
             // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
-                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read(hash((*signature.at(0), *signature.at(1)))),
                 Errors::SIGNATURE_USED
             );
             assert(
@@ -141,7 +140,7 @@ pub mod OpenMark {
             self.eth_token.read().transfer(get_contract_address(), commission);
 
             // 4. change storage
-            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write(hash((*signature.at(0), *signature.at(1))), true);
 
             // 5. emit events
             self.emit(OrderFilled { seller, buyer: get_caller_address(), order });
@@ -155,7 +154,7 @@ pub mod OpenMark {
             // 1. verify signature
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(
-                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read(hash((*signature.at(0), *signature.at(1)))),
                 Errors::SIGNATURE_USED
             );
             assert(
@@ -176,7 +175,7 @@ pub mod OpenMark {
             self.eth_token.read().transfer_from(buyer, get_contract_address(), commission);
 
             // 4. change storage
-            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write(hash((*signature.at(0), *signature.at(1))), true);
             // 5. emit events
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
@@ -199,7 +198,7 @@ pub mod OpenMark {
                     let signature = (*bids.at(i)).signature;
                     assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
                     assert(
-                        !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
+                        !self.usedSignatures.read(hash((*signature.at(0), *signature.at(1)))),
                         Errors::SIGNATURE_USED
                     );
 
@@ -227,7 +226,7 @@ pub mod OpenMark {
                 let mut i = 0;
                 while (i < bids.len() - 1) {
                     let signed_bid = (*bids.at(i));
-                    let signature = (*signed_bid.signature.at(0), *signed_bid.signature.at(1));
+                    let signature = hash((*signed_bid.signature.at(0), *signed_bid.signature.at(1)));
                     let bid = signed_bid.bid;
 
                     let mut amount = bid.amount;
@@ -284,7 +283,7 @@ pub mod OpenMark {
             // 4. Separate logic for last bidder to handle remaining NFTs
             {
                 let signed_bid = *bids.at(bids.len() - 1);
-                let signature = (*signed_bid.signature.at(0), *signed_bid.signature.at(1));
+                let signature = hash((*signed_bid.signature.at(0), *signed_bid.signature.at(1)));
 
                 let remaining_amount = total_bid_amount - tokenIds.len().into();
                 let mut amount = signed_bid.bid.amount;
@@ -344,7 +343,7 @@ pub mod OpenMark {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
-                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read(hash((*signature.at(0), *signature.at(1)))),
                 Errors::SIGNATURE_USED
             );
 
@@ -352,7 +351,7 @@ pub mod OpenMark {
                 self.hasher.verify_order(order, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
-            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write(hash((*signature.at(0), *signature.at(1))), true);
 
             self.emit(OrderCancelled { who: get_caller_address(), order, });
         }
@@ -361,7 +360,7 @@ pub mod OpenMark {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
             assert(
-                !self.usedSignatures.read((*signature.at(0), *signature.at(1))),
+                !self.usedSignatures.read(hash((*signature.at(0), *signature.at(1)))),
                 Errors::SIGNATURE_USED
             );
 
@@ -369,7 +368,7 @@ pub mod OpenMark {
                 self.hasher.verify_bid(bid, get_caller_address().into(), signature),
                 Errors::INVALID_SIGNATURE
             );
-            self.usedSignatures.write((*signature.at(0), *signature.at(1)), true);
+            self.usedSignatures.write(hash((*signature.at(0), *signature.at(1))), true);
             self.emit(BidCancelled { who: get_caller_address(), bid, });
         }
     }
@@ -385,7 +384,7 @@ pub mod OpenMark {
         }
 
         fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
-            self.usedSignatures.read((*signature.at(0), *signature.at(1)))
+            self.usedSignatures.read(hash((*signature.at(0), *signature.at(1))))
         }
     }
 
@@ -483,7 +482,7 @@ pub mod OpenMark {
             let mut i = 0;
             while (i < bids.len()) {
                 let bid = (*bids.at(i)).bid;
-                let signature = (*(*bids.at(i)).signature.at(0), *(*bids.at(i)).signature.at(1));
+                let signature = hash((*(*bids.at(i)).signature.at(0), *(*bids.at(i)).signature.at(1)));
 
                 let mut amount = bid.amount;
                 {
@@ -506,5 +505,10 @@ pub mod OpenMark {
         assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFTS);
 
         total_bid_amount
+    }
+
+    fn hash(signsture: Signature) -> felt252 {
+        let hash = PoseidonTrait::new().update_with(signsture).finalize();
+        hash
     }
 }
