@@ -13,11 +13,17 @@ pub mod HasherComponent {
     use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
+    
+    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
+    use openzeppelin::account::utils::{is_valid_stark_signature};
+
+
+    // Hash
+    use core::poseidon::PoseidonTrait;
+    use core::poseidon::poseidon_hash_span;
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::ecdsa::check_ecdsa_signature;
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
-    use openzeppelin::account::utils::{is_valid_stark_signature};
 
     #[storage]
     struct Storage {}
@@ -80,6 +86,14 @@ pub mod HasherComponent {
         ) -> bool {
             let hash = self.get_bid_hash(bid, signer);
             is_valid_stark_signature(hash, signer, signature)
+        }
+
+        fn hash_array(
+            self: @ComponentState<TContractState>,
+            value: Span<felt252>
+        ) -> felt252 {
+            let hash = PoseidonTrait::new().update(poseidon_hash_span(value)).finalize();
+            hash
         }
     }
 }

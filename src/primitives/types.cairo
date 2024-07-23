@@ -89,3 +89,7 @@ impl StructHashBid of IStructHash<Bid> {
         state.finalize()
     }
 }
+
+pub trait ISignatureHash {
+    fn hash_struct() -> felt252;
+}

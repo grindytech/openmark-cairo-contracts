@@ -18,7 +18,10 @@ use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_
 
 use openmark::{
     primitives::types::{Order, Bid, OrderType, SignedBid},
-    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark},
+    core::interface::{
+        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOpenMarkProvider,
+        IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
+    },
     hasher::interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
     },
@@ -102,6 +105,14 @@ pub fn deploy_openmark() -> ContractAddress {
 }
 
 
+pub fn create_mock_hasher() -> IOffchainMessageHashDispatcher {
+    let contract = declare("HasherMock").unwrap();
+    let mut constructor_calldata = array![];
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    let hasher_contract = IOffchainMessageHashDispatcher { contract_address };
+    hasher_contract
+}
+
 pub fn deploy_erc20() -> ContractAddress {
     let contract = declare("OpenMarkCoin").unwrap();
     let mut constructor_calldata = array![];
@@ -152,18 +163,17 @@ pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
 }
 
 pub fn create_buy() -> (
-    Order,
-    Span<felt252>,
-    IOpenMarkDispatcher,
-    ContractAddress,
-    IERC721Dispatcher,
-    ContractAddress,
-    IERC20Dispatcher,
-    ContractAddress,
-    ContractAddress,
-    ContractAddress,
+    Order, // order 
+    Span<felt252>, // signature
+    ContractAddress, // openmark address
+    ContractAddress, // nft address
+    ContractAddress, // payment token
+    ContractAddress, // seller
+    ContractAddress, // buyer
 ) {
-    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(
+        TEST_ERC721_ADDRESS.try_into().unwrap()
+    );
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
@@ -196,16 +206,11 @@ pub fn create_buy() -> (
 
     ERC20Dispatcher.approve(openmark_address, 3);
 
-    let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
-
     (
         order,
         SELL_SIGNATURES(),
-        OpenMarkDispatcher,
         openmark_address,
-        ERC721Dispatcher,
         erc721_address,
-        ERC20Dispatcher,
         eth_address,
         seller,
         buyer,
@@ -214,17 +219,16 @@ pub fn create_buy() -> (
 
 pub fn create_offer() -> (
     Order,
-    Span<felt252>,
-    IOpenMarkDispatcher,
-    ContractAddress,
-    IERC721Dispatcher,
-    ContractAddress,
-    IERC20Dispatcher,
-    ContractAddress,
-    ContractAddress,
-    ContractAddress,
+    Span<felt252>, // signature
+    ContractAddress, // openmark address
+    ContractAddress, // nft address
+    ContractAddress, // payment token
+    ContractAddress, // seller
+    ContractAddress, // buyer
 ) {
-    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(
+        TEST_ERC721_ADDRESS.try_into().unwrap()
+    );
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
@@ -264,16 +268,11 @@ pub fn create_offer() -> (
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
 
-    let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
-
     (
         order,
         OFFER_SIGNATURES(),
-        OpenMarkDispatcher,
         openmark_address,
-        ERC721Dispatcher,
         erc721_address,
-        ERC20Dispatcher,
         eth_address,
         seller,
         buyer,
@@ -281,20 +280,18 @@ pub fn create_offer() -> (
 }
 
 pub fn create_bids() -> (
-    Span<SignedBid>,
-    Span<Bid>,
-    IOpenMarkDispatcher,
-    ContractAddress,
-    IERC721Dispatcher,
-    ContractAddress,
-    IERC20Dispatcher,
-    ContractAddress,
-    ContractAddress,
-    Span<ContractAddress>,
-    Span<u128>,
-    u128
+    Span<SignedBid>, // signed bids
+    ContractAddress, // openmark address
+    ContractAddress, // nft address
+    ContractAddress, // token payment address
+    ContractAddress, // seller
+    Span<ContractAddress>, // buyers
+    Span<u128>, // sell nft token ids
+    u128 // asking price
 ) {
-    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(
+        TEST_ERC721_ADDRESS.try_into().unwrap()
+    );
     let eth_address: ContractAddress = TEST_ETH_ADDRESS.try_into().unwrap();
 
     let openmark_address = deploy_openmark();
@@ -343,11 +340,6 @@ pub fn create_bids() -> (
         ERC20Dispatcher.approve(openmark_address, approve_amount);
     }
 
-    // accept bids and verify
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
-
-    let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
     let (sig1, sig2, sig3) = BID_SIGNATURES();
     let signed_bids = array![
         SignedBid { bidder: buyer1, bid: bid1, signature: sig1 },
@@ -359,12 +351,8 @@ pub fn create_bids() -> (
 
     (
         signed_bids.span(),
-        array![bid1, bid2, bid3].span(),
-        OpenMarkDispatcher,
         openmark_address,
-        ERC721Dispatcher,
         erc721_address,
-        ERC20Dispatcher,
         eth_address,
         seller,
         array![buyer1, buyer2, buyer3].span(),
