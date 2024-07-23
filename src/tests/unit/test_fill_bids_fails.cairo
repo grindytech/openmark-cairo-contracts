@@ -26,9 +26,7 @@ use openmark::{
     core::OpenMark::Event as OpenMarkEvent,
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
-use openmark::tests::unit::common::{
-    create_bids, get_contract_state_for_testing, ZERO,
-};
+use openmark::tests::unit::common::{create_bids, get_contract_state_for_testing, ZERO,};
 
 #[test]
 #[available_gas(2000000)]
@@ -299,24 +297,21 @@ fn fill_bids_nft_mismatch_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: exceed bid nfts',))]
 fn fill_bids_exceed_bid_nfts_panics() {
-    let (mut signed_bids, openmark_address, erc721_address, eth_address, seller, _, _, unitPrice) =
-        create_bids();
+    let (mut signed_bids, openmark_address, _, eth_address, seller, _, _, _) = create_bids();
 
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
     let mut new_tokenIds = array![0, 1, 2, 3, 4, 5, 6];
-
-    openmark.validate_bids(signed_bids, seller, erc721_address, new_tokenIds.span(), unitPrice);
+    openmark.calculate_bid_amounts(signed_bids, new_tokenIds.span());
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: not enough nfts',))]
 fn fill_bids_not_enough_nfts_panics() {
-    let (mut signed_bids, openmark_address, erc721_address, eth_address, seller, _, _, unitPrice) =
-        create_bids();
+    let (mut signed_bids, openmark_address, _, eth_address, seller, _, _, _) = create_bids();
 
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
@@ -324,7 +319,7 @@ fn fill_bids_not_enough_nfts_panics() {
 
     let mut new_tokenIds = array![0, 1, 2];
 
-    openmark.validate_bids(signed_bids, seller, erc721_address, new_tokenIds.span(), unitPrice);
+    openmark.calculate_bid_amounts(signed_bids, new_tokenIds.span());
 }
 
 #[test]

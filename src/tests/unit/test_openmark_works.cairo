@@ -180,7 +180,6 @@ fn fill_bids_works() {
             bidder: *buyers.at(0),
             bid: (*signed_bids.at(0)).bid,
             tokenIds: array![0].span(),
-            askingPrice: unitPrice
         }
     );
     let expected_event2 = OpenMarkEvent::BidFilled(
@@ -189,7 +188,6 @@ fn fill_bids_works() {
             bidder: *buyers.at(1),
             bid: (*signed_bids.at(1)).bid,
             tokenIds: array![1, 2].span(),
-            askingPrice: unitPrice
         }
     );
     let expected_event3 = OpenMarkEvent::BidFilled(
@@ -198,7 +196,6 @@ fn fill_bids_works() {
             bidder: *buyers.at(2),
             bid: (*signed_bids.at(2)).bid,
             tokenIds: array![3, 4, 5].span(),
-            askingPrice: unitPrice
         }
     );
     spy

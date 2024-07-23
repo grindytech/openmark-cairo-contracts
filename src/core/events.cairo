@@ -31,7 +31,6 @@ pub struct OrderCancelled {
 /// - `bidder`: The address of the bidder who placed the bid.
 /// - `bid`: The details of the bid, encapsulated in the `Bid` struct.
 /// - `tokenIds`: A list of token IDs were traded.
-/// - `askingPrice`: The price at which the bid was accepted.
 ///
 /// This event provides key information about the transaction, enabling listeners to
 /// track successful bids and their associated details.
@@ -45,8 +44,6 @@ pub struct BidFilled {
     pub bid: Bid,
     #[key]
     pub tokenIds: Span<u128>,
-    #[key]
-    pub askingPrice: u128,
 }
 
 /// Emitted when a bid is canceled.
