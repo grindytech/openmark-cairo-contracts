@@ -42,7 +42,7 @@ pub trait IOpenMarkProvider<TState> {
         nftContract: ContractAddress,
         tokenIds: Span<u128>,
         askingPrice: u128
-    ) -> u128;
+    );
 
     fn validate_order_signature(
         self: @TState, order: Order, signer: ContractAddress, signature: Span<felt252>,
@@ -51,6 +51,10 @@ pub trait IOpenMarkProvider<TState> {
     fn validate_bid_signature(
         self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
     );
+
+    fn calculate_bid_amounts(
+        self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>
+    ) -> u128;
 }
 
 #[starknet::interface]

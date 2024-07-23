@@ -188,8 +188,10 @@ pub mod OpenMark {
             }
 
             // 2. Validate Bids
-            let total_bid_amount = self
-                .validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);
+            self.validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);
+
+            // 2.1 calculate and validate bid amounts
+            let total_bid_amount = self.calculate_bid_amounts(bids, tokenIds);
 
             // 3. Efficient loop for fee calculation and payout to wholesale bidders
             let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
@@ -385,7 +387,7 @@ pub mod OpenMark {
             nftContract: ContractAddress,
             tokenIds: Span<u128>,
             askingPrice: u128
-        ) -> u128 {
+        ) {
             assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
@@ -418,7 +420,32 @@ pub mod OpenMark {
                     i += 1;
                 }
             }
+        }
 
+        fn validate_bid_signature(
+            self: @ContractState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
+        ) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+            let is_used = self.usedSignatures.read(self.hasher.hash_array(signature));
+            assert(!is_used, Errors::SIGNATURE_USED);
+            assert(
+                self.hasher.verify_bid(bid, signer.into(), signature), Errors::INVALID_SIGNATURE
+            );
+        }
+
+        fn validate_order_signature(
+            self: @ContractState, order: Order, signer: ContractAddress, signature: Span<felt252>,
+        ) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+            assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
+            assert(
+                self.hasher.verify_order(order, signer.into(), signature), Errors::INVALID_SIGNATURE
+            );
+        }
+
+        fn calculate_bid_amounts(
+            self: @ContractState, bids: Span<SignedBid>, tokenIds: Span<u128>,
+        ) -> u128 {
             let mut min_bid_amount = 0;
             let mut total_bid_amount = 0;
             {
@@ -448,27 +475,6 @@ pub mod OpenMark {
             assert(tokenIds.len().into() > min_bid_amount, Errors::NOT_ENOUGH_BID_NFTS);
 
             total_bid_amount
-        }
-
-        fn validate_bid_signature(
-            self: @ContractState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
-        ) {
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
-            let is_used = self.usedSignatures.read(self.hasher.hash_array(signature));
-            assert(!is_used, Errors::SIGNATURE_USED);
-            assert(
-                self.hasher.verify_bid(bid, signer.into(), signature), Errors::INVALID_SIGNATURE
-            );
-        }
-
-        fn validate_order_signature(
-            self: @ContractState, order: Order, signer: ContractAddress, signature: Span<felt252>,
-        ) {
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
-            assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
-            assert(
-                self.hasher.verify_order(order, signer.into(), signature), Errors::INVALID_SIGNATURE
-            );
         }
     }
 
