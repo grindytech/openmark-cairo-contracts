@@ -187,8 +187,6 @@ pub mod OpenMark {
                 };
             }
 
-            println!("Got here!");
-
             // 2. Validate Bids
             let total_bid_amount = self
                 .validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);

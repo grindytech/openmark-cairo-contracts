@@ -27,7 +27,7 @@ use openmark::{
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::unit::common::{
-    create_bids, get_contract_state_for_testing, ZERO, create_openmark_provider_at,
+    create_bids, get_contract_state_for_testing, ZERO,
 };
 
 #[test]
