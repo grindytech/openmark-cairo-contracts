@@ -20,16 +20,14 @@ use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_
 
 use openmark::{
     primitives::types::{OrderType, Bid},
-    core::interface::{
-        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark
-    },
-    core::OpenMark::Event as OpenMarkEvent, core::OpenMark::{validate_order},
+    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark},
+    core::OpenMark::Event as OpenMarkEvent,
     core::events::{OrderFilled, BidFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 use openmark::tests::unit::common::{
-    create_buy, create_offer, create_bids, create_openmark_nft_at, deploy_openmark, TEST_ETH_ADDRESS,
-    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES, ZERO,
-    create_mock_hasher
+    create_buy, create_offer, create_bids, create_openmark_nft_at, deploy_openmark,
+    TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3,
+    BID_SIGNATURES, ZERO, create_mock_hasher
 };
 
 #[test]
@@ -136,7 +134,9 @@ fn cancel_order_works() {
         let hash_sig: felt252 = hasher.hash_array(signature);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),), 1,
+            openmark_address,
+            map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+            1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -308,7 +308,7 @@ fn fill_bids_partial_works() {
 
         let partialBidSignatures = load(
             openmark_address,
-            map_entry_address(selector!("partialBidSignatures"),array![hash_sig].span()),
+            map_entry_address(selector!("partialBidSignatures"), array![hash_sig].span()),
             1,
         );
         assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 0_u128);
@@ -324,7 +324,9 @@ fn fill_bids_partial_works() {
 #[test]
 #[available_gas(2000000)]
 fn cancel_bid_works() {
-    let erc721_address: ContractAddress = create_openmark_nft_at(TEST_ERC721_ADDRESS.try_into().unwrap());
+    let erc721_address: ContractAddress = create_openmark_nft_at(
+        TEST_ERC721_ADDRESS.try_into().unwrap()
+    );
 
     let openmark_address = deploy_openmark();
     let buyer1: ContractAddress = TEST_BUYER1.try_into().unwrap();
@@ -344,7 +346,9 @@ fn cancel_bid_works() {
         OpenMarkDispatcher.cancel_bid(bid, sig1);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),), 1,
+            openmark_address,
+            map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+            1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
