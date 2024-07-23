@@ -13,6 +13,7 @@
 #[starknet::contract]
 pub mod OpenMark {
     // use core::option::OptionTrait;
+    use core::option::OptionTrait;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
@@ -54,7 +55,7 @@ pub mod OpenMark {
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
     /// Reentrancy
-    impl InternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
+    impl ReentrancyInternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
     /// Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
     /// Hasher
@@ -125,7 +126,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
             let price: u256 = order.price.into();
-            let commission = calculate_commission(price, self.commission.read());
+            let commission = self.calculate_commission(price, self.commission.read());
             let payout = price - commission;
             self.eth_token.read().transfer(seller, payout);
             self.eth_token.read().transfer(get_contract_address(), commission);
@@ -153,7 +154,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            let commission = calculate_commission(price, self.commission.read());
+            let commission = self.calculate_commission(price, self.commission.read());
             let payout = price - commission;
             self.eth_token.read().transfer_from(buyer, get_caller_address(), payout);
             self.eth_token.read().transfer_from(buyer, get_contract_address(), commission);
@@ -190,129 +191,13 @@ pub mod OpenMark {
             // 2. Validate Bids
             self.validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);
 
-            // 2.1 calculate and validate bid amounts
+            // 3. calculate and validate bid amounts
             let total_bid_amount = self.calculate_bid_amounts(bids, tokenIds);
 
-            // 3. Efficient loop for fee calculation and payout to wholesale bidders
+            // 4. process bid transactions
             let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
-            let mut trade_token_ids = tokenIds;
+            self.process_all_bids(bids, tokenIds, @nft_dispatcher, total_bid_amount);
 
-            {
-                let commission = self.commission.read();
-
-                let mut i = 0;
-                while (i < bids.len() - 1) {
-                    let signed_bid = (*bids.at(i));
-                    let signature = self.hash_array(signed_bid.signature);
-                    let bid = signed_bid.bid;
-
-                    let mut amount = bid.amount;
-                    {
-                        let partial_signature_amount = self.partialBidSignatures.read(signature);
-                        if partial_signature_amount > 0 {
-                            amount = partial_signature_amount;
-                        }
-                    }
-
-                    let price: u256 = (bid.unitPrice * amount).into();
-                    let commission = calculate_commission(price, commission);
-                    let payout = price - commission;
-
-                    self
-                        .eth_token
-                        .read()
-                        .transfer_from(signed_bid.bidder, get_caller_address(), payout);
-
-                    self
-                        .eth_token
-                        .read()
-                        .transfer_from(signed_bid.bidder, get_contract_address(), commission);
-
-                    let mut traded_ids = ArrayTrait::new();
-                    let mut token_index: u128 = 0;
-                    while (token_index < amount) {
-                        let token_id: u128 = *trade_token_ids.pop_front().unwrap();
-                        nft_dispatcher
-                            .transfer_from(
-                                get_caller_address(), *bids.at(i).bidder, token_id.into()
-                            );
-                        traded_ids.append(token_id);
-                        token_index += 1;
-                    };
-
-                    self.usedSignatures.write(signature, true);
-                    self.partialBidSignatures.write(signature, 0);
-
-                    self
-                        .emit(
-                            BidFilled {
-                                seller: get_caller_address(),
-                                bidder: signed_bid.bidder,
-                                bid: bid,
-                                tokenIds: traded_ids.span(),
-                                askingPrice
-                            }
-                        );
-
-                    i += 1;
-                }
-            }
-            // 4. Separate logic for last bidder to handle remaining NFTs
-            {
-                let signed_bid = *bids.at(bids.len() - 1);
-                let signature = self.hash_array(signed_bid.signature);
-
-                let remaining_amount = total_bid_amount - tokenIds.len().into();
-                let mut amount = signed_bid.bid.amount;
-                {
-                    let partial_signature_amount = self.partialBidSignatures.read(signature);
-                    if partial_signature_amount > 0 {
-                        amount = partial_signature_amount;
-                    }
-                    amount -= remaining_amount;
-                }
-
-                let price = (amount * signed_bid.bid.unitPrice).into();
-
-                let commission = calculate_commission(price, self.commission.read());
-                let payout = price - commission;
-
-                self
-                    .eth_token
-                    .read()
-                    .transfer_from(signed_bid.bidder, get_caller_address(), payout);
-
-                self
-                    .eth_token
-                    .read()
-                    .transfer_from(signed_bid.bidder, get_contract_address(), commission);
-
-                let mut token_index: u128 = 0;
-                let mut traded_ids = ArrayTrait::new();
-                while (token_index < amount) {
-                    let token_id: u128 = *trade_token_ids.pop_front().unwrap();
-                    nft_dispatcher
-                        .transfer_from(get_caller_address(), signed_bid.bidder, token_id.into());
-                    traded_ids.append(token_id);
-                    token_index += 1;
-                };
-
-                self.partialBidSignatures.write(signature, remaining_amount);
-                if (remaining_amount == 0) {
-                    self.usedSignatures.write(signature, true);
-                }
-
-                self
-                    .emit(
-                        BidFilled {
-                            seller: get_caller_address(),
-                            bidder: signed_bid.bidder,
-                            bid: signed_bid.bid,
-                            tokenIds: traded_ids.span(),
-                            askingPrice
-                        }
-                    );
-            }
             self.reentrancy_guard.end();
         }
 
@@ -498,8 +383,97 @@ pub mod OpenMark {
         }
     }
 
-    #[abi(embed_v0)]
-    fn calculate_commission(price: u256, commission: u32) -> u256 {
-        price * commission.into() / PERMYRIAD.into()
+    #[generate_trait]
+    impl InternalImpl of InternalImplTrait {
+        fn calculate_commission(self: @ContractState, price: u256, commission: u32) -> u256 {
+            price * commission.into() / PERMYRIAD.into()
+        }
+
+        fn process_bid(
+            ref self: ContractState,
+            signed_bid: @SignedBid,
+            ref trade_token_ids: Span<u128>,
+            nft_dispatcher: @IERC721Dispatcher,
+            remaining_amount: Option<u128>
+        ) {
+            let signature = self.hash_array(*signed_bid.signature);
+            let mut amount = *signed_bid.bid.amount;
+
+            let partial_signature_amount = self.partialBidSignatures.read(signature);
+            if partial_signature_amount > 0 {
+                amount = partial_signature_amount;
+            }
+
+            if let Option::Some(rem_amount) = remaining_amount {
+                amount -= rem_amount;
+            }
+
+            let price: u256 = (*signed_bid.bid.unitPrice * amount).into();
+            let commission = self.calculate_commission(price, self.commission.read());
+            let payout = price - commission;
+
+            self.eth_token.read().transfer_from(*signed_bid.bidder, get_caller_address(), payout);
+            if commission > 0 {
+                self
+                    .eth_token
+                    .read()
+                    .transfer_from(*signed_bid.bidder, get_contract_address(), commission);
+            }
+
+            let mut traded_ids = ArrayTrait::new();
+
+            let mut token_index: u128 = 0;
+            while (token_index < amount) {
+                let token_id: u128 = *trade_token_ids.pop_front().unwrap();
+                (*nft_dispatcher)
+                    .transfer_from(get_caller_address(), *signed_bid.bidder, token_id.into());
+                traded_ids.append(token_id);
+                token_index += 1;
+            };
+
+            if let Option::Some(rem_amount) = remaining_amount {
+                self.partialBidSignatures.write(signature, rem_amount);
+            } else {
+                self.usedSignatures.write(signature, true);
+                self.partialBidSignatures.write(signature, 0);
+            }
+
+            self
+                .emit(
+                    BidFilled {
+                        seller: get_caller_address(),
+                        bidder: *signed_bid.bidder,
+                        bid: *signed_bid.bid,
+                        tokenIds: traded_ids.span(),
+                    }
+                );
+        }
+
+        fn process_all_bids(
+            ref self: ContractState,
+            bids: Span<SignedBid>,
+            tokenIds: Span<u128>,
+            nft_dispatcher: @IERC721Dispatcher,
+            total_bid_amount: u128
+        ) {
+            let mut maybe_remaining: Option<u128> = Option::None;
+            let remaining_amount = total_bid_amount - tokenIds.len().into();
+            if remaining_amount > 0 {
+                maybe_remaining = Option::Some(remaining_amount);
+            }
+
+            let mut trade_token_ids = tokenIds;
+
+            // wholesale
+            let mut i = 0;
+            while (i < bids.len() - 1) {
+                self.process_bid(bids.at(i), ref trade_token_ids, nft_dispatcher, Option::None);
+                i += 1;
+            };
+
+            // partial sale
+            let signed_bid = bids.at(bids.len() - 1);
+            self.process_bid(signed_bid, ref trade_token_ids, nft_dispatcher, maybe_remaining);
+        }
     }
 }
