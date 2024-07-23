@@ -9,6 +9,7 @@ const types = {
   Order: [
     { name: "nftContract", type: "ContractAddress" },
     { name: "tokenId", type: "u128" },
+    { name: "payment", type: "ContractAddress" },
     { name: "price", type: "u128" },
     { name: "salt", type: "felt" },
     { name: "expiry", type: "u128" },
@@ -17,6 +18,7 @@ const types = {
   Bid: [
     { name: "nftContract", type: "ContractAddress" },
     { name: "amount", type: "u128" },
+    { name: "payment", type: "ContractAddress" },
     { name: "unitPrice", type: "u128" },
     { name: "salt", type: "felt" },
     { name: "expiry", type: "u128" },
@@ -32,6 +34,7 @@ export enum OrderType {
 export interface Order {
   nftContract: string,
   tokenId: string,
+  payment: string,
   price: string,
   salt: string,
   expiry: string,
@@ -41,6 +44,7 @@ export interface Order {
 export interface Bid {
   nftContract: string,
   amount: string,
+  payment: string,
   unitPrice: string,
   salt: string,
   expiry: string,

@@ -26,8 +26,6 @@ const TEST_SIGNER: felt252 = 0x913b4e904ab75554db59b64e1d26116d1ba1c033ce57519b5
 const TEST_ERC721_ADDRESS: felt252 =
     0x52D3AA5AF7D5A5D024F99EF80645C32B0E94C9CC4645CDA09A36BE2696257AA;
 
-const HASHER_MOCK_CLASS_HASH: felt252 = 0x1626CDE5974259837361B6EB3F3B8D48DEAF7F5BA9C5B14BC1CC2C0B63DFEC3;
-
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
     let mut constructor_calldata = array![];
@@ -41,11 +39,12 @@ fn deploy_mock_hasher() -> ContractAddress {
 fn get_order_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
-    let message_hash = 0x2575f63956fb4a09d651d372072a90b8f616d79c67c17e70223b04158a5a65e;
+    let message_hash = 0x43bb63af60cadf46da9820cb6eacaffea38b26444385d94130d63612740b42d;
     let order = Order {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         tokenId: 2,
         price: 3,
+        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Buy,
@@ -64,11 +63,12 @@ fn get_order_hash_works() {
 fn get_bid_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
-    let message_hash = 0x6508e40ab567863c5d768e30c6d35aa5837c7150588e1794ec76f3675a8d151;
+    let message_hash = 0x239acfa1717fb6c270513e7c2ce47de2c88e4ef8ea4f0c556184a528c5ad4e1;
     let bid = Bid {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         amount: 1,
         unitPrice: 3,
+        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
     };
@@ -90,14 +90,15 @@ fn verify_order_works() {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         tokenId: 2,
         price: 3,
+        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Buy,
     };
 
     let mut signature = array![
-        0x731246d027886090a219c7a75469db89468d416f794020d7e8bd0a34858638d,
-        0xec12683f031e33fdd302b15259fc398f58f2786473aa8528546a129a7c3e4f
+        0x6edb77859dca36b18d5537cf87d8ffbbd5c0faaea8e05eefc929a07098f2295,
+        0x608305c5d0e5b3023260ab978bd9a0a0c52ae1c4f9e3f91a10a753e2d1c442c
     ];
 
     start_cheat_caller_address(contract_address, TEST_SIGNER.try_into().unwrap());
@@ -118,13 +119,14 @@ fn verify_bid_works() {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         amount: 1,
         unitPrice: 3,
+        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
     };
 
     let mut signature = array![
-        0x3c0ac7eca879533ffd6de6b6ef8630889a92b6f55844b4aefdb037443018c4d,
-        0x43ce88b1de27d39b8f8a88fc378792cacb39b67099161c835f66c5ddefe7ddd
+        0x4ea67a94ac0e95d87bfe2a39cb9728443a56850ced121afbcf0b47877f2edde,
+        0x7f0c4be2712170650643257b183d36cc93e13201788e3c45ba946a8622d97cb
     ];
 
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };

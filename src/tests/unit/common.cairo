@@ -185,6 +185,7 @@ pub fn create_buy() -> (
     let order = Order {
         nftContract: erc721_address,
         tokenId: 2,
+        payment: eth_address,
         price: 3,
         salt: 4,
         expiry: 5,
@@ -206,15 +207,7 @@ pub fn create_buy() -> (
 
     ERC20Dispatcher.approve(openmark_address, 3);
 
-    (
-        order,
-        SELL_SIGNATURES(),
-        openmark_address,
-        erc721_address,
-        eth_address,
-        seller,
-        buyer,
-    )
+    (order, SELL_SIGNATURES(), openmark_address, erc721_address, eth_address, seller, buyer,)
 }
 
 pub fn create_offer() -> (
@@ -242,6 +235,7 @@ pub fn create_offer() -> (
     let order = Order {
         nftContract: erc721_address,
         tokenId: token_id,
+        payment: eth_address,
         price: price,
         salt: 4,
         expiry: 5,
@@ -268,15 +262,7 @@ pub fn create_offer() -> (
     start_cheat_caller_address(openmark_address, seller);
     start_cheat_caller_address(eth_address, openmark_address);
 
-    (
-        order,
-        OFFER_SIGNATURES(),
-        openmark_address,
-        erc721_address,
-        eth_address,
-        seller,
-        buyer,
-    )
+    (order, OFFER_SIGNATURES(), openmark_address, erc721_address, eth_address, seller, buyer,)
 }
 
 pub fn create_bids() -> (
@@ -306,9 +292,15 @@ pub fn create_bids() -> (
 
     let unitPrice = 3_u128;
     let total_amount = 10;
-    let bid1 = Bid { nftContract: erc721_address, amount: 1, unitPrice, salt: 4, expiry: 5, };
-    let bid2 = Bid { nftContract: erc721_address, amount: 2, unitPrice, salt: 4, expiry: 5, };
-    let bid3 = Bid { nftContract: erc721_address, amount: 3, unitPrice, salt: 4, expiry: 5, };
+    let bid1 = Bid {
+        nftContract: erc721_address, amount: 1, payment: eth_address, unitPrice, salt: 4, expiry: 5,
+    };
+    let bid2 = Bid {
+        nftContract: erc721_address, amount: 2, payment: eth_address, unitPrice, salt: 4, expiry: 5,
+    };
+    let bid3 = Bid {
+        nftContract: erc721_address, amount: 3, payment: eth_address, unitPrice, salt: 4, expiry: 5,
+    };
 
     // create and approve nfts
     {

@@ -11,11 +11,11 @@ pub const STARKNET_DOMAIN_TYPE_HASH: felt252 =
 
 pub const ORDER_STRUCT_TYPE_HASH: felt252 =
     selector!(
-        "Order(nftContract:ContractAddress,tokenId:u128,price:u128,salt:felt,expiry:u128,option:OrderType)"
+        "Order(nftContract:ContractAddress,tokenId:u128,payment:ContractAddress,price:u128,salt:felt,expiry:u128,option:OrderType)"
     );
 
 pub const BID_STRUCT_TYPE_HASH: felt252 =
-    selector!("Bid(nftContract:ContractAddress,amount:u128,unitPrice:u128,salt:felt,expiry:u128)");
+    selector!("Bid(nftContract:ContractAddress,amount:u128,payment:ContractAddress,unitPrice:u128,salt:felt,expiry:u128)");
 
 #[derive(Drop, Copy, Hash)]
 pub struct StarknetDomain {
@@ -34,6 +34,7 @@ pub enum OrderType {
 pub struct Order {
     pub nftContract: ContractAddress,
     pub tokenId: u128,
+    pub payment: ContractAddress,
     pub price: u128,
     pub salt: felt252,
     pub expiry: u128,
@@ -51,6 +52,7 @@ pub struct SignedBid {
 pub struct Bid {
     pub nftContract: ContractAddress,
     pub amount: u128,
+    pub payment: ContractAddress,
     pub unitPrice: u128,
     pub salt: felt252,
     pub expiry: u128,
@@ -75,7 +77,7 @@ impl StructHashOrder of IStructHash<Order> {
         let mut state = PedersenTrait::new(0);
         state = state.update_with(ORDER_STRUCT_TYPE_HASH);
         state = state.update_with(*self);
-        state = state.update_with(7);
+        state = state.update_with(8);
         state.finalize()
     }
 }
@@ -85,7 +87,7 @@ impl StructHashBid of IStructHash<Bid> {
         let mut state = PedersenTrait::new(0);
         state = state.update_with(BID_STRUCT_TYPE_HASH);
         state = state.update_with(*self);
-        state = state.update_with(6);
+        state = state.update_with(7);
         state.finalize()
     }
 }
