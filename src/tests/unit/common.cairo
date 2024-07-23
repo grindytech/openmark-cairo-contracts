@@ -101,6 +101,13 @@ pub fn deploy_openmark() -> ContractAddress {
     contract_address
 }
 
+pub fn create_mock_hasher() -> IOffchainMessageHashDispatcher {
+    let contract = declare("HasherMock").unwrap();
+    let mut constructor_calldata = array![];
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    let hasher_contract = IOffchainMessageHashDispatcher{contract_address};
+    hasher_contract
+}
 
 pub fn deploy_erc20() -> ContractAddress {
     let contract = declare("OpenMarkCoin").unwrap();

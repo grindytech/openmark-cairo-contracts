@@ -1,3 +1,4 @@
+use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 use core::array::SpanTrait;
 use core::array::ArrayTrait;
 use core::option::OptionTrait;
@@ -27,7 +28,8 @@ use openmark::{
 };
 use openmark::tests::unit::common::{
     create_buy, create_offer, create_bids, create_openmark_nft_at, deploy_openmark, TEST_ETH_ADDRESS,
-    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES, ZERO
+    TEST_ERC721_ADDRESS, TEST_SELLER, TEST_BUYER1, TEST_BUYER2, TEST_BUYER3, BID_SIGNATURES, ZERO,
+    create_mock_hasher
 };
 
 #[test]
@@ -130,9 +132,11 @@ fn cancel_order_works() {
         let mut spy = spy_events(SpyOn::One(openmark_address));
 
         OpenMarkDispatcher.cancel_order(order, signature);
+        let hasher = create_mock_hasher();
+        let hash_sig: felt252 = hasher.hash_array(signature);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), signature,), 1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -281,10 +285,11 @@ fn fill_bids_partial_works() {
         assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
         assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
         assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 2));
-
+        let hasher = create_mock_hasher();
+        let hash_sig: felt252 = hasher.hash_array((*signed_bids.at(2)).signature);
         let partialBidSignatures = load(
             openmark_address,
-            map_entry_address(selector!("partialBidSignatures"), (*signed_bids.at(2)).signature,),
+            map_entry_address(selector!("partialBidSignatures"), array![hash_sig].span()),
             1,
         );
         assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 1_u128);
@@ -303,13 +308,13 @@ fn fill_bids_partial_works() {
 
         let partialBidSignatures = load(
             openmark_address,
-            map_entry_address(selector!("partialBidSignatures"), (*signed_bids.at(2)).signature),
+            map_entry_address(selector!("partialBidSignatures"),array![hash_sig].span()),
             1,
         );
         assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 0_u128);
         let usedSignatures = load(
             openmark_address,
-            map_entry_address(selector!("usedSignatures"), (*signed_bids.at(2)).signature),
+            map_entry_address(selector!("usedSignatures"), array![hash_sig].span()),
             1,
         );
         assert_eq!(*usedSignatures.at(0), true.into());
@@ -333,11 +338,13 @@ fn cancel_bid_works() {
 
         let OpenMarkDispatcher = IOpenMarkDispatcher { contract_address: openmark_address };
         let (sig1, _, _) = BID_SIGNATURES();
+        let hasher = create_mock_hasher();
+        let hash_sig: felt252 = hasher.hash_array(sig1);
 
         OpenMarkDispatcher.cancel_bid(bid, sig1);
 
         let usedSignatures = load(
-            openmark_address, map_entry_address(selector!("usedSignatures"), sig1,), 1,
+            openmark_address, map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),), 1,
         );
 
         assert_eq!(*usedSignatures.at(0), true.into());

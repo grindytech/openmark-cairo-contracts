@@ -3,12 +3,17 @@ pub mod HasherMock {
     use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
-    use core::pedersen::PedersenTrait;
-    use core::hash::{HashStateTrait, HashStateExTrait};
-    use core::ecdsa::check_ecdsa_signature;
+   
     use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
     use openzeppelin::account::utils::{is_valid_stark_signature};
     use openzeppelin::introspection::src5::SRC5Component;
+
+    // Hash
+    use core::poseidon::PoseidonTrait;
+    use core::poseidon::poseidon_hash_span;
+    use core::pedersen::PedersenTrait;
+    use core::hash::{HashStateTrait, HashStateExTrait};
+    use core::ecdsa::check_ecdsa_signature;
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -71,6 +76,14 @@ pub mod HasherMock {
         ) -> bool {
             let hash = self.get_bid_hash(bid, signer);
             is_valid_stark_signature(hash, signer, signature)
+        }
+
+         fn hash_array(
+            self: @ContractState,
+            value: Span<felt252>
+        ) -> felt252 {
+            let hash = PoseidonTrait::new().update(poseidon_hash_span(value)).finalize();
+            hash
         }
     }
 }
