@@ -20,7 +20,7 @@ const bid: Bid = {
   expiry: "5",
 };
 
-const privateKey = '0x1234567890123456789';
+const privateKey = '0x1234567890987654321';
 const starknetPublicKey = ec.starkCurve.getStarkKey(privateKey);
 const account: BigNumberish = starknetPublicKey;
 console.log(`account: ${account};`);

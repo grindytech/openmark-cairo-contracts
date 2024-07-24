@@ -19,12 +19,8 @@ use openmark::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
     },
 };
+use openmark::tests::unit::common::{TEST_SELLER, ZERO, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS};
 
-
-const TEST_ETH_ADDRESS: felt252 = 0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
-const TEST_SIGNER: felt252 = 0x913b4e904ab75554db59b64e1d26116d1ba1c033ce57519b53e35d374ef2dd;
-const TEST_ERC721_ADDRESS: felt252 =
-    0x52D3AA5AF7D5A5D024F99EF80645C32B0E94C9CC4645CDA09A36BE2696257AA;
 
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
@@ -39,7 +35,7 @@ fn deploy_mock_hasher() -> ContractAddress {
 fn get_order_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
-    let message_hash = 0x43bb63af60cadf46da9820cb6eacaffea38b26444385d94130d63612740b42d;
+    let message_hash = 0x654e997e1cbb22847cc326f215a1697fc98779141a6483e0c419f0aeed0b9c7;
     let order = Order {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         tokenId: 2,
@@ -50,10 +46,10 @@ fn get_order_hash_works() {
         option: OrderType::Buy,
     };
 
-    start_cheat_caller_address(contract_address, TEST_SIGNER.try_into().unwrap());
+    start_cheat_caller_address(contract_address, TEST_SELLER.try_into().unwrap());
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.get_order_hash(order, TEST_SIGNER);
+    let result = dispatcher.get_order_hash(order, TEST_SELLER);
 
     assert_eq!(result, message_hash);
 }
@@ -63,7 +59,7 @@ fn get_order_hash_works() {
 fn get_bid_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
-    let message_hash = 0x239acfa1717fb6c270513e7c2ce47de2c88e4ef8ea4f0c556184a528c5ad4e1;
+    let message_hash = 0x42793086c598ac82585061162a6eeee3a8b54ec0711b04610501c286e12ef04;
     let bid = Bid {
         nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
         amount: 1,
@@ -73,10 +69,10 @@ fn get_bid_hash_works() {
         expiry: 5,
     };
 
-    start_cheat_caller_address(contract_address, TEST_SIGNER.try_into().unwrap());
+    start_cheat_caller_address(contract_address, TEST_SELLER.try_into().unwrap());
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.get_bid_hash(bid, TEST_SIGNER);
+    let result = dispatcher.get_bid_hash(bid, TEST_SELLER);
 
     assert_eq!(result, message_hash);
 }
@@ -97,15 +93,15 @@ fn verify_order_works() {
     };
 
     let mut signature = array![
-        0x6edb77859dca36b18d5537cf87d8ffbbd5c0faaea8e05eefc929a07098f2295,
-        0x608305c5d0e5b3023260ab978bd9a0a0c52ae1c4f9e3f91a10a753e2d1c442c
+        0xe75494836b56da6d28f2c18ee2716cb89ce8438b4c9d0127390feb12433f3d,
+        0xfa8533c614eac3b508e14f5cd86ea583cb7e4842938574559e8927696c16fb
     ];
 
-    start_cheat_caller_address(contract_address, TEST_SIGNER.try_into().unwrap());
+    start_cheat_caller_address(contract_address, TEST_SELLER.try_into().unwrap());
 
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.verify_order(order, TEST_SIGNER, signature.span());
+    let result = dispatcher.verify_order(order, TEST_SELLER, signature.span());
 
     assert_eq!(result, true);
 }
@@ -125,13 +121,13 @@ fn verify_bid_works() {
     };
 
     let mut signature = array![
-        0x4ea67a94ac0e95d87bfe2a39cb9728443a56850ced121afbcf0b47877f2edde,
-        0x7f0c4be2712170650643257b183d36cc93e13201788e3c45ba946a8622d97cb
+        0x59690b63571efee93f41a750b5e50122dcbd13cdbe153d5c7eac9a9b88b33bf,
+        0x66e0f62a9917abf71409ceb81d164e7f2dc3587b4f0bb8c91f85c1b8ee9446a
     ];
 
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
-    let result = dispatcher.verify_bid(bid, TEST_SIGNER, signature.span());
+    let result = dispatcher.verify_bid(bid, TEST_SELLER, signature.span());
 
     assert_eq!(result, true);
 }

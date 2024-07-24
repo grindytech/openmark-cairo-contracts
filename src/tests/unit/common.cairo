@@ -46,33 +46,33 @@ pub const TEST_BUYER3: felt252 = 0x4136107a5d3c1a6cd4c28693ea6a0e5bb9ffa64846762
 
 pub fn SELL_SIGNATURES() -> Span<felt252> {
     array![
-        0x7cdfb9010d274c820449ed9992fe536b5f39bd7f9895ffc4b03890e7d223609,
-        0x4aef0200250ccd0c035b44deed85143afc7cb73bfb231ea313e74049221d1a9
+        0xe75494836b56da6d28f2c18ee2716cb89ce8438b4c9d0127390feb12433f3d,
+        0xfa8533c614eac3b508e14f5cd86ea583cb7e4842938574559e8927696c16fb
     ]
         .span()
 }
 pub fn OFFER_SIGNATURES() -> Span<felt252> {
     array![
-        0x8e4f2e62cd2f90e03dd3bf11dfb386ebbbf055e73da762ab38ae32a30fe4df,
-        0x52dabad9e0e9a446f1e2ab4d4519ca308008ee43cb1c8e8e4a6f1d358cdca1d
+        0xce3a19678534f8e7420bbe3c4613a0a716eff23925de684b5fafaa00e754c9,
+        0x3d5429d1e2d1cb26392c87b385c94741f2d80aba24525e7411a319800e77f07
     ]
         .span()
 }
 pub fn BID_SIGNATURES() -> (Span<felt252>, Span<felt252>, Span<felt252>) {
     (
         array![
-            0x592161e15972fe40f0eb72af55ab43f5348b6a2547a276758920eb6ed805882,
-            0x7c4d82030882a2d980e02b53e39a91822e5e45f2d13a05c4515678bf536bfff
+            0x4ea67a94ac0e95d87bfe2a39cb9728443a56850ced121afbcf0b47877f2edde,
+            0x7f0c4be2712170650643257b183d36cc93e13201788e3c45ba946a8622d97cb
         ]
             .span(),
         array![
-            0x3b7322829b23e6bc68cf7eda509451f43fff6707dd06f48b622796093f17204,
-            0x3d2a4aef4ebac578454e50a5437006a2b7b2cfcb77dda430836830ee437b75e
+            0x7d36cfee3552e78c1a60afe10366c66142eabcd30c28e3200a12fee3ad557ba,
+            0x1197015e853fd8f56e7ad8dda624163e6fd862770c4bcf295aad94414557570
         ]
             .span(),
         array![
-            0x5d27957bc6b9d4960e284e6b104e1b8992ed0fbad1f316b7c6c7aa9d33e2724,
-            0xbf102f4a8acbe4309742dd1222ef25310e3d82344a1701a64d719aa47c4fd6
+            0x53cc0434c9c75305d06e1be89fd92260e9b920140b230fe25505d10f1df92d0,
+            0x6524f145d25a95c1de68bb0fc64351a7e86b8ac06850131c9dc632ec12088
         ]
             .span(),
     )
