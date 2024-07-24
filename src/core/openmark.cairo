@@ -97,12 +97,24 @@ pub mod OpenMark {
         maxBids: u32, // Maximum number of bids allowed in fillBids
         usedSignatures: LegacyMap<felt252, bool>, // store used order signatures
         partialBidSignatures: LegacyMap<felt252, u128>, // store partial bid signatures
+        paymentTokens: LegacyMap<ContractAddress, bool>, // store allowed payment tokens
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, eth_address: ContractAddress) {
-        self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
+    fn constructor(
+        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>
+    ) {
+        // self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
         self.ownable.initializer(owner);
+
+        assert(paymentTokens.len() > 0, Errors::INVALID_PAYMENT_TOKEN);
+
+        let mut i = 0;
+        while (i < paymentTokens.len()) {
+            self.paymentTokens.write(*paymentTokens.at(i), true);
+            i += 1;
+        };
+
         self.commission.write(0);
         self.maxBids.write(10);
     }
@@ -126,10 +138,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
             let price: u256 = order.price.into();
-            let commission = self.calculate_commission(price, self.commission.read());
-            let payout = price - commission;
-            self.eth_token.read().transfer(seller, payout);
-            self.eth_token.read().transfer(get_contract_address(), commission);
+            self.process_payment(Option::None, seller, price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
@@ -154,10 +163,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            let commission = self.calculate_commission(price, self.commission.read());
-            let payout = price - commission;
-            self.eth_token.read().transfer_from(buyer, get_caller_address(), payout);
-            self.eth_token.read().transfer_from(buyer, get_contract_address(), commission);
+            self.process_payment(Option::Some(buyer), get_caller_address(), price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
@@ -176,17 +182,16 @@ pub mod OpenMark {
             self.reentrancy_guard.start();
 
             // 1. Verify signatures
-            {
-                let state = (@self);
-                let mut i = 0;
-                while (i < bids.len()) {
-                    state
-                        .validate_bid_signature(
-                            (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
-                        );
-                    i += 1;
-                };
-            }
+
+            let state = (@self);
+            let mut i = 0;
+            while (i < bids.len()) {
+                state
+                    .validate_bid_signature(
+                        (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
+                    );
+                i += 1;
+            };
 
             // 2. Validate Bids
             self.validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);
@@ -385,8 +390,8 @@ pub mod OpenMark {
 
     #[generate_trait]
     impl InternalImpl of InternalImplTrait {
-        fn calculate_commission(self: @ContractState, price: u256, commission: u32) -> u256 {
-            price * commission.into() / PERMYRIAD.into()
+        fn calculate_commission(self: @ContractState, price: u256) -> u256 {
+            price * self.commission.read().into() / PERMYRIAD.into()
         }
 
         fn process_bid(
@@ -409,19 +414,15 @@ pub mod OpenMark {
             }
 
             let price: u256 = (*signed_bid.bid.unitPrice * amount).into();
-            let commission = self.calculate_commission(price, self.commission.read());
-            let payout = price - commission;
-
-            self.eth_token.read().transfer_from(*signed_bid.bidder, get_caller_address(), payout);
-            if commission > 0 {
-                self
-                    .eth_token
-                    .read()
-                    .transfer_from(*signed_bid.bidder, get_contract_address(), commission);
-            }
+            self
+                .process_payment(
+                    Option::Some(*signed_bid.bidder),
+                    get_caller_address(),
+                    price,
+                    *signed_bid.bid.payment
+                );
 
             let mut traded_ids = ArrayTrait::new();
-
             let mut token_index: u128 = 0;
             while (token_index < amount) {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
@@ -474,6 +475,41 @@ pub mod OpenMark {
             // partial sale
             let signed_bid = bids.at(bids.len() - 1);
             self.process_bid(signed_bid, ref trade_token_ids, nft_dispatcher, maybe_remaining);
+        }
+
+        /// Processes a payment from sender to a receiver.
+        /// 
+        /// # Parameters:
+        /// - `maybe_sender`: An optional sender address.
+        /// If `maybe_sender` is `None`, the sender is the contract caller.
+        /// - `receiver`: The address to receive the payment.
+        /// - `amount`: The amount to be transferred.
+        /// - `payment_token`: The address of the payment token contract.
+        fn process_payment(
+            self: @ContractState,
+            maybe_sender: Option::<ContractAddress>,
+            receiver: ContractAddress,
+            amount: u256,
+            payment_token: ContractAddress
+        ) {
+            assert(self.paymentTokens.read(payment_token), Errors::INVALID_PAYMENT_TOKEN);
+
+            let commission = self.calculate_commission(amount);
+
+            let payout = amount - commission;
+            let token = IERC20Dispatcher { contract_address: payment_token };
+
+            if let Option::Some(sender) = maybe_sender {
+                token.transfer_from(sender, receiver, payout);
+                if commission > 0 {
+                    token.transfer_from(sender, get_contract_address(), commission);
+                }
+            } else {
+                token.transfer(receiver, payout);
+                if commission > 0 {
+                    token.transfer(get_contract_address(), commission);
+                }
+            }
         }
     }
 }

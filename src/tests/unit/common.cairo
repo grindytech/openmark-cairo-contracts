@@ -97,7 +97,7 @@ pub fn deploy_openmark() -> ContractAddress {
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(TEST_SELLER);
-    constructor_calldata.append_serde(eth_address);
+    constructor_calldata.append_serde(array![eth_address].span());
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
