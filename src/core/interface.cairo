@@ -60,4 +60,6 @@ pub trait IOpenMarkProvider<TState> {
 #[starknet::interface]
 pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
+    fn add_payment_tokens(ref self: TState, payment_tokens: Span<ContractAddress>);
+    fn remove_payment_tokens(ref self: TState, payment_tokens: Span<ContractAddress>);
 }

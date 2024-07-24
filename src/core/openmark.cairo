@@ -84,7 +84,6 @@ pub mod OpenMark {
 
     #[storage]
     struct Storage {
-        eth_token: IERC20Dispatcher,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -104,10 +103,9 @@ pub mod OpenMark {
     fn constructor(
         ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>
     ) {
-        // self.eth_token.write(IERC20Dispatcher { contract_address: eth_address });
         self.ownable.initializer(owner);
 
-        assert(paymentTokens.len() > 0, Errors::INVALID_PAYMENT_TOKEN);
+        assert(paymentTokens.len() > 0, Errors::EMPTY_PAYMENT_TOKEN);
 
         let mut i = 0;
         while (i < paymentTokens.len()) {
@@ -374,6 +372,25 @@ pub mod OpenMark {
             self.ownable.assert_only_owner();
             assert(new_commission < MAX_COMMISSION, Errors::COMMISSION_TOO_HIGH);
             self.commission.write(new_commission);
+        }
+
+        fn add_payment_tokens(ref self: ContractState, payment_tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+
+            let mut i = 0;
+            while (i < payment_tokens.len()) {
+                self.paymentTokens.write(*payment_tokens.at(i), true);
+                i += 1;
+            }
+        }
+        fn remove_payment_tokens(ref self: ContractState, payment_tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+
+            let mut i = 0;
+            while (i < payment_tokens.len()) {
+                self.paymentTokens.write(*payment_tokens.at(i), false);
+                i += 1;
+            }
         }
     }
 

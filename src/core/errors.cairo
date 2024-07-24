@@ -45,5 +45,8 @@ pub const NOT_ENOUGH_BID_NFTS: felt252 = 'OPENMARK: not enough nfts';
 /// Commission exceeds maximum allowed.
 pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
 
-/// Invalid payment token
-pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: invalid payment token';
+/// Invalid construct with no payment token
+pub const EMPTY_PAYMENT_TOKEN: felt252 = 'OPENMARK: empty payment token';
+
+/// Payment token not allowd
+pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: Invalid payment token';

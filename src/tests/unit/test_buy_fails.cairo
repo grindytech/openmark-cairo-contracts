@@ -20,6 +20,9 @@ use openmark::{
     core::interface::{
         IOpenMarkProvider, IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
     },
+    core::interface::{
+        IOpenMarkManager, IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
+    },
     core::OpenMark::Event as OpenMarkEvent, core::events::{OrderFilled, OrderCancelled},
     core::errors as Errors,
 };
@@ -120,4 +123,21 @@ fn buy_price_is_zero_panics() {
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
     order.price = 0;
     openmark.validate_order(order, seller, buyer, OrderType::Buy);
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('OPENMARK: Invalid payment token',))]
+fn invalid_payment_token_panics() {
+    let (order, signature, openmark_address, _, payment_token, seller, buyer) = create_buy();
+    let openmark = IOpenMarkManagerDispatcher { contract_address: openmark_address };
+
+    start_cheat_caller_address(openmark_address, seller);
+    openmark.remove_payment_tokens(array![payment_token].span());
+
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(payment_token, buyer);
+
+    openmark.buy(seller, order, signature);
 }
