@@ -131,3 +131,4 @@ fn verify_bid_works() {
 
     assert_eq!(result, true);
 }
+

@@ -12,6 +12,8 @@ pub trait IOffchainMessageHash<T> {
     fn hash_array(self: @T, value: Span<felt252>) -> felt252;
 }
 
+pub const IS_VALID_SIGNATURE_SELECTOR: felt252 = selector!("is_valid_signature");
+
 
 // Import Argent account interface
 #[starknet::interface]

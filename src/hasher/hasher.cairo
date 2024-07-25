@@ -15,7 +15,10 @@ pub mod HasherComponent {
     use core::option::OptionTrait;
     use core::traits::TryInto;
     use starknet::{ContractAddress, VALIDATED};
-    use openmark::hasher::interface::{IOffchainMessageHash};
+    use starknet::syscalls::call_contract_syscall;
+
+    use openzeppelin::utils::serde::SerializedAppend;
+    use openmark::hasher::interface::{IOffchainMessageHash, IS_VALID_SIGNATURE_SELECTOR};
     use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
 
@@ -103,16 +106,31 @@ pub mod HasherComponent {
             if (is_valid_stark_signature(hash, signer, signature)) {
                 return true;
             } else {
-                // check contract address
-                let account_contract = IAccountDispatcher {
-                    contract_address: signer.try_into().unwrap()
-                };
-                if account_contract
-                    .is_valid_signature(
-                        hash, array![*signature.at(0), *signature.at(1)]
-                    ) == VALIDATED {
-                    return true;
+                if let Option::Some(account) = signer.try_into() {
+                    let mut args = array![];
+                    args.append_serde(hash);
+                    args.append_serde(signature);
+
+                    match call_contract_syscall(account, IS_VALID_SIGNATURE_SELECTOR, args.span()) {
+                        Result::Ok(ret) => {
+                            if ret.len() > 0 && *ret.at(0) == VALIDATED {
+                                return true;
+                            }
+                        },
+                        Result::Err(_) => { return false; }
+                    }
                 }
+            // check contract address
+            // let account_contract = IAccountDispatcher {
+            //     contract_address: signer.try_into().unwrap()
+            // };
+
+            // if account_contract
+            //     .is_valid_signature(
+            //         hash, array![*signature.at(0), *signature.at(1)]
+            //     ) == VALIDATED {
+            //     return true;
+            // }
             }
             return false;
         }
