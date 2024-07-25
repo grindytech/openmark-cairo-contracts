@@ -14,8 +14,7 @@ keywords = ["openmark", "starknet", "cairo", "contracts"]
 
 [dependencies]
 starknet = "2.6.4"
-# openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "0.15.0-rc.0" }
-openzeppelin = { path = "../cairo-contracts" }
+openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", rev = "6869190bbc3eef90f49651a42e0b44dcc4bec842" }
 
 [dev-dependencies]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.25.0" }
