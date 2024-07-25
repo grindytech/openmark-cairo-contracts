@@ -26,8 +26,6 @@ const TEST_SIGNER: felt252 = 0x913b4e904ab75554db59b64e1d26116d1ba1c033ce57519b5
 const TEST_ERC721_ADDRESS: felt252 =
     0x52D3AA5AF7D5A5D024F99EF80645C32B0E94C9CC4645CDA09A36BE2696257AA;
 
-const HASHER_MOCK_CLASS_HASH: felt252 = 0x1626CDE5974259837361B6EB3F3B8D48DEAF7F5BA9C5B14BC1CC2C0B63DFEC3;
-
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
     let mut constructor_calldata = array![];
@@ -133,3 +131,4 @@ fn verify_bid_works() {
 
     assert_eq!(result, true);
 }
+

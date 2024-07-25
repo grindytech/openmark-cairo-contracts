@@ -1,7 +1,9 @@
 #[starknet::contract]
 pub mod OpenMarkNFT {
-    use openzeppelin::token::erc721::interface::IERC721Metadata;
-    use openzeppelin::token::erc721::interface::IERC721MetadataDispatcher;
+    use openzeppelin::token::erc721::interface::ERC721ABI;
+    use openzeppelin::introspection::interface::ISRC5;
+    use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
+    use openzeppelin::token::erc721::interface::{IERC721Metadata, IERC721MetadataDispatcher};
     use core::byte_array::ByteArrayTrait;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
@@ -133,7 +135,8 @@ pub mod OpenMarkNFT {
 
         fn set_token_uri(ref self: ContractState, token_id: u256, uri: ByteArray) {
             assert(
-                self.erc721.owner_of(token_id) == get_caller_address(), ERC721Errors::UNAUTHORIZED
+                IERC721::owner_of(@self.erc721, token_id) == get_caller_address(),
+                ERC721Errors::UNAUTHORIZED
             );
             self.token_uris.write(token_id, uri.clone());
             self.emit(TokenURIUpdated { who: get_caller_address(), token_id, uri, });
@@ -173,6 +176,13 @@ pub mod OpenMarkNFT {
     impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamelOnly<ContractState> {
         fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
             self.token_uri(tokenId)
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl IOpenMarkSRC5Impl of ISRC5<ContractState> {
+        fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
+            self.erc721.supports_interface(interface_id)
         }
     }
 

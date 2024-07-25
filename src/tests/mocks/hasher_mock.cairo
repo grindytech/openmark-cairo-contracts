@@ -63,14 +63,45 @@ pub(crate) mod HasherMock {
             self: @ContractState, order: Order, signer: felt252, signature: Span<felt252>
         ) -> bool {
             let hash = self.get_order_hash(order, signer);
-            is_valid_stark_signature(hash, signer, signature)
+            self.verify_signature(hash, signer, signature)
         }
 
         fn verify_bid(
             self: @ContractState, bid: Bid, signer: felt252, signature: Span<felt252>
         ) -> bool {
             let hash = self.get_bid_hash(bid, signer);
-            is_valid_stark_signature(hash, signer, signature)
+            self.verify_signature(hash, signer, signature)
+        }
+
+        fn verify_signature(
+            self: @ComponentState<TContractState>,
+            hash: felt252,
+            signer: felt252,
+            signature: Span<felt252>
+        ) -> bool {
+            // check public key
+            if (is_valid_stark_signature(hash, signer, signature)) {
+                return true;
+            } else {
+                println!("HERE1");
+
+                // check account contract
+                if let Option::Some(account) = signer.try_into() {
+                    let mut args = array![];
+                    args.append_serde(hash);
+                    args.append_serde(signature);
+                    println!("HERE2");
+                    match call_contract_syscall(account, IS_VALID_SIGNATURE_SELECTOR, args.span()) {
+                        Result::Ok(ret) => {
+                            if ret.len() > 0 && *ret.at(0) == VALIDATED {
+                                return true;
+                            }
+                        },
+                        Result::Err(_) => { return false; }
+                    }
+                }
+            }
+            return false;
         }
     }
 }
