@@ -2,8 +2,10 @@
 pub mod HasherMock {
     use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
+    use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
-   
+
+    use starknet::{VALIDATED};
     use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
     use openzeppelin::account::utils::{is_valid_stark_signature};
     use openzeppelin::introspection::src5::SRC5Component;
@@ -68,22 +70,40 @@ pub mod HasherMock {
             self: @ContractState, order: Order, signer: felt252, signature: Span<felt252>
         ) -> bool {
             let hash = self.get_order_hash(order, signer);
-            is_valid_stark_signature(hash, signer, signature)
+            self.verify_signature(hash, signer, signature)
         }
 
         fn verify_bid(
             self: @ContractState, bid: Bid, signer: felt252, signature: Span<felt252>
         ) -> bool {
             let hash = self.get_bid_hash(bid, signer);
-            is_valid_stark_signature(hash, signer, signature)
+            self.verify_signature(hash, signer, signature)
         }
 
-         fn hash_array(
-            self: @ContractState,
-            value: Span<felt252>
-        ) -> felt252 {
+        fn hash_array(self: @ContractState, value: Span<felt252>) -> felt252 {
             let hash = PoseidonTrait::new().update(poseidon_hash_span(value)).finalize();
             hash
+        }
+
+        fn verify_signature(
+            self: @ContractState, hash: felt252, signer: felt252, signature: Span<felt252>
+        ) -> bool {
+            // check public key
+            if (is_valid_stark_signature(hash, signer, signature)) {
+                return true;
+            } else {
+                // check contract address
+                let account_contract = IAccountDispatcher {
+                    contract_address: signer.try_into().unwrap()
+                };
+                if account_contract
+                    .is_valid_signature(
+                        hash, array![*signature.at(0), *signature.at(1)]
+                    ) == VALIDATED {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
