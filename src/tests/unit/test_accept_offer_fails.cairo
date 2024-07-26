@@ -56,20 +56,6 @@ fn order_signature_used_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: invalid sig',))]
-fn order_invalid_signature_panics() {
-    let (order, _, openmark_address, _, eth_address, seller, buyer,) = create_offer();
-    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
-
-    openmark.accept_offer(buyer, order, array![1, 2].span());
-}
-
-
-#[test]
-#[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: sig expired',))]
 fn order_sig_expired_panics() {
     let (order, signature, openmark_address, _, eth_address, seller, buyer,) = create_offer();

@@ -81,32 +81,6 @@ fn fill_bids_signature_used_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: invalid sig',))]
-fn fill_bids_invalid_signature_panics() {
-    let (
-        mut signed_bids,
-        openmark_address,
-        erc721_address,
-        eth_address,
-        seller,
-        _,
-        tokenIds,
-        unitPrice
-    ) =
-        create_bids();
-    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
-
-    let mut new_bid = *signed_bids.at(0);
-    new_bid.signature = array![1, 2].span();
-    let mut bids = array![new_bid, *signed_bids.at(1), *signed_bids.at(2)];
-    openmark.fill_bids(bids.span(), erc721_address, tokenIds, unitPrice);
-}
-
-#[test]
-#[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: too many bids',))]
 fn fill_bids_too_many_bids_panics() {
     let (

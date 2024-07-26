@@ -120,17 +120,6 @@ pub mod HasherComponent {
                         Result::Err(_) => { return false; }
                     }
                 }
-            // check contract address
-            // let account_contract = IAccountDispatcher {
-            //     contract_address: signer.try_into().unwrap()
-            // };
-
-            // if account_contract
-            //     .is_valid_signature(
-            //         hash, array![*signature.at(0), *signature.at(1)]
-            //     ) == VALIDATED {
-            //     return true;
-            // }
             }
             return false;
         }

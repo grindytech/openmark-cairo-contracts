@@ -5,6 +5,7 @@ pub mod token;
 
 pub mod mocks {
     mod hasher_mock;
+    mod account_mock;
 }
 
 #[cfg(test)]

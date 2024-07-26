@@ -19,7 +19,9 @@ use openmark::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
     },
 };
-use openmark::tests::unit::common::{TEST_SELLER, ZERO, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS};
+use openmark::tests::unit::common::{
+    TEST_SELLER, ZERO, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS, deploy_mock_account
+};
 
 
 fn deploy_mock_hasher() -> ContractAddress {
@@ -76,6 +78,44 @@ fn get_bid_hash_works() {
 
     assert_eq!(result, message_hash);
 }
+
+
+#[test]
+#[available_gas(2000000)]
+fn verify_signature_works() {
+    let contract_address = deploy_mock_hasher();
+    // This value was computed using StarknetJS
+    let message_hash = 0x654e997e1cbb22847cc326f215a1697fc98779141a6483e0c419f0aeed0b9c7;
+
+    let mut signature = array![
+        0xe75494836b56da6d28f2c18ee2716cb89ce8438b4c9d0127390feb12433f3d,
+        0xfa8533c614eac3b508e14f5cd86ea583cb7e4842938574559e8927696c16fb
+    ];
+
+    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
+    let result = dispatcher.verify_signature(message_hash, TEST_SELLER, signature.span());
+
+    assert_eq!(result, true);
+}
+
+#[test]
+#[available_gas(2000000)]
+fn verify_contract_signature_works() {
+    let contract_address = deploy_mock_hasher();
+    // This value was computed using StarknetJS
+    let message_hash = 1;
+
+    let mut signature = array![1, 2];
+
+    let account = deploy_mock_account();
+
+    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
+
+    let result = dispatcher.verify_signature(message_hash, account.into(), signature.span());
+
+    assert_eq!(result, true);
+}
+
 
 #[test]
 #[available_gas(2000000)]
