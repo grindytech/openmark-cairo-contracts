@@ -32,11 +32,11 @@ use openmark::tests::unit::common::{create_offer, create_buy, ZERO};
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: invalid sig len',))]
 fn buy_invalid_signature_len_panics() {
-    let (order, _, openmark_address, _, eth_address, seller, buyer,) = create_buy();
+    let (order, _, openmark_address, _, payment_token, seller, buyer,) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, buyer);
-    start_cheat_caller_address(eth_address, buyer);
+    start_cheat_caller_address(payment_token, buyer);
 
     openmark.buy(seller, order, array![].span());
 }
@@ -45,10 +45,10 @@ fn buy_invalid_signature_len_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: sig used',))]
 fn buy_signature_used_panics() {
-    let (order, signature, openmark_address, _, eth_address, seller, buyer,) = create_buy();
+    let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
-    start_cheat_caller_address(eth_address, buyer);
+    start_cheat_caller_address(payment_token, buyer);
     start_cheat_caller_address(openmark_address, seller);
     openmark.cancel_order(order, signature);
 
@@ -60,11 +60,11 @@ fn buy_signature_used_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: sig expired',))]
 fn buy_sig_expired_panics() {
-    let (order, signature, openmark_address, _, eth_address, seller, buyer,) = create_buy();
+    let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, buyer);
-    start_cheat_caller_address(eth_address, buyer);
+    start_cheat_caller_address(payment_token, buyer);
     start_cheat_block_timestamp(openmark_address, order.expiry.try_into().unwrap());
     openmark.buy(seller, order, signature);
 }
@@ -92,11 +92,11 @@ fn buy_seller_is_zero_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: seller not owner',))]
 fn buy_seller_not_owner_panics() {
-    let (order, _, openmark_address, erc721_address, _, seller, buyer) = create_buy();
+    let (order, _, openmark_address, nft_token, _, seller, buyer) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    start_cheat_caller_address(erc721_address, seller);
-    let nft_dispatcher = IERC721Dispatcher { contract_address: erc721_address };
+    start_cheat_caller_address(nft_token, seller);
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
     openmark.validate_order(order, seller, buyer, OrderType::Buy);
@@ -120,7 +120,7 @@ fn invalid_payment_token_panics() {
     let openmark = IOpenMarkManagerDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, seller);
-    openmark.remove_payment_tokens(array![payment_token].span());
+    openmark.remove_payment_token(payment_token);
 
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
     start_cheat_caller_address(openmark_address, buyer);
