@@ -136,7 +136,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
 
             let price: u256 = order.price.into();
-            self.process_payment(Option::None, seller, price, order.payment);
+            self.process_payment(get_caller_address(), seller, price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
@@ -161,7 +161,7 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            self.process_payment(Option::Some(buyer), get_caller_address(), price, order.payment);
+            self.process_payment(buyer, get_caller_address(), price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
@@ -433,10 +433,7 @@ pub mod OpenMark {
             let price: u256 = (*signed_bid.bid.unitPrice * amount).into();
             self
                 .process_payment(
-                    Option::Some(*signed_bid.bidder),
-                    get_caller_address(),
-                    price,
-                    *signed_bid.bid.payment
+                    *signed_bid.bidder, get_caller_address(), price, *signed_bid.bid.payment
                 );
 
             let mut traded_ids = ArrayTrait::new();
@@ -497,35 +494,25 @@ pub mod OpenMark {
         /// Processes a payment from sender to a receiver.
         /// 
         /// # Parameters:
-        /// - `maybe_sender`: An optional sender address.
-        /// If `maybe_sender` is `None`, the sender is the contract caller.
+        /// - `sender`: The sender address.
         /// - `receiver`: The address to receive the payment.
         /// - `amount`: The amount to be transferred.
         /// - `payment_token`: The address of the payment token contract.
         fn process_payment(
             self: @ContractState,
-            maybe_sender: Option::<ContractAddress>,
+            sender: ContractAddress,
             receiver: ContractAddress,
             amount: u256,
             payment_token: ContractAddress
         ) {
             assert(self.paymentTokens.read(payment_token), Errors::INVALID_PAYMENT_TOKEN);
-
             let commission = self.calculate_commission(amount);
-
             let payout = amount - commission;
             let token = IERC20Dispatcher { contract_address: payment_token };
 
-            if let Option::Some(sender) = maybe_sender {
-                token.transfer_from(sender, receiver, payout);
-                if commission > 0 {
-                    token.transfer_from(sender, get_contract_address(), commission);
-                }
-            } else {
-                token.transfer(receiver, payout);
-                if commission > 0 {
-                    token.transfer(get_contract_address(), commission);
-                }
+            token.transfer_from(sender, receiver, payout);
+            if commission > 0 {
+                token.transfer_from(sender, get_contract_address(), commission);
             }
         }
     }

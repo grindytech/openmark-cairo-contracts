@@ -29,23 +29,27 @@ use openmark::tests::unit::common::{
 #[test]
 #[available_gas(2000000)]
 fn buy_works() {
-    let (order, signature, openmark_address, erc721_address, eth_address, seller, buyer) =
+    let (order, signature, openmark_address, nft_token, payment_token, seller, buyer) =
         create_buy();
 
     // buy and verify
     start_cheat_caller_address(openmark_address, buyer);
-    start_cheat_caller_address(eth_address, buyer);
-    start_cheat_caller_address(erc721_address, seller);
+    start_cheat_caller_address(nft_token, seller);
 
-    let payment_dispatcher = IERC20Dispatcher { contract_address: eth_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: erc721_address };
+    start_cheat_caller_address(payment_token, buyer);
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    payment_dispatcher.approve(openmark_address, order.price.try_into().unwrap());
+
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-
-    payment_dispatcher.approve(openmark_address, 3);
 
     let buyer_before_balance = payment_dispatcher.balance_of(buyer);
     let seller_before_balance = payment_dispatcher.balance_of(seller);
     let mut spy = spy_events(SpyOn::One(openmark_address));
+
+    start_cheat_caller_address(payment_token, openmark_address);
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(nft_token, openmark_address);
 
     openmark.buy(seller, order, signature);
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
@@ -60,18 +64,17 @@ fn buy_works() {
     spy.assert_emitted(@array![(openmark_address, expected_event)]);
 }
 
-
 #[test]
 #[available_gas(2000000)]
 fn accept_offer_works() {
-    let (order, signature, openmark_address, erc721_address, eth_address, seller, buyer) =
+    let (order, signature, openmark_address, nft_token, payment_token, seller, buyer) =
         create_offer();
-    let payment_dispatcher = IERC20Dispatcher { contract_address: eth_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: erc721_address };
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
 
     // buy and verify
     start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(payment_token, openmark_address);
 
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
@@ -92,7 +95,6 @@ fn accept_offer_works() {
     let expected_event = OpenMarkEvent::OrderFilled(OrderFilled { seller, buyer, order });
     spy.assert_emitted(@array![(openmark_address, expected_event)]);
 }
-
 
 #[test]
 #[available_gas(2000000)]
@@ -130,21 +132,21 @@ fn fill_bids_works() {
     let (
         mut signed_bids,
         openmark_address,
-        erc721_address,
-        eth_address,
+        nft_token,
+        payment_token,
         seller,
         buyers,
         tokenIds,
         unitPrice
     ) =
         create_bids();
-    let payment_dispatcher = IERC20Dispatcher { contract_address: eth_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: erc721_address };
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     // accept bids and verify
     start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(payment_token, openmark_address);
 
     let seller_before_balance = payment_dispatcher.balance_of(seller);
     let buyer1_before_balance = payment_dispatcher.balance_of(*buyers.at(0));
@@ -153,7 +155,7 @@ fn fill_bids_works() {
 
     let mut spy = spy_events(SpyOn::One(openmark_address));
 
-    openmark.fill_bids(signed_bids, erc721_address, tokenIds, unitPrice);
+    openmark.fill_bids(signed_bids, nft_token, tokenIds, unitPrice);
 
     let seller_after_balance = payment_dispatcher.balance_of(seller);
     let buyer1_after_balance = payment_dispatcher.balance_of(*buyers.at(0));
@@ -214,20 +216,20 @@ fn fill_bids_partial_works() {
     let (
         mut signed_bids,
         openmark_address,
-        erc721_address,
-        eth_address,
+        nft_token,
+        payment_token,
         seller,
         buyers,
         mut tokenIds,
         unitPrice
     ) =
         create_bids();
-    let payment_dispatcher = IERC20Dispatcher { contract_address: eth_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: erc721_address };
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
     // accept bids and verify
     start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(eth_address, openmark_address);
+    start_cheat_caller_address(payment_token, openmark_address);
 
     let seller_before_balance = payment_dispatcher.balance_of(seller);
     let buyer1_before_balance = payment_dispatcher.balance_of(*buyers.at(0));
@@ -235,7 +237,7 @@ fn fill_bids_partial_works() {
     let buyer3_before_balance = payment_dispatcher.balance_of(*buyers.at(2));
 
     let _ = tokenIds.pop_back();
-    openmark.fill_bids(signed_bids, erc721_address, tokenIds, unitPrice);
+    openmark.fill_bids(signed_bids, nft_token, tokenIds, unitPrice);
 
     let seller_after_balance = payment_dispatcher.balance_of(seller);
     let buyer1_after_balance = payment_dispatcher.balance_of(*buyers.at(0));
@@ -263,7 +265,7 @@ fn fill_bids_partial_works() {
     assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 1_u128);
 
     openmark
-        .fill_bids(array![*signed_bids.at(2)].span(), erc721_address, array![5].span(), unitPrice);
+        .fill_bids(array![*signed_bids.at(2)].span(), nft_token, array![5].span(), unitPrice);
 
     assert_eq!(nft_dispatcher.owner_of(5), *buyers.at(2));
 
@@ -314,4 +316,3 @@ fn cancel_bid_works() {
         spy.assert_emitted(@array![(openmark_address, expected_event)]);
     }
 }
-

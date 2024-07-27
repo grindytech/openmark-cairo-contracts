@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod OpenMarkCoin {
+mod OpenMarkCoinMock {
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use starknet::ContractAddress;
 
@@ -24,10 +24,14 @@ mod OpenMarkCoin {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, recipient: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        initial_supply: u256,
+        recipient: ContractAddress
+    ) {
         let name = "OpenMark Coin";
         let symbol = "OMC";
         self.erc20.initializer(name, symbol);
-        self.erc20.mint(recipient, 1000000000000000000000000000); // 1B tokens
+        self.erc20.mint(recipient, initial_supply);
     }
 }
