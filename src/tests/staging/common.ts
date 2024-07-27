@@ -31,10 +31,10 @@ const types = {
 export enum OrderType {
     Buy,
     Offer,
-}
-
-
-export interface Order {
+  }
+  
+  
+  export interface Order {
     nftContract: string,
     tokenId: string,
     payment: string,
@@ -42,17 +42,16 @@ export interface Order {
     salt: string,
     expiry: string,
     option: OrderType,
-}
+  }
 
 export interface Bid {
     nftContract: string,
-    amount: string,
     payment: string,
+    amount: string,
     unitPrice: string,
     salt: string,
     expiry: string,
 }
-
 
 function getDomain(chainId: string): StarknetDomain {
     return {

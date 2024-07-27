@@ -100,19 +100,9 @@ pub mod OpenMark {
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>
-    ) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, paymentToken: ContractAddress) {
         self.ownable.initializer(owner);
-
-        assert(paymentTokens.len() > 0, Errors::EMPTY_PAYMENT_TOKEN);
-
-        let mut i = 0;
-        while (i < paymentTokens.len()) {
-            self.paymentTokens.write(*paymentTokens.at(i), true);
-            i += 1;
-        };
-
+        self.paymentTokens.write(paymentToken, true);
         self.commission.write(0);
         self.maxBids.write(10);
     }
@@ -374,23 +364,13 @@ pub mod OpenMark {
             self.commission.write(new_commission);
         }
 
-        fn add_payment_tokens(ref self: ContractState, payment_tokens: Span<ContractAddress>) {
+        fn add_payment_token(ref self: ContractState, payment_token: ContractAddress) {
             self.ownable.assert_only_owner();
-
-            let mut i = 0;
-            while (i < payment_tokens.len()) {
-                self.paymentTokens.write(*payment_tokens.at(i), true);
-                i += 1;
-            }
+            self.paymentTokens.write(payment_token, true);
         }
-        fn remove_payment_tokens(ref self: ContractState, payment_tokens: Span<ContractAddress>) {
+        fn remove_payment_token(ref self: ContractState, payment_token: ContractAddress) {
             self.ownable.assert_only_owner();
-
-            let mut i = 0;
-            while (i < payment_tokens.len()) {
-                self.paymentTokens.write(*payment_tokens.at(i), false);
-                i += 1;
-            }
+            self.paymentTokens.write(payment_token, false);
         }
     }
 

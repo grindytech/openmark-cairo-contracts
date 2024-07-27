@@ -120,7 +120,7 @@ fn invalid_payment_token_panics() {
     let openmark = IOpenMarkManagerDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, seller);
-    openmark.remove_payment_tokens(array![payment_token].span());
+    openmark.remove_payment_token(payment_token);
 
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
     start_cheat_caller_address(openmark_address, buyer);
