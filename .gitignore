@@ -146,3 +146,4 @@ docs/build/
 .vscode/
 
 .snfoundry_cache
+snfoundry.toml
