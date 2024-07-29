@@ -9,20 +9,41 @@ pub trait IOpenMarkFactory<T> {
         symbol: ByteArray,
         base_uri: ByteArray,
     );
+}
 
-    fn set_openmark_nft(ref self: T, classhash: ClassHash);
+#[starknet::interface]
+pub trait IOpenMarkFactoryCamel<T> {
+    fn createCollection(
+       ref self: T,
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        baseURI: ByteArray,
+    );
 }
 
 #[starknet::interface]
 pub trait IOpenMarkNFT<T> {
     fn safe_mint(ref self: T, to: ContractAddress);
-    fn safe_mint_with_uri(ref self: T, to: ContractAddress, uri: ByteArray);
-
     fn safe_batch_mint(ref self: T, to: ContractAddress, quantity: u256);
+
+    fn safe_mint_with_uri(ref self: T, to: ContractAddress, uri: ByteArray);
     fn safe_batch_mint_with_uris(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
 
     fn set_token_uri(ref self: T, token_id: u256, uri: ByteArray);
     fn set_base_uri(ref self: T, base_uri: ByteArray);
+}
+
+#[starknet::interface]
+pub trait IOpenMarkNFTCamel<T> {
+    fn safeMint(ref self: T, to: ContractAddress);
+    fn safeBatchMint(ref self: T, to: ContractAddress, quantity: u256);
+    
+    fn safeMintWithURI(ref self: T, to: ContractAddress, uri: ByteArray);
+    fn safeBatchMintWithURIs(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
+
+    fn setTokenURI(ref self: T, tokenId: u256, tokenURI: ByteArray);
+    fn setBaseURI(ref self: T, baseURI: ByteArray);
 }
 
 #[starknet::interface]
@@ -33,6 +54,6 @@ pub trait IOpenMarNFTkMetadata<T> {
 }
 
 #[starknet::interface]
-pub trait IOpenMarkNFTMetadataCamelOnly<T> {
+pub trait IOpenMarkNFTMetadataCamel<T> {
     fn tokenURI(self: @T, tokenId: u256) -> ByteArray;
 }

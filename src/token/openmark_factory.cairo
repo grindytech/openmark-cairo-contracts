@@ -7,7 +7,7 @@ mod OpenMarkFactory {
     use openzeppelin::upgrades::interface::IUpgradeable;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
-    use openmark::token::interface::IOpenMarkFactory;
+    use openmark::token::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -83,10 +83,18 @@ mod OpenMarkFactory {
             self.factory.write(id, address);
             self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri });
         }
+    }
 
-        fn set_openmark_nft(ref self: ContractState, classhash: ClassHash) {
-            self.ownable.assert_only_owner();
-            self.openmark_nft.write(classhash);
+    #[abi(embed_v0)]
+    impl OpenMarkFactoryCamelImpl of IOpenMarkFactoryCamel<ContractState> {
+        fn createCollection(
+            ref self: ContractState,
+            owner: ContractAddress,
+            name: ByteArray,
+            symbol: ByteArray,
+            baseURI: ByteArray,
+        ) {
+            self.create_collection(owner, name, symbol, baseURI);
         }
     }
 
@@ -99,6 +107,12 @@ mod OpenMarkFactory {
             // Replace the class hash upgrading the contract
             self.upgradeable.upgrade(new_class_hash);
         }
+    }
+
+    #[abi(embed_v0)]
+    fn set_openmark_nft(ref self: ContractState, classhash: ClassHash) {
+        self.ownable.assert_only_owner();
+        self.openmark_nft.write(classhash);
     }
 
 

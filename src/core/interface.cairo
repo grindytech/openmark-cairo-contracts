@@ -1,5 +1,5 @@
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Order, OrderType, Bid, SignedBid};
+use openmark::primitives::types::{Order, OrderType, Bid, SignedBid, Bag};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
@@ -13,13 +13,34 @@ pub trait IOpenMark<TState> {
         ref self: TState,
         bids: Span<SignedBid>,
         nftContract: ContractAddress,
-        tokenIds: Span<u128>,
-        askingPrice: u128
+        tokenIds: Span<u128>
     );
 
     fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
 
     fn cancel_bid(ref self: TState, bid: Bid, signature: Span<felt252>);
+
+    fn batch_buy(ref self: TState, bags: Span<Bag>);
+}
+
+#[starknet::interface]
+pub trait IOpenMarkCamel<TState> {
+    fn acceptOffer(
+        ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+    );
+
+    fn fillBids(
+        ref self: TState,
+        bids: Span<SignedBid>,
+        nftContract: ContractAddress,
+        tokenIds: Span<u128>
+    );
+
+    fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
+
+    fn cancelBid(ref self: TState, bid: Bid, signature: Span<felt252>);
+
+    fn batchBuy(ref self: TState, bags: Span<Bag>);
 }
 
 #[starknet::interface]
@@ -40,8 +61,7 @@ pub trait IOpenMarkProvider<TState> {
         bids: Span<SignedBid>,
         seller: ContractAddress,
         nftContract: ContractAddress,
-        tokenIds: Span<u128>,
-        askingPrice: u128
+        tokenIds: Span<u128>
     );
 
     fn validate_order_signature(

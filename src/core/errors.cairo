@@ -30,9 +30,6 @@ pub const NO_BIDS: felt252 = 'OPENMARK: no bids';
 /// Bid with zero amount nft
 pub const ZERO_BIDS_AMOUNT: felt252 = 'OPENMARK: zero bids amount'; 
 
-// Asking price higher than bid price.
-pub const ASKING_PRICE_TOO_HIGH: felt252 = 'OPENMARK: asking too high';
- 
 /// Provided NFT does not match the NFT in the bid
 pub const NFT_MISMATCH: felt252 = 'OPENMARK: nft mismatch';
 

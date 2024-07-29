@@ -16,7 +16,7 @@ pub mod OpenMarkNFT {
 
     use starknet::ContractAddress;
     use openmark::token::interface::{
-        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamelOnly
+        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
     };
     use starknet::{get_caller_address};
 
@@ -149,6 +149,35 @@ pub mod OpenMarkNFT {
     }
 
     #[abi(embed_v0)]
+    impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
+        fn safeMint(ref self: ContractState, to: ContractAddress) {
+            self.safe_mint(to);
+        }
+
+        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
+            self.safe_batch_mint(to, quantity);
+        }
+
+        fn safeMintWithURI(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
+            self.safe_mint_with_uri(to, uri);
+        }
+
+        fn safeBatchMintWithURIs(
+            ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
+        ) {
+            self.safe_batch_mint_with_uris(to, uris);
+        }
+
+        fn setTokenURI(ref self: ContractState, tokenId: u256, tokenURI: ByteArray) {
+            self.set_token_uri(tokenId, tokenURI);
+        }
+
+        fn setBaseURI(ref self: ContractState, baseURI: ByteArray) {
+            self.set_base_uri(baseURI);
+        }
+    }
+
+    #[abi(embed_v0)]
     impl IOpenMarNFTkMetadataImpl of IOpenMarNFTkMetadata<ContractState> {
         fn name(self: @ContractState) -> ByteArray {
             self.erc721.ERC721_name.read()
@@ -173,7 +202,7 @@ pub mod OpenMarkNFT {
     }
 
     #[abi(embed_v0)]
-    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamelOnly<ContractState> {
+    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamel<ContractState> {
         fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
             self.token_uri(tokenId)
         }

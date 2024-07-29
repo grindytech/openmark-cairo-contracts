@@ -280,7 +280,6 @@ pub fn create_bids() -> (
     ContractAddress, // seller
     Span<ContractAddress>, // buyers
     Span<u128>, // sell nft token ids
-    u128 // asking price
 ) {
     let nft_token: ContractAddress = create_openmark_nft_at(
         TEST_ERC721_ADDRESS.try_into().unwrap()
@@ -355,8 +354,7 @@ pub fn create_bids() -> (
         payment_token,
         seller,
         array![buyer1, buyer2, buyer3].span(),
-        tokenIds,
-        unitPrice
+        tokenIds
     )
 }
 
