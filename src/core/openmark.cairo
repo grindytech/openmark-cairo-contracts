@@ -32,10 +32,10 @@ pub mod OpenMark {
     use starknet::ClassHash;
     use core::num::traits::Zero;
 
-    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid};
+    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid, Bag};
     use openmark::hasher::interface::IOffchainMessageHash;
     use openmark::hasher::{HasherComponent};
-    use openmark::core::interface::{IOpenMark, IOpenMarkProvider, IOpenMarkManager};
+    use openmark::core::interface::{IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager};
     use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
     use openmark::core::errors as Errors;
 
@@ -164,8 +164,7 @@ pub mod OpenMark {
             ref self: ContractState,
             bids: Span<SignedBid>,
             nftContract: ContractAddress,
-            tokenIds: Span<u128>,
-            askingPrice: u128
+            tokenIds: Span<u128>
         ) {
             self.reentrancy_guard.start();
 
@@ -182,7 +181,7 @@ pub mod OpenMark {
             };
 
             // 2. Validate Bids
-            self.validate_bids(bids, get_caller_address(), nftContract, tokenIds, askingPrice);
+            self.validate_bids(bids, get_caller_address(), nftContract, tokenIds);
 
             // 3. calculate and validate bid amounts
             let total_bid_amount = self.calculate_bid_amounts(bids, tokenIds);
@@ -219,6 +218,44 @@ pub mod OpenMark {
             );
             self.usedSignatures.write(self.hash_array(signature), true);
             self.emit(BidCancelled { who: get_caller_address(), bid, });
+        }
+
+        fn batch_buy(ref self: ContractState, bags: Span<Bag>) {
+            let mut i = 0;
+            while (i < bags.len()) {
+                let bag = *bags.at(i);
+                self.buy(bag.seller, bag.order, bag.signature);
+            };
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl OpenMarkCamelImpl of IOpenMarkCamel<ContractState> {
+        fn acceptOffer(
+            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+        ) {
+            self.accept_offer(buyer, order, signature);
+        }
+
+        fn fillBids(
+            ref self: ContractState,
+            bids: Span<SignedBid>,
+            nftContract: ContractAddress,
+            tokenIds: Span<u128>
+        ) {
+            self.fill_bids(bids, nftContract, tokenIds);
+        }
+
+        fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
+            self.cancel_order(order, signature);
+        }
+
+        fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
+            self.cancel_bid(bid, signature);
+        }
+
+        fn batchBuy(ref self: ContractState, bags: Span<Bag>) {
+            self.batch_buy(bags);
         }
     }
 
@@ -263,8 +300,7 @@ pub mod OpenMark {
             bids: Span<SignedBid>,
             seller: ContractAddress,
             nftContract: ContractAddress,
-            tokenIds: Span<u128>,
-            askingPrice: u128
+            tokenIds: Span<u128>
         ) {
             assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
@@ -279,7 +315,6 @@ pub mod OpenMark {
 
                     assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
                     assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
-                    assert(bid.unitPrice >= askingPrice, Errors::ASKING_PRICE_TOO_HIGH);
                     assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
                     assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
                     i += 1;

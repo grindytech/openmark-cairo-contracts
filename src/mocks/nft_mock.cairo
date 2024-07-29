@@ -16,7 +16,7 @@ pub mod OpenMarkNFTMock {
 
     use starknet::ContractAddress;
     use openmark::token::interface::{
-        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamelOnly
+        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel
     };
     use starknet::{get_caller_address};
 
@@ -173,7 +173,7 @@ pub mod OpenMarkNFTMock {
     }
 
     #[abi(embed_v0)]
-    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamelOnly<ContractState> {
+    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamel<ContractState> {
         fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
             self.token_uri(tokenId)
         }
