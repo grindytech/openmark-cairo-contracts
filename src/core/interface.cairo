@@ -47,6 +47,7 @@ pub trait IOpenMarkCamel<TState> {
 pub trait IOpenMarkProvider<TState> {
     fn get_chain_id(self: @TState) -> felt252;
     fn get_commission(self: @TState) -> u32;
+    fn verify_payment_token(self: @TState, payment_token: ContractAddress) -> bool;
     fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
     fn validate_order(
         self: @TState,
