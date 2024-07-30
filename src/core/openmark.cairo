@@ -280,6 +280,10 @@ pub mod OpenMark {
             self.commission.read()
         }
 
+        fn verify_payment_token(self: @ContractState, payment_token: ContractAddress) -> bool {
+            self.paymentTokens.read(payment_token)
+        }
+
         fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
             self.usedSignatures.read(self.hash_array(signature))
         }
@@ -536,7 +540,7 @@ pub mod OpenMark {
             amount: u256,
             payment_token: ContractAddress
         ) {
-            assert(self.paymentTokens.read(payment_token), Errors::INVALID_PAYMENT_TOKEN);
+            assert(self.verify_payment_token(payment_token), Errors::INVALID_PAYMENT_TOKEN);
             let commission = self.calculate_commission(amount);
             let payout = amount - commission;
             let token = IERC20Dispatcher { contract_address: payment_token };
