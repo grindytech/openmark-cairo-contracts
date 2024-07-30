@@ -178,13 +178,14 @@ pub mod OpenMark {
             self.reentrancy_guard.start();
 
             // 1. Verify signatures
-            let state = (@self);
+            let state = @self;
             {
                 let mut i = 0;
                 while (i < bids.len()) {
+                    let signed_bid = *bids.at(i);
                     state
                         .validate_bid_signature(
-                            (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
+                            signed_bid.bid, signed_bid.bidder, signed_bid.signature
                         );
                     i += 1;
                 };
@@ -477,7 +478,7 @@ pub mod OpenMark {
 
             let mut traded_ids = ArrayTrait::new();
             let mut token_index: u128 = 0;
-            let state = (@self);
+            let state = @self;
 
             while (token_index < amount) {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
