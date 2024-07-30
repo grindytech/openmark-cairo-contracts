@@ -18,18 +18,21 @@ pub mod OpenMark {
     use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use openzeppelin::token::erc721::interface::{
-        IERC721, IERC721Dispatcher, IERC721DispatcherTrait
-    };
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
+    use openzeppelin::utils::serde::SerializedAppend;
+    use openzeppelin::utils::{try_selector_with_fallback};
+    use openzeppelin::utils::selectors;
+    use openzeppelin::utils::UnwrapAndCast;
 
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
     use starknet::ClassHash;
+    use starknet::SyscallResultTrait;
+    use starknet::syscalls::call_contract_syscall;
+
     use core::num::traits::Zero;
 
     use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid, Bag};
@@ -122,8 +125,10 @@ pub mod OpenMark {
             self.validate_order(order, seller, get_caller_address(), OrderType::Buy);
 
             // 3. make trade
-            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
-            nft_dispatcher.transfer_from(seller, get_caller_address(), order.tokenId.into());
+            self
+                .nft_transfer_from(
+                    order.nftContract, seller, get_caller_address(), order.tokenId.into()
+                );
 
             let price: u256 = order.price.into();
             self.process_payment(get_caller_address(), seller, price, order.payment);
@@ -147,8 +152,10 @@ pub mod OpenMark {
             self.validate_order(order, get_caller_address(), buyer, OrderType::Offer);
 
             // 3. make trade
-            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
-            nft_dispatcher.transfer_from(get_caller_address(), buyer, order.tokenId.into());
+            self
+                .nft_transfer_from(
+                    order.nftContract, get_caller_address(), buyer, order.tokenId.into()
+                );
 
             let price: u256 = order.price.into();
             self.process_payment(buyer, get_caller_address(), price, order.payment);
@@ -171,13 +178,14 @@ pub mod OpenMark {
             self.reentrancy_guard.start();
 
             // 1. Verify signatures
-            let state = (@self);
+            let state = @self;
             {
                 let mut i = 0;
                 while (i < bids.len()) {
+                    let signed_bid = *bids.at(i);
                     state
                         .validate_bid_signature(
-                            (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
+                            signed_bid.bid, signed_bid.bidder, signed_bid.signature
                         );
                     i += 1;
                 };
@@ -196,8 +204,7 @@ pub mod OpenMark {
             let total_bid_amount = self.calculate_bid_amounts(bids, token_ids);
 
             // 4. process bid transactions
-            let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
-            self.process_all_bids(bids, token_ids, @nft_dispatcher, total_bid_amount);
+            self.process_all_bids(bids, token_ids, total_bid_amount);
 
             self.reentrancy_guard.end();
         }
@@ -298,12 +305,12 @@ pub mod OpenMark {
             assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
 
-            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
-
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
+
             assert(
-                nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::SELLER_NOT_OWNER
+                self.nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
+                Errors::SELLER_NOT_OWNER
             );
 
             let price: u256 = order.price.into();
@@ -344,10 +351,8 @@ pub mod OpenMark {
                 assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
                 assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
 
-                let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
-
                 assert(
-                    nft_dispatcher.owner_of((*token_ids.at(i)).into()) == seller,
+                    self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
                     Errors::SELLER_NOT_OWNER
                 );
 
@@ -448,13 +453,13 @@ pub mod OpenMark {
 
         fn process_bid(
             ref self: ContractState,
-            signed_bid: @SignedBid,
+            seller: ContractAddress,
+            signed_bid: SignedBid,
             ref trade_token_ids: Span<u128>,
-            nft_dispatcher: @IERC721Dispatcher,
             remaining_amount: Option<u128>
         ) {
-            let signature = self.hash_array(*signed_bid.signature);
-            let mut amount = *signed_bid.bid.amount;
+            let signature = self.hash_array(signed_bid.signature);
+            let mut amount = signed_bid.bid.amount;
 
             let partial_signature_amount = self.partialBidSignatures.read(signature);
             if partial_signature_amount > 0 {
@@ -465,18 +470,24 @@ pub mod OpenMark {
                 amount -= rem_amount;
             }
 
-            let price: u256 = (*signed_bid.bid.unitPrice * amount).into();
+            let price: u256 = (signed_bid.bid.unitPrice * amount).into();
             self
                 .process_payment(
-                    *signed_bid.bidder, get_caller_address(), price, *signed_bid.bid.payment
+                    signed_bid.bidder, get_caller_address(), price, signed_bid.bid.payment
                 );
 
             let mut traded_ids = ArrayTrait::new();
             let mut token_index: u128 = 0;
+            let state = @self;
+
             while (token_index < amount) {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
-                (*nft_dispatcher)
-                    .transfer_from(get_caller_address(), *signed_bid.bidder, token_id.into());
+
+                state
+                    .nft_transfer_from(
+                        signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
+                    );
+
                 traded_ids.append(token_id);
                 token_index += 1;
             };
@@ -491,9 +502,9 @@ pub mod OpenMark {
             self
                 .emit(
                     BidFilled {
-                        seller: get_caller_address(),
-                        bidder: *signed_bid.bidder,
-                        bid: *signed_bid.bid,
+                        seller,
+                        bidder: signed_bid.bidder,
+                        bid: signed_bid.bid,
                         tokenIds: traded_ids.span(),
                     }
                 );
@@ -503,7 +514,6 @@ pub mod OpenMark {
             ref self: ContractState,
             bids: Span<SignedBid>,
             tokenIds: Span<u128>,
-            nft_dispatcher: @IERC721Dispatcher,
             total_bid_amount: u128
         ) {
             let mut maybe_remaining: Option<u128> = Option::None;
@@ -517,13 +527,19 @@ pub mod OpenMark {
             // wholesale
             let mut i = 0;
             while (i < bids.len() - 1) {
-                self.process_bid(bids.at(i), ref trade_token_ids, nft_dispatcher, Option::None);
+                self
+                    .process_bid(
+                        get_caller_address(), *bids.at(i), ref trade_token_ids, Option::None
+                    );
                 i += 1;
             };
 
             // partial sale
-            let signed_bid = bids.at(bids.len() - 1);
-            self.process_bid(signed_bid, ref trade_token_ids, nft_dispatcher, maybe_remaining);
+            let signed_bid = *bids.at(bids.len() - 1);
+            self
+                .process_bid(
+                    get_caller_address(), signed_bid, ref trade_token_ids, maybe_remaining
+                );
         }
 
         /// Processes a payment from sender to a receiver.
@@ -543,12 +559,61 @@ pub mod OpenMark {
             assert(self.verify_payment_token(payment_token), Errors::INVALID_PAYMENT_TOKEN);
             let commission = self.calculate_commission(amount);
             let payout = amount - commission;
-            let token = IERC20Dispatcher { contract_address: payment_token };
 
-            token.transfer_from(sender, receiver, payout);
+            self.payment_transfer_from(payment_token, sender, receiver, payout);
+
             if commission > 0 {
-                token.transfer_from(sender, get_contract_address(), commission);
+                self
+                    .payment_transfer_from(
+                        payment_token, sender, get_contract_address(), commission
+                    );
             }
+        }
+
+        fn payment_transfer_from(
+            self: @ContractState,
+            target: ContractAddress,
+            sender: ContractAddress,
+            receiver: ContractAddress,
+            amount: u256
+        ) {
+            let mut args = array![];
+            args.append_serde(sender);
+            args.append_serde(receiver);
+            args.append_serde(amount);
+
+            try_selector_with_fallback(
+                target, selectors::transfer_from, selectors::transferFrom, args.span()
+            )
+                .unwrap_syscall();
+        }
+
+        fn nft_transfer_from(
+            self: @ContractState,
+            target: ContractAddress,
+            sender: ContractAddress,
+            receiver: ContractAddress,
+            token_id: u256
+        ) {
+            let mut args = array![];
+            args.append_serde(sender);
+            args.append_serde(receiver);
+            args.append_serde(token_id);
+
+            try_selector_with_fallback(
+                target, selectors::transfer_from, selectors::transferFrom, args.span()
+            )
+                .unwrap_syscall();
+        }
+
+        fn nft_owner_of(
+            self: @ContractState, target: ContractAddress, token_id: u256
+        ) -> ContractAddress {
+            let mut args = array![];
+            args.append_serde(token_id);
+
+            try_selector_with_fallback(target, selectors::owner_of, selectors::ownerOf, args.span())
+                .unwrap_and_cast()
         }
     }
 }
