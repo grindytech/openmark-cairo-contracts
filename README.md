@@ -11,6 +11,9 @@ Before you begin, ensure you have the following tools installed:
 
 ```sh
 scarb --version
+
+scarb 2.6.5
+cairo: 2.6.4
 ```
 
 1. Add the Scarb plugin:
@@ -19,28 +22,28 @@ scarb --version
     asdf plugin add scarb
     ```
 
-2. Install the specific version (e.g., 2.6.3):
+2. Install the specific version (e.g., 2.6.5):
 
     ```bash
-    asdf install scarb 2.6.3
+    asdf install scarb 2.6.5
     ```
 
 3. Set the global version:
 
     ```bash
-    asdf global scarb 2.6.3
+    asdf global scarb 2.6.5
     ```
 
 Alternatively, you can install Scarb using the following command:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.6.3
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.6.5
 ```
 
 ### Run tests
 
 ```bash
-scarb test
+npm run test
 ```
 
 ## API Document
