@@ -53,3 +53,9 @@ pub const EMPTY_PAYMENT_TOKEN: felt252 = 'OPENMARK: empty payment token';
 
 /// Payment token not allowd
 pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: Invalid payment token';
+
+/// Payment transfer failed
+pub const PAYMENT_TRANSFER_FAILED: felt252 = 'OPENMARK: Payment failed';
+
+/// NFT transfer failed
+pub const NFT_TRANSFER_FAILED: felt252 = 'OPENMARK: NFT transfer failed';

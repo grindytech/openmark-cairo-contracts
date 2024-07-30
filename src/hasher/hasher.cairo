@@ -15,15 +15,17 @@ pub mod HasherComponent {
     use core::option::OptionTrait;
     use core::traits::TryInto;
     use starknet::{ContractAddress, VALIDATED};
-    use starknet::syscalls::call_contract_syscall;
 
     use openzeppelin::utils::serde::SerializedAppend;
-    use openmark::hasher::interface::{IOffchainMessageHash, IS_VALID_SIGNATURE_SELECTOR};
+    use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
 
     use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
     use openzeppelin::account::utils::{is_valid_stark_signature};
+    use openzeppelin::utils::{try_selector_with_fallback};
+    use openzeppelin::utils::selectors;
+    use openzeppelin::utils::UnwrapAndCast;
 
 
     // Hash
@@ -111,13 +113,13 @@ pub mod HasherComponent {
                     args.append_serde(hash);
                     args.append_serde(signature);
 
-                    match call_contract_syscall(account, IS_VALID_SIGNATURE_SELECTOR, args.span()) {
-                        Result::Ok(ret) => {
-                            if ret.len() > 0 && *ret.at(0) == VALIDATED {
-                                return true;
-                            }
-                        },
-                        Result::Err(_) => { return false; }
+                    let result = try_selector_with_fallback(
+                        account, selectors::is_valid_signature, selectors::isValidSignature, args.span()
+                    )
+                        .unwrap_and_cast();
+
+                    if result == VALIDATED {
+                        return true;
                     }
                 }
             }
