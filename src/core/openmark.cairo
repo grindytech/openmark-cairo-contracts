@@ -163,32 +163,41 @@ pub mod OpenMark {
         fn fill_bids(
             ref self: ContractState,
             bids: Span<SignedBid>,
-            nftContract: ContractAddress,
-            tokenIds: Span<u128>
+            nft_token: ContractAddress,
+            token_ids: Span<u128>,
+            payment_token: ContractAddress,
+            asking_price: u128,
         ) {
             self.reentrancy_guard.start();
 
             // 1. Verify signatures
-
             let state = (@self);
-            let mut i = 0;
-            while (i < bids.len()) {
-                state
-                    .validate_bid_signature(
-                        (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
-                    );
-                i += 1;
-            };
+            {
+                let mut i = 0;
+                while (i < bids.len()) {
+                    state
+                        .validate_bid_signature(
+                            (*bids.at(i)).bid, (*bids.at(i)).bidder, (*bids.at(i)).signature
+                        );
+                    i += 1;
+                };
+            }
 
             // 2. Validate Bids
-            self.validate_bids(bids, get_caller_address(), nftContract, tokenIds);
+            self.validate_bids(bids);
+
+            //2.1 Validate Supply
+            self
+                .validate_bid_supply(
+                    bids, get_caller_address(), nft_token, token_ids, payment_token, asking_price
+                );
 
             // 3. calculate and validate bid amounts
-            let total_bid_amount = self.calculate_bid_amounts(bids, tokenIds);
+            let total_bid_amount = self.calculate_bid_amounts(bids, token_ids);
 
             // 4. process bid transactions
-            let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
-            self.process_all_bids(bids, tokenIds, @nft_dispatcher, total_bid_amount);
+            let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
+            self.process_all_bids(bids, token_ids, @nft_dispatcher, total_bid_amount);
 
             self.reentrancy_guard.end();
         }
@@ -241,9 +250,11 @@ pub mod OpenMark {
             ref self: ContractState,
             bids: Span<SignedBid>,
             nftContract: ContractAddress,
-            tokenIds: Span<u128>
+            tokenIds: Span<u128>,
+            paymentToken: ContractAddress,
+            askingPrice: u128,
         ) {
-            self.fill_bids(bids, nftContract, tokenIds);
+            self.fill_bids(bids, nftContract, tokenIds, paymentToken, askingPrice);
         }
 
         fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
@@ -295,17 +306,9 @@ pub mod OpenMark {
             assert(price > 0, Errors::PRICE_IS_ZERO);
         }
 
-        fn validate_bids(
-            self: @ContractState,
-            bids: Span<SignedBid>,
-            seller: ContractAddress,
-            nftContract: ContractAddress,
-            tokenIds: Span<u128>
-        ) {
+        fn validate_bids(self: @ContractState, bids: Span<SignedBid>) {
             assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
-            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
-
             {
                 let mut i = 0;
                 while (i < bids.len()) {
@@ -316,23 +319,36 @@ pub mod OpenMark {
                     assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
                     assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
                     assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
-                    assert(bid.nftContract == nftContract, Errors::NFT_MISMATCH);
                     i += 1;
                 };
             }
+        }
 
-            // 3. Verify token owner
-            let nft_dispatcher = IERC721Dispatcher { contract_address: nftContract };
-            {
-                let mut i = 0;
-                while (i < tokenIds.len()) {
-                    assert(
-                        nft_dispatcher.owner_of((*tokenIds.at(i)).into()) == seller,
-                        Errors::SELLER_NOT_OWNER
-                    );
-                    i += 1;
-                }
-            }
+        fn validate_bid_supply(
+            self: @ContractState,
+            bids: Span<SignedBid>,
+            seller: ContractAddress,
+            nft_token: ContractAddress,
+            token_ids: Span<u128>,
+            payment_token: ContractAddress,
+            asking_price: u128
+        ) {
+            let mut i = 0;
+            while (i < bids.len()) {
+                let bid = (*bids.at(i)).bid;
+                assert(bid.nftContract == nft_token, Errors::NFT_MISMATCH);
+                assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
+                assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
+
+                let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
+
+                assert(
+                    nft_dispatcher.owner_of((*token_ids.at(i)).into()) == seller,
+                    Errors::SELLER_NOT_OWNER
+                );
+
+                i += 1;
+            };
         }
 
         fn validate_bid_signature(
@@ -421,7 +437,7 @@ pub mod OpenMark {
     }
 
     #[generate_trait]
-    impl InternalImpl of InternalImplTrait {
+    pub impl InternalImpl of InternalImplTrait {
         fn calculate_commission(self: @ContractState, price: u256) -> u256 {
             price * self.commission.read().into() / PERMYRIAD.into()
         }
