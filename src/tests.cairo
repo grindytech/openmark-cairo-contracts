@@ -5,5 +5,6 @@ pub mod unit {
     mod test_accept_offer_fails;
     mod test_fill_bids_fails;
     mod test_token;
+    mod test_openmark_factory;
     mod common;
 }

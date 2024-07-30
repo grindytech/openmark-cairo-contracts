@@ -1,10 +1,12 @@
 #[starknet::contract]
-mod OpenMarkFactory {
+pub mod OpenMarkFactory {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::utils::serde::SerializedAppend;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
+
+    use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
     use openmark::token::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel};
@@ -28,23 +30,22 @@ mod OpenMarkFactory {
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         factory: LegacyMap<u256, ContractAddress>,
-        contract_index: u256,
         openmark_nft: ClassHash,
     }
 
     #[derive(Drop, PartialEq, starknet::Event)]
-    struct CollectionCreated {
-        id: u256,
-        address: ContractAddress,
-        owner: ContractAddress,
-        name: ByteArray,
-        symbol: ByteArray,
-        base_uri: ByteArray,
+    pub struct CollectionCreated {
+        pub id: u256,
+        pub address: ContractAddress,
+        pub owner: ContractAddress,
+        pub name: ByteArray,
+        pub symbol: ByteArray,
+        pub base_uri: ByteArray,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -56,18 +57,20 @@ mod OpenMarkFactory {
     fn constructor(ref self: ContractState, owner: ContractAddress, openmark_nft: ClassHash) {
         self.ownable.initializer(owner);
         self.openmark_nft.write(openmark_nft);
-        self.contract_index.write(0);
     }
 
     #[abi(embed_v0)]
     impl OpenMarkFactoryImpl of IOpenMarkFactory<ContractState> {
         fn create_collection(
             ref self: ContractState,
+            id: u256,
             owner: ContractAddress,
             name: ByteArray,
             symbol: ByteArray,
             base_uri: ByteArray,
         ) {
+            assert(self.get_collection(id).is_zero(), 'OMFactory: ID in use');
+
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
             name.serialize(ref constructor_calldata);
@@ -79,9 +82,12 @@ mod OpenMarkFactory {
             )
                 .unwrap_syscall();
 
-            let id = next_id(ref self);
             self.factory.write(id, address);
             self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri });
+        }
+
+        fn get_collection(self: @ContractState, id: u256) -> ContractAddress {
+            self.factory.read(id)
         }
     }
 
@@ -89,12 +95,17 @@ mod OpenMarkFactory {
     impl OpenMarkFactoryCamelImpl of IOpenMarkFactoryCamel<ContractState> {
         fn createCollection(
             ref self: ContractState,
+            id: u256,
             owner: ContractAddress,
             name: ByteArray,
             symbol: ByteArray,
             baseURI: ByteArray,
         ) {
-            self.create_collection(owner, name, symbol, baseURI);
+            self.create_collection(id, owner, name, symbol, baseURI);
+        }
+
+        fn getCollection(self: @ContractState, id: u256) -> ContractAddress {
+            self.get_collection(id)
         }
     }
 
@@ -113,13 +124,5 @@ mod OpenMarkFactory {
     fn set_openmark_nft(ref self: ContractState, classhash: ClassHash) {
         self.ownable.assert_only_owner();
         self.openmark_nft.write(classhash);
-    }
-
-
-    /// Returns the current id and increments it for the next use.
-    fn next_id(ref self: ContractState) -> u256 {
-        let current_id = self.contract_index.read();
-        self.contract_index.write(current_id + 1);
-        current_id
     }
 }

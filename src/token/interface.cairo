@@ -3,23 +3,35 @@ use starknet::{ClassHash, ContractAddress};
 #[starknet::interface]
 pub trait IOpenMarkFactory<T> {
     fn create_collection(
-       ref self: T,
+        ref self: T,
+        id: u256,
         owner: ContractAddress,
         name: ByteArray,
         symbol: ByteArray,
         base_uri: ByteArray,
     );
+
+     fn get_collection(
+        self: @T,
+        id: u256
+    ) -> ContractAddress;
 }
 
 #[starknet::interface]
 pub trait IOpenMarkFactoryCamel<T> {
     fn createCollection(
-       ref self: T,
+        ref self: T,
+        id: u256,
         owner: ContractAddress,
         name: ByteArray,
         symbol: ByteArray,
         baseURI: ByteArray,
     );
+    
+    fn getCollection(
+        self: @T,
+        id: u256
+    ) -> ContractAddress;
 }
 
 #[starknet::interface]
@@ -38,7 +50,7 @@ pub trait IOpenMarkNFT<T> {
 pub trait IOpenMarkNFTCamel<T> {
     fn safeMint(ref self: T, to: ContractAddress);
     fn safeBatchMint(ref self: T, to: ContractAddress, quantity: u256);
-    
+
     fn safeMintWithURI(ref self: T, to: ContractAddress, uri: ByteArray);
     fn safeBatchMintWithURIs(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
 
