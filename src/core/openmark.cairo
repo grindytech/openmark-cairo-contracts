@@ -18,10 +18,6 @@ pub mod OpenMark {
     use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
-    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use openzeppelin::token::erc721::interface::{
-        IERC721, IERC721Dispatcher, IERC721DispatcherTrait
-    };
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
@@ -308,12 +304,12 @@ pub mod OpenMark {
             assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
 
-            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
-
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
+
             assert(
-                nft_dispatcher.owner_of(order.tokenId.into()) == seller, Errors::SELLER_NOT_OWNER
+                self.nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
+                Errors::SELLER_NOT_OWNER
             );
 
             let price: u256 = order.price.into();
@@ -354,10 +350,8 @@ pub mod OpenMark {
                 assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
                 assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
 
-                let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
-
                 assert(
-                    nft_dispatcher.owner_of((*token_ids.at(i)).into()) == seller,
+                    self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
                     Errors::SELLER_NOT_OWNER
                 );
 
@@ -609,6 +603,16 @@ pub mod OpenMark {
                 target, selectors::transfer_from, selectors::transferFrom, args.span()
             )
                 .unwrap_syscall();
+        }
+
+        fn nft_owner_of(
+            self: @ContractState, target: ContractAddress, token_id: u256
+        ) -> ContractAddress {
+            let mut args = array![];
+            args.append_serde(token_id);
+
+            try_selector_with_fallback(target, selectors::owner_of, selectors::ownerOf, args.span())
+                .unwrap_and_cast()
         }
     }
 }
