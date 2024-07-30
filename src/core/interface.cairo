@@ -12,8 +12,10 @@ pub trait IOpenMark<TState> {
     fn fill_bids(
         ref self: TState,
         bids: Span<SignedBid>,
-        nftContract: ContractAddress,
-        tokenIds: Span<u128>
+        nft_token: ContractAddress,
+        token_ids: Span<u128>,
+        payment_token: ContractAddress,
+        asking_price: u128,
     );
 
     fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
@@ -33,7 +35,9 @@ pub trait IOpenMarkCamel<TState> {
         ref self: TState,
         bids: Span<SignedBid>,
         nftContract: ContractAddress,
-        tokenIds: Span<u128>
+        tokenIds: Span<u128>,
+        paymentToken: ContractAddress,
+        askingPrice: u128,
     );
 
     fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
@@ -57,12 +61,16 @@ pub trait IOpenMarkProvider<TState> {
         order_type: OrderType
     );
 
-    fn validate_bids(
+    fn validate_bids(self: @TState, bids: Span<SignedBid>);
+
+    fn validate_bid_supply(
         self: @TState,
         bids: Span<SignedBid>,
         seller: ContractAddress,
-        nftContract: ContractAddress,
-        tokenIds: Span<u128>
+        nft_token: ContractAddress,
+        token_ids: Span<u128>,
+        payment_token: ContractAddress,
+        asking_price: u128
     );
 
     fn validate_order_signature(
@@ -73,9 +81,7 @@ pub trait IOpenMarkProvider<TState> {
         self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
     );
 
-    fn calculate_bid_amounts(
-        self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>
-    ) -> u128;
+    fn calculate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
 }
 
 #[starknet::interface]

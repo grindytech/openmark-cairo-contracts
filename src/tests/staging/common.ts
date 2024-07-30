@@ -31,10 +31,10 @@ const types = {
 export enum OrderType {
     Buy,
     Offer,
-  }
-  
-  
-  export interface Order {
+}
+
+
+export interface Order {
     nftContract: string,
     tokenId: string,
     payment: string,
@@ -42,7 +42,7 @@ export enum OrderType {
     salt: string,
     expiry: string,
     option: OrderType,
-  }
+}
 
 export interface Bid {
     nftContract: string,
@@ -53,6 +53,12 @@ export interface Bid {
     expiry: string,
 }
 
+export interface SignedBid {
+    bidder: string,
+    bid: Bid,
+    signature: bigint[]
+}
+
 function getDomain(chainId: string): StarknetDomain {
     return {
         name: "OpenMark",
@@ -61,10 +67,6 @@ function getDomain(chainId: string): StarknetDomain {
     };
 }
 
-export function getOrderHash(myStruct: Order, chainId: string, owner: BigNumberish): string {
-    let hash_data = getOrderData(myStruct, chainId);
-    return typedData.getMessageHash(getOrderData(myStruct, chainId), owner);
-}
 
 function getOrderData(myStruct: Order, chainId: string): TypedData {
     return {
@@ -75,8 +77,22 @@ function getOrderData(myStruct: Order, chainId: string): TypedData {
     };
 }
 
+function getBidData(myStruct: Bid, chainId: string): TypedData {
+    return {
+        types,
+        primaryType: "Bid",
+        domain: getDomain(chainId),
+        message: { ...myStruct },
+    };
+}
+
 
 export async function createOrderSignature(order: Order, seller: Account, chainID): Promise<WeierstrassSignatureType> {
     let signature = await seller.signMessage(getOrderData(order, chainID)) as WeierstrassSignatureType;
+    return signature;
+}
+
+export async function createBidSignature(bid: Bid, seller: Account, chainID): Promise<WeierstrassSignatureType> {
+    let signature = await seller.signMessage(getBidData(bid, chainID)) as WeierstrassSignatureType;
     return signature;
 }
