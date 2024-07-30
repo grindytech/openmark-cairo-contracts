@@ -17,10 +17,10 @@ The `buy` function allows a buyer to purchase an NFT from a seller by verifying 
 ### Events
 - `OrderFilled { seller: ContractAddress, buyer: ContractAddress, order: Order }` - Emitted when an order is successfully filled.
 
-## 2. `accept_offer`
+## 2. `acceptOffer`
 
 ### Description
-The `accept_offer` function allows a seller to accept an offer from a buyer. It verifies the provided signature, validates the order, executes the trade, updates the storage, and emits relevant events.
+The `acceptOffer` function allows a seller to accept an offer from a buyer. It verifies the provided signature, validates the order, executes the trade, updates the storage, and emits relevant events.
 
 ### Arguments
 - `buyer: ContractAddress` - Address of the buyer.
@@ -30,24 +30,25 @@ The `accept_offer` function allows a seller to accept an offer from a buyer. It 
 ### Events
 - `OrderFilled { seller: ContractAddress, buyer: ContractAddress, order: Order }` - Emitted when an order is successfully filled.
 
-## 3. `fill_bids`
+## 3. `fillBids`
 
 ### Description
-The `fill_bids` function allows the contract to process multiple bids for NFTs in a single transaction. It verifies the provided signatures, validates the bids, calculates commissions, executes the trades, updates the storage, and emits relevant events for each bid filled.
+The `fillBids` function allows the contract to process multiple bids for NFTs in a single transaction. It verifies the provided signatures, validates the bids, calculates commissions, executes the trades, updates the storage, and emits relevant events for each bid filled.
 
 ### Arguments
 - `bids: Span<SignedBid>` - Span of signed bids to be processed.
 - `nftContract: ContractAddress` - Address of the NFT contract.
 - `tokenIds: Span<u128>` - Span of token IDs to be traded.
+- `paymentToken: ContractAddress` - Address of the payment token
 - `askingPrice: u128` - Asking price for the NFTs.
 
 ### Events
-- `BidFilled { seller: ContractAddress, bidder: ContractAddress, bid: Bid, tokenIds: Span<u128>, askingPrice: u128 }` - Emitted for each bid that is successfully filled.
+- `BidFilled { seller: ContractAddress, bidder: ContractAddress, bid: Bid, tokenIds: Span<u128> }` - Emitted for each bid that is successfully filled.
 
-## 4. `cancel_order`
+## 4. `cancelOrder`
 
 ### Description
-The `cancel_order` function allows a user to cancel an order by verifying the provided signature and updating the storage. It emits a relevant event upon successful cancellation.
+The `cancelOrder` function allows a user to cancel an order by verifying the provided signature and updating the storage. It emits a relevant event upon successful cancellation.
 
 ### Arguments
 - `order: Order` - Order details to be cancelled.
@@ -56,10 +57,10 @@ The `cancel_order` function allows a user to cancel an order by verifying the pr
 ### Events
 - `OrderCancelled { who: ContractAddress, order: Order }` - Emitted when an order is successfully cancelled.
 
-## 5. `cancel_bid`
+## 5. `cancelBid`
 
 ### Description
-The `cancel_bid` function allows a user to cancel a bid by verifying the provided signature and updating the storage. It emits a relevant event upon successful cancellation.
+The `cancelBid` function allows a user to cancel a bid by verifying the provided signature and updating the storage. It emits a relevant event upon successful cancellation.
 
 ### Arguments
 - `bid: Bid` - Bid details to be cancelled.
