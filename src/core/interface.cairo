@@ -82,6 +82,8 @@ pub trait IOpenMarkProvider<TState> {
     );
 
     fn validate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
+
+    fn get_version(self: @TState) -> (u32, u32, u32 );
 }
 
 #[starknet::interface]
