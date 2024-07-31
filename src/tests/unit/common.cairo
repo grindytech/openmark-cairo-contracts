@@ -26,7 +26,6 @@ use openmark::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
     },
     token::interface::{IOpenMarkNFTDispatcher}, core::OpenMark::Event as OpenMarkEvent,
-    core::OpenMark::{maxBidsContractMemberStateTrait, ContractState},
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };
 
@@ -356,11 +355,4 @@ pub fn create_bids() -> (
         array![buyer1, buyer2, buyer3].span(),
         tokenIds
     )
-}
-
-pub fn get_contract_state_for_testing() -> ContractState {
-    let mut state = openmark::core::OpenMark::contract_state_for_testing();
-    state.maxBids.write(10);
-
-    state
 }

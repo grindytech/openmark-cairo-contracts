@@ -12,7 +12,6 @@
 
 #[starknet::contract]
 pub mod OpenMark {
-    // use core::option::OptionTrait;
     use core::option::OptionTrait;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use core::traits::Into;
@@ -93,13 +92,21 @@ pub mod OpenMark {
         reentrancy_guard: ReentrancyGuardComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
+        /// hash provider
         #[substorage(v0)]
-        hasher: HasherComponent::Storage, // hash provider
-        commission: u32, // OpenMark's commission (per mille)
-        maxBids: u32, // Maximum number of bids allowed in fillBids
-        usedSignatures: LegacyMap<felt252, bool>, // store used order signatures
-        partialBidSignatures: LegacyMap<felt252, u128>, // store partial bid signatures
-        paymentTokens: LegacyMap<ContractAddress, bool>, // store allowed payment tokens
+        hasher: HasherComponent::Storage,
+        /// OpenMark's commission (per mille)
+        commission: u32,
+        /// Maximum number of bids allowed in fillBids
+        maxFillBids: u32,
+        /// Maximum number of tokens that can be handled in a single fillBids operation
+        maxFillNFTs: u32,
+        /// store used order signatures
+        usedSignatures: LegacyMap<felt252, bool>,
+        /// store partial bid signatures
+        partialBidSignatures: LegacyMap<felt252, u128>,
+        /// store allowed payment tokens
+        paymentTokens: LegacyMap<ContractAddress, bool>,
     }
 
     #[constructor]
@@ -107,9 +114,9 @@ pub mod OpenMark {
         self.ownable.initializer(owner);
         self.paymentTokens.write(paymentToken, true);
         self.commission.write(0);
-        self.maxBids.write(10);
+        self.maxFillBids.write(5);
+        self.maxFillNFTs.write(10);
     }
-
 
     #[abi(embed_v0)]
     impl OpenMarkImpl of IOpenMark<ContractState> {
@@ -201,10 +208,10 @@ pub mod OpenMark {
                 );
 
             // 3. calculate and validate bid amounts
-            let total_bid_amount = self.calculate_bid_amounts(bids, token_ids);
+            let total_bid_amount = self.validate_bid_amounts(bids, token_ids);
 
             // 4. process bid transactions
-            self.process_all_bids(bids, token_ids, total_bid_amount);
+            self.process_all_bids(get_caller_address(), bids, token_ids, total_bid_amount);
 
             self.reentrancy_guard.end();
         }
@@ -319,7 +326,7 @@ pub mod OpenMark {
 
         fn validate_bids(self: @ContractState, bids: Span<SignedBid>) {
             assert(bids.len() > 0, Errors::NO_BIDS);
-            assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
+            assert(bids.len() < self.maxFillBids.read(), Errors::TOO_MANY_BIDS);
             {
                 let mut i = 0;
                 while (i < bids.len()) {
@@ -344,20 +351,29 @@ pub mod OpenMark {
             payment_token: ContractAddress,
             asking_price: u128
         ) {
-            let mut i = 0;
-            while (i < bids.len()) {
-                let bid = (*bids.at(i)).bid;
-                assert(bid.nftContract == nft_token, Errors::NFT_MISMATCH);
-                assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
-                assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
+            {
+                let mut i = 0;
+                while (i < bids.len()) {
+                    let bid = (*bids.at(i)).bid;
+                    assert(bid.nftContract == nft_token, Errors::NFT_MISMATCH);
+                    assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
+                    assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
 
-                assert(
-                    self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
-                    Errors::SELLER_NOT_OWNER
-                );
+                    i += 1;
+                };
+            }
+            assert(token_ids.len() < self.maxFillNFTs.read(), Errors::TOO_MANY_NFTS);
+            {
+                let mut i = 0;
+                while (i < token_ids.len()) {
+                    assert(
+                        self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
+                        Errors::SELLER_NOT_OWNER
+                    );
 
-                i += 1;
-            };
+                    i += 1;
+                };
+            }
         }
 
         fn validate_bid_signature(
@@ -381,7 +397,7 @@ pub mod OpenMark {
             );
         }
 
-        fn calculate_bid_amounts(
+        fn validate_bid_amounts(
             self: @ContractState, bids: Span<SignedBid>, tokenIds: Span<u128>,
         ) -> u128 {
             let mut min_bid_amount = 0;
@@ -414,6 +430,11 @@ pub mod OpenMark {
 
             total_bid_amount
         }
+
+        fn get_version(self: @ContractState) -> (u32, u32, u32) {
+            // version 0.2.0
+            (0, 2, 0)
+        }
     }
 
     #[abi(embed_v0)]
@@ -431,6 +452,15 @@ pub mod OpenMark {
         fn remove_payment_token(ref self: ContractState, payment_token: ContractAddress) {
             self.ownable.assert_only_owner();
             self.paymentTokens.write(payment_token, false);
+        }
+
+        fn set_max_fill_bids(ref self: ContractState, max_bids: u32) {
+            self.ownable.assert_only_owner();
+            self.maxFillBids.write(max_bids);
+        }
+        fn set_max_fill_nfts(ref self: ContractState, max_nfts: u32) {
+            self.ownable.assert_only_owner();
+            self.maxFillNFTs.write(max_nfts);
         }
     }
 
@@ -456,18 +486,16 @@ pub mod OpenMark {
             seller: ContractAddress,
             signed_bid: SignedBid,
             ref trade_token_ids: Span<u128>,
-            remaining_amount: Option<u128>
+            remaining_amount: u128
         ) {
             let signature = self.hash_array(signed_bid.signature);
             let mut amount = signed_bid.bid.amount;
-
-            let partial_signature_amount = self.partialBidSignatures.read(signature);
-            if partial_signature_amount > 0 {
-                amount = partial_signature_amount;
-            }
-
-            if let Option::Some(rem_amount) = remaining_amount {
-                amount -= rem_amount;
+            {
+                let partial_amount = self.partialBidSignatures.read(signature);
+                if partial_amount > 0 {
+                    amount = partial_amount;
+                }
+                amount -= remaining_amount;
             }
 
             let price: u256 = (signed_bid.bid.unitPrice * amount).into();
@@ -492,8 +520,8 @@ pub mod OpenMark {
                 token_index += 1;
             };
 
-            if let Option::Some(rem_amount) = remaining_amount {
-                self.partialBidSignatures.write(signature, rem_amount);
+            if remaining_amount > 0 {
+                self.partialBidSignatures.write(signature, remaining_amount);
             } else {
                 self.usedSignatures.write(signature, true);
                 self.partialBidSignatures.write(signature, 0);
@@ -512,34 +540,23 @@ pub mod OpenMark {
 
         fn process_all_bids(
             ref self: ContractState,
+            seller: ContractAddress,
             bids: Span<SignedBid>,
             tokenIds: Span<u128>,
             total_bid_amount: u128
         ) {
-            let mut maybe_remaining: Option<u128> = Option::None;
             let remaining_amount = total_bid_amount - tokenIds.len().into();
-            if remaining_amount > 0 {
-                maybe_remaining = Option::Some(remaining_amount);
-            }
-
             let mut trade_token_ids = tokenIds;
-
             // wholesale
             let mut i = 0;
             while (i < bids.len() - 1) {
-                self
-                    .process_bid(
-                        get_caller_address(), *bids.at(i), ref trade_token_ids, Option::None
-                    );
+                self.process_bid(seller, *bids.at(i), ref trade_token_ids, 0);
                 i += 1;
             };
 
             // partial sale
             let signed_bid = *bids.at(bids.len() - 1);
-            self
-                .process_bid(
-                    get_caller_address(), signed_bid, ref trade_token_ids, maybe_remaining
-                );
+            self.process_bid(seller, signed_bid, ref trade_token_ids, remaining_amount);
         }
 
         /// Processes a payment from sender to a receiver.

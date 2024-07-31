@@ -24,6 +24,9 @@ pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 /// Exceeds number of bids allowd in 'fillBids'.
 pub const TOO_MANY_BIDS: felt252 = 'OPENMARK: too many bids';
 
+/// Exceeds number of nfts allowd in 'fillBids'.
+pub const TOO_MANY_NFTS: felt252 = 'OPENMARK: too many nfts';
+
 /// There is no bid in 'fill_bids'.
 pub const NO_BIDS: felt252 = 'OPENMARK: no bids';
 
@@ -54,8 +57,3 @@ pub const EMPTY_PAYMENT_TOKEN: felt252 = 'OPENMARK: empty payment token';
 /// Payment token not allowd
 pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: Invalid payment token';
 
-/// Payment transfer failed
-pub const PAYMENT_TRANSFER_FAILED: felt252 = 'OPENMARK: Payment failed';
-
-/// NFT transfer failed
-pub const NFT_TRANSFER_FAILED: felt252 = 'OPENMARK: NFT transfer failed';

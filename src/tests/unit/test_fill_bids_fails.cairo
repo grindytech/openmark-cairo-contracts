@@ -23,11 +23,14 @@ use openmark::{
     core::interface::{
         IOpenMarkProvider, IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
     },
+    core::interface::{
+        IOpenMarkManager, IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
+    },
     core::OpenMark::Event as OpenMarkEvent,
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
     core::OpenMark::{InternalImpl},
 };
-use openmark::tests::unit::common::{create_bids, get_contract_state_for_testing, ZERO,};
+use openmark::tests::unit::common::{create_bids, ZERO,};
 
 #[test]
 #[available_gas(2000000)]
@@ -73,21 +76,38 @@ fn fill_bids_signature_used_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: too many bids',))]
 fn fill_bids_too_many_bids_panics() {
-    let (mut signed_bids, openmark_address, _, payment_token, seller, _, _,) = create_bids();
+    let (mut signed_bids, openmark_address, nft_token, payment_token, seller, _, tokenIds) =
+        create_bids();
 
-    let mut bids = array![];
-
-    let mut i = 0_u32;
-    while i < 11 {
-        bids.append(*signed_bids.at(0));
-        i += 1;
-    };
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+    let openmark_manager = IOpenMarkManagerDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(payment_token, openmark_address);
-    let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
+    openmark_manager.set_max_fill_bids(1);
 
-    openmark.validate_bids(bids.span());
+    openmark
+        .fill_bids(
+            signed_bids, nft_token, tokenIds, payment_token, *signed_bids.at(0).bid.unitPrice
+        );
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('OPENMARK: too many nfts',))]
+fn fill_bids_too_many_nft_panics() {
+    let (mut signed_bids, openmark_address, nft_token, payment_token, seller, _, tokenIds) =
+        create_bids();
+
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+    let openmark_manager = IOpenMarkManagerDispatcher { contract_address: openmark_address };
+
+    start_cheat_caller_address(openmark_address, seller);
+    openmark_manager.set_max_fill_nfts(1);
+
+    openmark
+        .fill_bids(
+            signed_bids, nft_token, tokenIds, payment_token, *signed_bids.at(0).bid.unitPrice
+        );
 }
 
 #[test]
@@ -265,7 +285,7 @@ fn fill_bids_exceed_bid_nfts_panics() {
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
     let mut new_tokenIds = array![0, 1, 2, 3, 4, 5, 6];
-    openmark.calculate_bid_amounts(signed_bids, new_tokenIds.span());
+    openmark.validate_bid_amounts(signed_bids, new_tokenIds.span());
 }
 
 #[test]
@@ -280,6 +300,6 @@ fn fill_bids_not_enough_nfts_panics() {
 
     let mut new_tokenIds = array![0, 1, 2];
 
-    openmark.calculate_bid_amounts(signed_bids, new_tokenIds.span());
+    openmark.validate_bid_amounts(signed_bids, new_tokenIds.span());
 }
 
