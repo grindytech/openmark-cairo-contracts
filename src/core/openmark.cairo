@@ -95,8 +95,12 @@ pub mod OpenMark {
         upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
         hasher: HasherComponent::Storage, // hash provider
-        commission: u32, // OpenMark's commission (per mille)
-        maxBids: u32, // Maximum number of bids allowed in fillBids
+        // OpenMark's commission (per mille)
+        commission: u32,
+        // Maximum number of bids allowed in fillBids
+        maxFillBids: u32,
+        // Maximum number of tokens that can be handled in a single fillBids operation
+        maxFillNFTs: u32,
         usedSignatures: LegacyMap<felt252, bool>, // store used order signatures
         partialBidSignatures: LegacyMap<felt252, u128>, // store partial bid signatures
         paymentTokens: LegacyMap<ContractAddress, bool>, // store allowed payment tokens
@@ -107,7 +111,8 @@ pub mod OpenMark {
         self.ownable.initializer(owner);
         self.paymentTokens.write(paymentToken, true);
         self.commission.write(0);
-        self.maxBids.write(10);
+        self.maxFillBids.write(5);
+        self.maxFillNFTs.write(10);
     }
 
 
@@ -201,7 +206,7 @@ pub mod OpenMark {
                 );
 
             // 3. calculate and validate bid amounts
-            let total_bid_amount = self.calculate_bid_amounts(bids, token_ids);
+            let total_bid_amount = self.validate_bid_amounts(bids, token_ids);
 
             // 4. process bid transactions
             self.process_all_bids(bids, token_ids, total_bid_amount);
@@ -319,7 +324,7 @@ pub mod OpenMark {
 
         fn validate_bids(self: @ContractState, bids: Span<SignedBid>) {
             assert(bids.len() > 0, Errors::NO_BIDS);
-            assert(bids.len() < self.maxBids.read(), Errors::TOO_MANY_BIDS);
+            assert(bids.len() < self.maxFillBids.read(), Errors::TOO_MANY_BIDS);
             {
                 let mut i = 0;
                 while (i < bids.len()) {
@@ -344,20 +349,29 @@ pub mod OpenMark {
             payment_token: ContractAddress,
             asking_price: u128
         ) {
-            let mut i = 0;
-            while (i < bids.len()) {
-                let bid = (*bids.at(i)).bid;
-                assert(bid.nftContract == nft_token, Errors::NFT_MISMATCH);
-                assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
-                assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
+            {
+                let mut i = 0;
+                while (i < bids.len()) {
+                    let bid = (*bids.at(i)).bid;
+                    assert(bid.nftContract == nft_token, Errors::NFT_MISMATCH);
+                    assert(bid.payment == payment_token, Errors::PAYMENT_MISMATCH);
+                    assert(asking_price <= bid.unitPrice, Errors::ASKING_PRICE_TOO_HIGH);
 
-                assert(
-                    self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
-                    Errors::SELLER_NOT_OWNER
-                );
+                    i += 1;
+                };
+            }
+            assert(token_ids.len() < self.maxFillNFTs.read(), Errors::TOO_MANY_NFTS);
+            {
+                let mut i = 0;
+                while (i < token_ids.len()) {
+                    assert(
+                        self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
+                        Errors::SELLER_NOT_OWNER
+                    );
 
-                i += 1;
-            };
+                    i += 1;
+                };
+            }
         }
 
         fn validate_bid_signature(
@@ -381,7 +395,7 @@ pub mod OpenMark {
             );
         }
 
-        fn calculate_bid_amounts(
+        fn validate_bid_amounts(
             self: @ContractState, bids: Span<SignedBid>, tokenIds: Span<u128>,
         ) -> u128 {
             let mut min_bid_amount = 0;
@@ -431,6 +445,15 @@ pub mod OpenMark {
         fn remove_payment_token(ref self: ContractState, payment_token: ContractAddress) {
             self.ownable.assert_only_owner();
             self.paymentTokens.write(payment_token, false);
+        }
+
+        fn set_max_fill_bids(ref self: ContractState, max_bids: u32) {
+            self.ownable.assert_only_owner();
+            self.maxFillBids.write(max_bids);
+        }
+        fn set_max_fill_nfts(ref self: ContractState, max_nfts: u32) {
+            self.ownable.assert_only_owner();
+            self.maxFillNFTs.write(max_nfts);
         }
     }
 

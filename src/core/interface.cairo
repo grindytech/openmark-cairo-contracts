@@ -81,7 +81,7 @@ pub trait IOpenMarkProvider<TState> {
         self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
     );
 
-    fn calculate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
+    fn validate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
 }
 
 #[starknet::interface]
@@ -89,4 +89,6 @@ pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
     fn add_payment_token(ref self: TState, payment_token: ContractAddress);
     fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
+    fn set_max_fill_bids(ref self: TState, max_bids: u32);
+    fn set_max_fill_nfts(ref self: TState, max_nfts: u32);
 }
