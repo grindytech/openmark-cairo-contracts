@@ -7,8 +7,9 @@ pub const INVALID_SIGNATURE: felt252 = 'OPENMARK: invalid sig';
 /// Invalid signature length (2)
 pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
 
-// Signature is expired.
-pub const SIGNATURE_EXPIRED: felt252 = 'OPENMARK: sig expired';
+pub const ORDER_EXPIRED: felt252 = 'OPENMARK: order expired';
+
+pub const BID_EXPIRED: felt252 = 'OPENMARK: bid expired';
 
 /// Seller is not the owner of nft.
 pub const NOT_NFT_OWNER: felt252 = 'OPENMARK: not nft owner';

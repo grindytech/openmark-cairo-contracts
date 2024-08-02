@@ -310,7 +310,7 @@ pub mod OpenMark {
             buyer: ContractAddress,
             order_type: OrderType
         ) {
-            assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
+            assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
             assert(self.verify_payment_token(order.payment), Errors::INVALID_PAYMENT_TOKEN);
 
@@ -331,28 +331,27 @@ pub mod OpenMark {
             assert(price > 0, Errors::PRICE_IS_ZERO);
         }
 
+        fn validate_bid(self: @ContractState, bid: Bid, bidder: ContractAddress) {
+            assert(!bidder.is_zero(), Errors::ZERO_ADDRESS);
+
+            assert(self.verify_payment_token(bid.payment), Errors::INVALID_PAYMENT_TOKEN);
+            assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
+            let price: u256 = (bid.unitPrice * bid.amount).into();
+            assert(price > 0, Errors::PRICE_IS_ZERO);
+            assert(
+                self.payment_balance_of(bid.payment, bidder) >= price, Errors::INSUFFICIENT_BALANCE
+            );
+            assert(bid.expiry > get_block_timestamp().into(), Errors::BID_EXPIRED);
+        }
+
         fn validate_bids(self: @ContractState, bids: Span<SignedBid>) {
             assert(bids.len() > 0, Errors::NO_BIDS);
             assert(bids.len() < self.maxFillBids.read(), Errors::TOO_MANY_BIDS);
-            {
-                let mut i = 0;
-                while (i < bids.len()) {
-                    let signed_bid = *bids.at(i);
-                    assert(!signed_bid.bidder.is_zero(), Errors::ZERO_ADDRESS);
-                    let bid = signed_bid.bid;
-
-                    assert(self.verify_payment_token(bid.payment), Errors::INVALID_PAYMENT_TOKEN);
-                    assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
-                    let price: u256 = (bid.unitPrice * bid.amount).into();
-                    assert(price > 0, Errors::PRICE_IS_ZERO);
-                    assert(
-                        self.payment_balance_of(bid.payment, signed_bid.bidder) >= price,
-                        Errors::INSUFFICIENT_BALANCE
-                    );
-                    assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
-                    i += 1;
-                };
-            }
+            let mut i = 0;
+            while (i < bids.len()) {
+                self.validate_bid(*bids.at(i).bid, *bids.at(i).bidder);
+                i += 1;
+            };
         }
 
         fn validate_bid_supply(

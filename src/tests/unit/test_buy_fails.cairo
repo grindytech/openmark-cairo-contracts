@@ -58,8 +58,8 @@ fn buy_signature_used_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: sig expired',))]
-fn buy_sig_expired_panics() {
+#[should_panic(expected: ('OPENMARK: order expired',))]
+fn buy_order_expired_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 

@@ -61,6 +61,7 @@ pub trait IOpenMarkProvider<TState> {
         order_type: OrderType
     );
 
+    fn validate_bid(self: @TState, bid: Bid, bidder: ContractAddress);
     fn validate_bids(self: @TState, bids: Span<SignedBid>);
 
     fn validate_bid_supply(
@@ -83,7 +84,7 @@ pub trait IOpenMarkProvider<TState> {
 
     fn validate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
 
-    fn get_version(self: @TState) -> (u32, u32, u32 );
+    fn get_version(self: @TState) -> (u32, u32, u32);
 }
 
 #[starknet::interface]

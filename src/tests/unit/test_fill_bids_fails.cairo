@@ -175,8 +175,8 @@ fn fill_bids_zero_price_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: sig expired',))]
-fn fill_bids_sig_expired_panics() {
+#[should_panic(expected: ('OPENMARK: bid expired',))]
+fn fill_bids_bid_expired_panics() {
     let (mut signed_bids, openmark_address, _, payment_token, seller, _, _,) = create_bids();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
