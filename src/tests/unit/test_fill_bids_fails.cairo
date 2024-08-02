@@ -212,7 +212,7 @@ fn fill_bids_nft_mismatch_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: seller not owner',))]
+#[should_panic(expected: ('OPENMARK: not nft owner',))]
 fn fill_bids_seller_not_owner_panics() {
     let (mut signed_bids, openmark_address, nft_token, payment_token, seller, _, tokenIds,) =
         create_bids();

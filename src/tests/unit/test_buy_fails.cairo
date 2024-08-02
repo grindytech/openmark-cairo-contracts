@@ -90,7 +90,7 @@ fn buy_seller_is_zero_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: seller not owner',))]
+#[should_panic(expected: ('OPENMARK: not nft owner',))]
 fn buy_seller_not_owner_panics() {
     let (order, _, openmark_address, nft_token, _, seller, buyer) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };

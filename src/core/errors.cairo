@@ -11,7 +11,9 @@ pub const INVALID_SIGNATURE_LEN: felt252 = 'OPENMARK: invalid sig len';
 pub const SIGNATURE_EXPIRED: felt252 = 'OPENMARK: sig expired';
 
 /// Seller is not the owner of nft.
-pub const SELLER_NOT_OWNER: felt252 = 'OPENMARK: seller not owner';
+pub const NOT_NFT_OWNER: felt252 = 'OPENMARK: not nft owner';
+
+pub const INSUFFICIENT_BALANCE: felt252 = 'OPENMARK: insufficient balance';
 
 pub const ZERO_ADDRESS: felt252 = 'OPENMARK: address is zero';
 

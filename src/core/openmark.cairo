@@ -248,6 +248,7 @@ pub mod OpenMark {
             while (i < bags.len()) {
                 let bag = *bags.at(i);
                 self.buy(bag.seller, bag.order, bag.signature);
+                i += 1;
             };
         }
     }
@@ -311,16 +312,22 @@ pub mod OpenMark {
         ) {
             assert(order.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
+            assert(self.verify_payment_token(order.payment), Errors::INVALID_PAYMENT_TOKEN);
 
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(
                 self.nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
-                Errors::SELLER_NOT_OWNER
+                Errors::NOT_NFT_OWNER
             );
 
             let price: u256 = order.price.into();
+
+            assert(
+                self.payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
+            );
+
             assert(price > 0, Errors::PRICE_IS_ZERO);
         }
 
@@ -334,8 +341,14 @@ pub mod OpenMark {
                     assert(!signed_bid.bidder.is_zero(), Errors::ZERO_ADDRESS);
                     let bid = signed_bid.bid;
 
+                    assert(self.verify_payment_token(bid.payment), Errors::INVALID_PAYMENT_TOKEN);
                     assert(bid.amount > 0, Errors::ZERO_BIDS_AMOUNT);
-                    assert(bid.unitPrice > 0, Errors::PRICE_IS_ZERO);
+                    let price: u256 = (bid.unitPrice * bid.amount).into();
+                    assert(price > 0, Errors::PRICE_IS_ZERO);
+                    assert(
+                        self.payment_balance_of(bid.payment, signed_bid.bidder) >= price,
+                        Errors::INSUFFICIENT_BALANCE
+                    );
                     assert(bid.expiry > get_block_timestamp().into(), Errors::SIGNATURE_EXPIRED);
                     i += 1;
                 };
@@ -368,7 +381,7 @@ pub mod OpenMark {
                 while (i < token_ids.len()) {
                     assert(
                         self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
-                        Errors::SELLER_NOT_OWNER
+                        Errors::NOT_NFT_OWNER
                     );
 
                     i += 1;
@@ -573,7 +586,6 @@ pub mod OpenMark {
             amount: u256,
             payment_token: ContractAddress
         ) {
-            assert(self.verify_payment_token(payment_token), Errors::INVALID_PAYMENT_TOKEN);
             let commission = self.calculate_commission(amount);
             let payout = amount - commission;
 
@@ -630,6 +642,18 @@ pub mod OpenMark {
             args.append_serde(token_id);
 
             try_selector_with_fallback(target, selectors::owner_of, selectors::ownerOf, args.span())
+                .unwrap_and_cast()
+        }
+
+        fn payment_balance_of(
+            self: @ContractState, target: ContractAddress, account: ContractAddress
+        ) -> u256 {
+            let mut args = array![];
+            args.append_serde(account);
+
+            try_selector_with_fallback(
+                target, selectors::balance_of, selectors::balanceOf, args.span()
+            )
                 .unwrap_and_cast()
         }
     }
