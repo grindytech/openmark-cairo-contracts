@@ -9,7 +9,7 @@ use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::signature::SignerTrait;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, map_entry_address,
-    start_cheat_block_timestamp
+    start_cheat_block_timestamp, EventAssertions, EventSpy, spy_events, load, SpyOn
 };
 
 use starknet::{ContractAddress};
@@ -23,7 +23,69 @@ use openmark::{
     core::OpenMark::Event as OpenMarkEvent, core::events::{OrderFilled, OrderCancelled},
     core::errors as Errors,
 };
-use openmark::tests::unit::common::{create_offer, create_buy, ZERO};
+use openmark::tests::unit::common::{create_offer, create_mock_hasher, create_buy, ZERO};
+use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
+
+#[test]
+#[available_gas(2000000)]
+fn accept_offer_works() {
+    let (order, signature, openmark_address, nft_token, payment_token, seller, buyer) =
+        create_offer();
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
+
+    // buy and verify
+    start_cheat_caller_address(openmark_address, seller);
+    start_cheat_caller_address(payment_token, openmark_address);
+
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+
+    let buyer_before_balance = payment_dispatcher.balance_of(buyer);
+    let seller_before_balance = payment_dispatcher.balance_of(seller);
+    let mut spy = spy_events(SpyOn::One(openmark_address));
+
+    openmark.accept_offer(buyer, order, signature);
+
+    let buyer_after_balance = payment_dispatcher.balance_of(buyer);
+    let seller_after_balance = payment_dispatcher.balance_of(seller);
+
+    assert_eq!(nft_dispatcher.owner_of(order.tokenId.into()), buyer);
+    assert_eq!(buyer_after_balance, buyer_before_balance - order.price.into());
+    assert_eq!(seller_after_balance, seller_before_balance + order.price.into());
+
+    // events
+    let expected_event = OpenMarkEvent::OrderFilled(OrderFilled { seller, buyer, order });
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
+}
+
+
+#[test]
+#[available_gas(2000000)]
+fn cancel_offer_works() {
+    let (order, signature, openmark_address, _, _, _, buyer) = create_offer();
+
+    start_cheat_caller_address(openmark_address, buyer);
+
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+
+    let mut spy = spy_events(SpyOn::One(openmark_address));
+
+    openmark.cancel_order(order, signature);
+    let hasher = create_mock_hasher();
+    let hash_sig: felt252 = hasher.hash_array(signature);
+
+    let usedSignatures = load(
+        openmark_address,
+        map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+        1,
+    );
+
+    assert_eq!(*usedSignatures.at(0), true.into());
+
+    // events
+    let expected_event = OpenMarkEvent::OrderCancelled(OrderCancelled { who: buyer, order });
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
+}
 
 
 #[test]
