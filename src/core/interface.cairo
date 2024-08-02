@@ -62,17 +62,24 @@ pub trait IOpenMarkProvider<TState> {
     );
 
     fn validate_bid(self: @TState, bid: Bid, bidder: ContractAddress);
-    fn validate_bids(self: @TState, bids: Span<SignedBid>);
+
+    /// Validate the validity of signed bid
+    fn validate_signed_bid(self: @TState, bid: SignedBid);
 
     fn validate_bid_supply(
+        self: @TState, seller: ContractAddress, nft_token: ContractAddress, token_ids: Span<u128>
+    );
+
+    /// Validate the match of seller and bidder
+    fn validate_matching_bid(
         self: @TState,
-        bids: Span<SignedBid>,
-        seller: ContractAddress,
+        bid: Bid,
         nft_token: ContractAddress,
-        token_ids: Span<u128>,
         payment_token: ContractAddress,
         asking_price: u128
     );
+
+    fn validate_signed_bids(self: @TState, bids: Span<SignedBid>);
 
     fn validate_order_signature(
         self: @TState, order: Order, signer: ContractAddress, signature: Span<felt252>,
@@ -82,8 +89,6 @@ pub trait IOpenMarkProvider<TState> {
         self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
     );
 
-    fn validate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
-
     fn get_version(self: @TState) -> (u32, u32, u32);
 }
 
@@ -92,6 +97,5 @@ pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
     fn add_payment_token(ref self: TState, payment_token: ContractAddress);
     fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
-    fn set_max_fill_bids(ref self: TState, max_bids: u32);
     fn set_max_fill_nfts(ref self: TState, max_nfts: u32);
 }
