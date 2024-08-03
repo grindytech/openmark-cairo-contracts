@@ -143,18 +143,29 @@ pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
     contract_address
 }
 
-pub fn create_openmark_nft() -> ContractAddress {
+pub fn do_create_nft(
+    owner: ContractAddress, name: ByteArray, symbol: ByteArray, base_uri: ByteArray
+) -> ContractAddress {
     let contract = declare("OpenMarkNFTMock").unwrap();
     let mut constructor_calldata = array![];
 
-    constructor_calldata.append_serde(TEST_SELLER);
-    constructor_calldata.append_serde(OPENMARK_NFT_NAME());
-    constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
-    constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(name);
+    constructor_calldata.append_serde(symbol);
+    constructor_calldata.append_serde(base_uri);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     contract_address
+}
+
+pub fn create_openmark_nft() -> ContractAddress {
+    do_create_nft(
+        TEST_SELLER.try_into().unwrap(),
+        OPENMARK_NFT_NAME(),
+        OPENMARK_NFT_SYMBOL(),
+        OPENMARK_NFT_BASE_URI()
+    )
 }
 
 pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {

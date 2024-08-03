@@ -61,7 +61,7 @@ pub trait IOpenMarkProvider<TState> {
         seller: ContractAddress,
         buyer: ContractAddress
     );
-    
+
     fn verify_accept_offer(
         self: @TState,
         order: Order,
@@ -70,31 +70,53 @@ pub trait IOpenMarkProvider<TState> {
         buyer: ContractAddress
     );
 
-    fn validate_bid(self: @TState, bid: Bid, bidder: ContractAddress);
-
-    /// Validate the validity of signed bid
-    fn validate_signed_bid(self: @TState, bid: SignedBid);
-
-    fn validate_bid_supply(
-        self: @TState, seller: ContractAddress, nft_token: ContractAddress, token_ids: Span<u128>
-    );
-
-    /// Validate the match of seller and bidder
-    fn validate_matching_bid(
+    fn verify_fill_bids(
         self: @TState,
-        bid: Bid,
+        bids: Span<SignedBid>,
+        seller:  ContractAddress,
         nft_token: ContractAddress,
+        token_ids: Span<u128>,
         payment_token: ContractAddress,
         asking_price: u128
     );
 
-    fn validate_signed_bids(self: @TState, bids: Span<SignedBid>);
+    fn get_version(self: @TState) -> (u32, u32, u32);
+}
 
-    fn validate_bid_signature(
-        self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
+#[starknet::interface]
+pub trait IOpenMarkProviderCamel<TState> {
+    fn getChainId(self: @TState) -> felt252;
+    fn getCommission(self: @TState) -> u32;
+    fn verifyPaymentToken(self: @TState, paymentToken: ContractAddress) -> bool;
+    fn isUsedSignature(self: @TState, signature: Span<felt252>) -> bool;
+
+    fn verifyBuy(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
     );
 
-    fn get_version(self: @TState) -> (u32, u32, u32);
+    fn verifyAcceptOffer(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
+    );
+
+    fn verifyFillBids(
+        self: @TState,
+        bids: Span<SignedBid>,
+        seller: ContractAddress,
+        nftToken: ContractAddress,
+        tokenIds: Span<u128>,
+        paymentToken: ContractAddress,
+        askingPrice: u128
+    );
+
+    fn getVersion(self: @TState) -> (u32, u32, u32);
 }
 
 #[starknet::interface]

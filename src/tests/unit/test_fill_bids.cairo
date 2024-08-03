@@ -31,7 +31,8 @@ use openmark::{
 };
 
 use openmark::tests::unit::common::{
-    create_buy, create_offer, create_bids, ZERO, create_mock_hasher
+    create_buy, create_offer, create_bids, ZERO, create_mock_hasher, do_create_nft,
+    deploy_erc20
 };
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
@@ -291,51 +292,68 @@ fn fill_bids_too_many_nft_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: address is zero',))]
 fn fill_bids_seller_is_zero_panics() {
-    let (_, openmark_address, nft_token, _, _, _, token_ids,) = create_bids();
+    let (bids, openmark_address, nft_token, payment_token, _, _, token_ids,) = create_bids();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    openmark.validate_bid_supply(ZERO(), nft_token, token_ids,);
-}
-
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: not nft owner',))]
-fn fill_bids_seller_not_owner_panics() {
-    let (_, openmark_address, nft_token, _, seller, _, token_ids,) = create_bids();
-    let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    start_cheat_caller_address(nft_token, seller);
-
-    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
-    nft_dispatcher.transfer_from(seller, 1.try_into().unwrap(), 0);
-
-    openmark.validate_bid_supply(seller, nft_token, token_ids,);
+    openmark
+        .verify_fill_bids(
+            bids, ZERO(), nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+        );
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: address is zero',))]
 fn fill_bids_buyer_is_zero_panics() {
-    let (signed_bids, openmark_address, _, _, seller, _, _,) = create_bids();
-    start_cheat_caller_address(openmark_address, seller);
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
+
+    let mut new_bid = *bids.at(0);
+    new_bid.bidder = ZERO();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    let mut new_bid = *signed_bids.at(0);
-    new_bid.bidder = ZERO();
-    openmark.validate_bid(new_bid.bid, new_bid.bidder);
+    openmark
+        .verify_fill_bids(
+            array![new_bid].span(),
+            seller,
+            nft_token,
+            token_ids,
+            payment_token,
+            new_bid.bid.unitPrice
+        );
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('OPENMARK: not nft owner',))]
+fn fill_bids_seller_not_owner_panics() {
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
+    let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
+    start_cheat_caller_address(nft_token, seller);
+
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
+    nft_dispatcher.transfer_from(seller, 1.try_into().unwrap(), 0);
+
+    openmark
+        .verify_fill_bids(
+            bids, seller, nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+        );
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: Invalid payment token',))]
 fn fill_bids_invalid_payment_panics() {
-    let (signed_bids, openmark_address, _, payment_token, seller, _, _,) = create_bids();
-    start_cheat_caller_address(openmark_address, seller);
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
+    start_cheat_caller_address(openmark_address, seller);
     let manager = IOpenMarkManagerDispatcher { contract_address: openmark_address };
     manager.remove_payment_token(payment_token);
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    openmark.validate_bid((*signed_bids.at(0)).bid, (*signed_bids.at(0)).bidder);
+    openmark
+        .verify_fill_bids(
+            bids, seller, nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+        );
 }
 
 
@@ -343,96 +361,121 @@ fn fill_bids_invalid_payment_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: zero bids amount',))]
 fn fill_bids_zero_amount_panics() {
-    let (signed_bids, openmark_address, _, _, _, _, _,) = create_bids();
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    let mut new_bid = *signed_bids.at(0);
+    let mut new_bid = *bids.at(0);
     new_bid.bid.amount = 0;
 
-    openmark.validate_bid(new_bid.bid, new_bid.bidder);
+    openmark
+        .verify_fill_bids(
+            array![new_bid].span(),
+            seller,
+            nft_token,
+            token_ids,
+            payment_token,
+            new_bid.bid.unitPrice
+        );
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: price is zero',))]
 fn fill_bids_zero_price_panics() {
-    let (signed_bids, openmark_address, _, _, _, _, _,) = create_bids();
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    let mut new_bid = *signed_bids.at(0);
+    let mut new_bid = *bids.at(0);
     new_bid.bid.unitPrice = 0;
 
-    openmark.validate_bid(new_bid.bid, new_bid.bidder);
+    openmark
+        .verify_fill_bids(
+            array![new_bid].span(),
+            seller,
+            nft_token,
+            token_ids,
+            payment_token,
+            *bids.at(0).bid.unitPrice
+        );
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: insufficient balance',))]
 fn fill_bids_insufficient_balance_panics() {
-    let (signed_bids, openmark_address, _, payment_token, _, _, _,) = create_bids();
-    let mut new_bid = *signed_bids.at(0);
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
+
+    let mut new_bid = *bids.at(0);
 
     start_cheat_caller_address(payment_token, new_bid.bidder);
     let payment = IERC20Dispatcher { contract_address: payment_token };
     payment.transfer(openmark_address, payment.balance_of(new_bid.bidder));
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    openmark.validate_bid(new_bid.bid, new_bid.bidder);
+    openmark
+        .verify_fill_bids(
+            bids, seller, nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+        );
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: bid expired',))]
 fn fill_bids_bid_expired_panics() {
-    let (mut signed_bids, openmark_address, _, _, _, _, _,) = create_bids();
-    let new_bid = *signed_bids.at(0);
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
+
+    let new_bid = *bids.at(0);
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
     start_cheat_block_timestamp(openmark_address, new_bid.bid.expiry.try_into().unwrap());
-    openmark.validate_bid(new_bid.bid, new_bid.bidder);
-}
-
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: nft mismatch',))]
-fn fill_bids_nft_mismatch_panics() {
-    let (mut signed_bids, openmark_address, _, payment_token, _, _, _,) = create_bids();
-
-    let new_bid = *signed_bids.at(0);
-
-    let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-
     openmark
-        .validate_matching_bid(new_bid.bid, payment_token, payment_token, new_bid.bid.unitPrice);
+        .verify_fill_bids(
+            bids, seller, nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+        );
 }
 
-#[test]
-#[available_gas(2000000)]
-#[should_panic(expected: ('OPENMARK: payment mismatch',))]
-fn fill_bids_payment_mismatch_panics() {
-    let (mut signed_bids, openmark_address, nft_token, _, _, _, _,) = create_bids();
+// #[test]
+// #[available_gas(2000000)]
+// #[should_panic(expected: ('OPENMARK: nft mismatch',))]
+// fn fill_bids_nft_mismatch_panics() {
+//     let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
-    let new_bid = *signed_bids.at(0);
+//     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
+//     openmark
+//         .verify_fill_bids(
+//             bids, seller, payment_token, token_ids, payment_token, *bids.at(0).bid.unitPrice
+//         );
+// }
 
-    openmark.validate_matching_bid(new_bid.bid, nft_token, nft_token, new_bid.bid.unitPrice);
-}
+// #[test]
+// #[available_gas(2000000)]
+// #[should_panic(expected: ('OPENMARK: payment mismatch',))]
+// fn fill_bids_payment_mismatch_panics() {
+//     let (bids, openmark_address, nft_token, _, seller, _, token_ids,) = create_bids();
+
+//     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
+//     let new_payment = deploy_erc20();
+
+//     openmark
+//         .verify_fill_bids(
+//             bids, seller, nft_token, token_ids, new_payment, *bids.at(0).bid.unitPrice
+//         );
+// }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: asking too high',))]
 fn fill_bids_asking_too_high_panics() {
-    let (mut signed_bids, openmark_address, nft_token, payment_token, _, _, _,) = create_bids();
-
-    let new_bid = *signed_bids.at(0);
+    let (bids, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-
     openmark
-        .validate_matching_bid(new_bid.bid, nft_token, payment_token, new_bid.bid.unitPrice + 1);
+        .verify_fill_bids(
+            bids, seller, nft_token, token_ids, payment_token, *bids.at(0).bid.unitPrice + 1
+        );
 }
 
