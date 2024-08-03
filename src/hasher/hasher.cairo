@@ -10,18 +10,21 @@
 /// and authenticity in decentralized applications (dApps) on StarkNet.
 #[starknet::component]
 pub mod HasherComponent {
+    use core::array::ArrayTrait;
     use core::array::SpanTrait;
     use core::traits::IndexView;
     use core::option::OptionTrait;
     use core::traits::TryInto;
     use starknet::{ContractAddress, VALIDATED};
+    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
+    use starknet::SyscallResultTrait;
+    use starknet::syscalls::call_contract_syscall;
 
     use openzeppelin::utils::serde::SerializedAppend;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
 
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
     use openzeppelin::account::utils::{is_valid_stark_signature};
     use openzeppelin::utils::{try_selector_with_fallback};
     use openzeppelin::utils::selectors;
@@ -114,7 +117,10 @@ pub mod HasherComponent {
                     args.append_serde(signature);
 
                     let result = try_selector_with_fallback(
-                        account, selectors::is_valid_signature, selectors::isValidSignature, args.span()
+                        account,
+                        selectors::is_valid_signature,
+                        selectors::isValidSignature,
+                        args.span()
                     )
                         .unwrap_and_cast();
 

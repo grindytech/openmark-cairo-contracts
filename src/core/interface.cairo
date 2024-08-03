@@ -53,12 +53,21 @@ pub trait IOpenMarkProvider<TState> {
     fn get_commission(self: @TState) -> u32;
     fn verify_payment_token(self: @TState, payment_token: ContractAddress) -> bool;
     fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
-    fn validate_order(
+
+    fn verify_buy(
         self: @TState,
         order: Order,
+        signature: Span<felt252>,
         seller: ContractAddress,
-        buyer: ContractAddress,
-        order_type: OrderType
+        buyer: ContractAddress
+    );
+    
+    fn verify_accept_offer(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
     );
 
     fn validate_bid(self: @TState, bid: Bid, bidder: ContractAddress);
@@ -80,10 +89,6 @@ pub trait IOpenMarkProvider<TState> {
     );
 
     fn validate_signed_bids(self: @TState, bids: Span<SignedBid>);
-
-    fn validate_order_signature(
-        self: @TState, order: Order, signer: ContractAddress, signature: Span<felt252>,
-    );
 
     fn validate_bid_signature(
         self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,

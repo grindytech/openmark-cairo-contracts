@@ -121,27 +121,21 @@ pub mod OpenMark {
             ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             self.reentrancy_guard.start();
+            let buyer = get_caller_address();
 
-            // 1. verify signature
-            self.validate_order_signature(order, seller, signature);
-
-            // 2. verify order
-            self.validate_order(order, seller, get_caller_address(), OrderType::Buy);
+            self.verify_buy(order, signature, seller, buyer);
 
             // 3. make trade
-            self
-                .nft_transfer_from(
-                    order.nftContract, seller, get_caller_address(), order.tokenId.into()
-                );
+            self._nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            self.process_payment(get_caller_address(), seller, price, order.payment);
+            self._process_payment(buyer, seller, price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
 
             // 5. emit events
-            self.emit(OrderFilled { seller, buyer: get_caller_address(), order });
+            self.emit(OrderFilled { seller, buyer, order });
             self.reentrancy_guard.end();
         }
 
@@ -149,20 +143,18 @@ pub mod OpenMark {
             ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
         ) {
             self.reentrancy_guard.start();
-            // 1. verify signature
-            self.validate_order_signature(order, buyer, signature);
+            let seller = get_caller_address();
 
-            // 2. verify order
-            self.validate_order(order, get_caller_address(), buyer, OrderType::Offer);
+            self.verify_accept_offer(order, signature, seller, buyer);
 
             // 3. make trade
             self
-                .nft_transfer_from(
+                ._nft_transfer_from(
                     order.nftContract, get_caller_address(), buyer, order.tokenId.into()
                 );
 
             let price: u256 = order.price.into();
-            self.process_payment(buyer, get_caller_address(), price, order.payment);
+            self._process_payment(buyer, get_caller_address(), price, order.payment);
 
             // 4. change storage
             self.usedSignatures.write(self.hash_array(signature), true);
@@ -195,7 +187,7 @@ pub mod OpenMark {
 
                 self.validate_matching_bid(*bids.at(i).bid, nft_token, payment_token, asking_price);
 
-                self.process_bid(seller, *bids.at(i), ref trade_token_ids);
+                self._process_bid(seller, *bids.at(i), ref trade_token_ids);
                 i += 1;
             };
 
@@ -289,32 +281,32 @@ pub mod OpenMark {
             self.usedSignatures.read(self.hash_array(signature))
         }
 
-        fn validate_order(
+        fn verify_buy(
             self: @ContractState,
             order: Order,
+            signature: Span<felt252>,
             seller: ContractAddress,
-            buyer: ContractAddress,
-            order_type: OrderType
+            buyer: ContractAddress
         ) {
-            assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
-            assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
-            assert(self.verify_payment_token(order.payment), Errors::INVALID_PAYMENT_TOKEN);
+            // 1. verify order
+            self._verify_order(order, seller, get_caller_address(), OrderType::Buy);
 
-            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
-            assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
+            // 2. verify signature
+            self._validate_order_signature(order, seller, signature);
+        }
 
-            assert(
-                self.nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
-                Errors::NOT_NFT_OWNER
-            );
+        fn verify_accept_offer(
+            self: @ContractState,
+            order: Order,
+            signature: Span<felt252>,
+            seller: ContractAddress,
+            buyer: ContractAddress
+        ) {
+            // 1. verify order
+            self._verify_order(order, seller, buyer, OrderType::Offer);
 
-            let price: u256 = order.price.into();
-
-            assert(
-                self.payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
-            );
-
-            assert(price > 0, Errors::PRICE_IS_ZERO);
+            // 2. verify signature
+            self._validate_order_signature(order, buyer, signature);
         }
 
         fn validate_bid(self: @ContractState, bid: Bid, bidder: ContractAddress) {
@@ -325,7 +317,7 @@ pub mod OpenMark {
             let price: u256 = (bid.unitPrice * bid.amount).into();
             assert(price > 0, Errors::PRICE_IS_ZERO);
             assert(
-                self.payment_balance_of(bid.payment, bidder) >= price, Errors::INSUFFICIENT_BALANCE
+                self._payment_balance_of(bid.payment, bidder) >= price, Errors::INSUFFICIENT_BALANCE
             );
             assert(bid.expiry > get_block_timestamp().into(), Errors::BID_EXPIRED);
         }
@@ -334,7 +326,6 @@ pub mod OpenMark {
             self.validate_bid_signature(bid.bid, bid.bidder, bid.signature);
             self.validate_bid(bid.bid, bid.bidder);
         }
-
 
         fn validate_signed_bids(self: @ContractState, bids: Span<SignedBid>) {
             assert(bids.len() > 0, Errors::NO_BIDS);
@@ -369,7 +360,7 @@ pub mod OpenMark {
             let mut i = 0;
             while (i < token_ids.len()) {
                 assert(
-                    self.nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
+                    self._nft_owner_of(nft_token, (*token_ids.at(i)).into()) == seller,
                     Errors::NOT_NFT_OWNER
                 );
                 i += 1;
@@ -387,15 +378,6 @@ pub mod OpenMark {
             );
         }
 
-        fn validate_order_signature(
-            self: @ContractState, order: Order, signer: ContractAddress, signature: Span<felt252>,
-        ) {
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
-            assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
-            assert(
-                self.hasher.verify_order(order, signer.into(), signature), Errors::INVALID_SIGNATURE
-            );
-        }
 
         fn get_version(self: @ContractState) -> (u32, u32, u32) {
             // version 0.2.0
@@ -439,11 +421,49 @@ pub mod OpenMark {
 
     #[generate_trait]
     pub impl InternalImpl of InternalImplTrait {
-        fn calculate_commission(self: @ContractState, price: u256) -> u256 {
+        fn _validate_order_signature(
+            self: @ContractState, order: Order, signer: ContractAddress, signature: Span<felt252>,
+        ) {
+            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
+            assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
+            assert(
+                self.hasher.verify_order(order, signer.into(), signature), Errors::INVALID_SIGNATURE
+            );
+        }
+
+        fn _verify_order(
+            self: @ContractState,
+            order: Order,
+            seller: ContractAddress,
+            buyer: ContractAddress,
+            order_type: OrderType
+        ) {
+            assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
+            assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
+            assert(self.verify_payment_token(order.payment), Errors::INVALID_PAYMENT_TOKEN);
+
+            assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
+            assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
+
+            assert(
+                self._nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
+                Errors::NOT_NFT_OWNER
+            );
+
+            let price: u256 = order.price.into();
+
+            assert(
+                self._payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
+            );
+
+            assert(price > 0, Errors::PRICE_IS_ZERO);
+        }
+
+        fn _calculate_commission(self: @ContractState, price: u256) -> u256 {
             price * self.commission.read().into() / PERMYRIAD.into()
         }
 
-        fn process_bid(
+        fn _process_bid(
             ref self: ContractState,
             seller: ContractAddress,
             signed_bid: SignedBid,
@@ -468,7 +488,7 @@ pub mod OpenMark {
 
             let price: u256 = (signed_bid.bid.unitPrice * trade_amount).into();
             self
-                .process_payment(
+                ._process_payment(
                     signed_bid.bidder, get_caller_address(), price, signed_bid.bid.payment
                 );
 
@@ -480,7 +500,7 @@ pub mod OpenMark {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
 
                 state
-                    .nft_transfer_from(
+                    ._nft_transfer_from(
                         signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
                     );
 
@@ -513,27 +533,27 @@ pub mod OpenMark {
         /// - `receiver`: The address to receive the payment.
         /// - `amount`: The amount to be transferred.
         /// - `payment_token`: The address of the payment token contract.
-        fn process_payment(
+        fn _process_payment(
             self: @ContractState,
             sender: ContractAddress,
             receiver: ContractAddress,
             amount: u256,
             payment_token: ContractAddress
         ) {
-            let commission = self.calculate_commission(amount);
+            let commission = self._calculate_commission(amount);
             let payout = amount - commission;
 
-            self.payment_transfer_from(payment_token, sender, receiver, payout);
+            self._payment_transfer_from(payment_token, sender, receiver, payout);
 
             if commission > 0 {
                 self
-                    .payment_transfer_from(
+                    ._payment_transfer_from(
                         payment_token, sender, get_contract_address(), commission
                     );
             }
         }
 
-        fn payment_transfer_from(
+        fn _payment_transfer_from(
             self: @ContractState,
             target: ContractAddress,
             sender: ContractAddress,
@@ -551,7 +571,7 @@ pub mod OpenMark {
                 .unwrap_syscall();
         }
 
-        fn nft_transfer_from(
+        fn _nft_transfer_from(
             self: @ContractState,
             target: ContractAddress,
             sender: ContractAddress,
@@ -569,7 +589,7 @@ pub mod OpenMark {
                 .unwrap_syscall();
         }
 
-        fn nft_owner_of(
+        fn _nft_owner_of(
             self: @ContractState, target: ContractAddress, token_id: u256
         ) -> ContractAddress {
             let mut args = array![];
@@ -579,7 +599,7 @@ pub mod OpenMark {
                 .unwrap_and_cast()
         }
 
-        fn payment_balance_of(
+        fn _payment_balance_of(
             self: @ContractState, target: ContractAddress, account: ContractAddress
         ) -> u256 {
             let mut args = array![];

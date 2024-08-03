@@ -133,42 +133,42 @@ fn order_order_expired_panics() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: invalid order type',))]
 fn order_invalid_order_type_panics() {
-    let (order, _, openmark_address, _, _, seller, buyer,) = create_buy();
+    let (order, signature, openmark_address, _, _, seller, buyer,) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    openmark.validate_order(order, seller, buyer, OrderType::Offer);
+    openmark.verify_accept_offer(order, signature, seller, buyer,);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: address is zero',))]
 fn order_seller_is_zero_panics() {
-    let (order, _, openmark_address, _, _, _, buyer,) = create_offer();
+    let (order, signature, openmark_address, _, _, _, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    openmark.validate_order(order, ZERO(), buyer, OrderType::Offer);
+    openmark.verify_accept_offer(order, signature, ZERO(), buyer,);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: not nft owner',))]
 fn order_seller_not_owner_panics() {
-    let (order, _, openmark_address, nft_token, _, seller, buyer,) = create_offer();
+    let (order, signature, openmark_address, nft_token, _, seller, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
     let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
 
     start_cheat_caller_address(nft_token, seller);
     nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
-    openmark.validate_order(order, seller, buyer, OrderType::Offer);
+    openmark.verify_accept_offer(order, signature, seller, buyer,);
 }
 
 #[test]
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: price is zero',))]
 fn order_price_is_zero_panics() {
-    let (mut order, _, openmark_address, _, _, seller, buyer,) = create_offer();
+    let (mut order, signature, openmark_address, _, _, seller, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
     order.price = 0;
-    openmark.validate_order(order, seller, buyer, OrderType::Offer);
+    openmark.verify_accept_offer(order, signature, seller, buyer,);
 }
