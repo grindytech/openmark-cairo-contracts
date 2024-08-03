@@ -53,38 +53,70 @@ pub trait IOpenMarkProvider<TState> {
     fn get_commission(self: @TState) -> u32;
     fn verify_payment_token(self: @TState, payment_token: ContractAddress) -> bool;
     fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
-    fn validate_order(
+
+    fn verify_buy(
         self: @TState,
         order: Order,
+        signature: Span<felt252>,
         seller: ContractAddress,
-        buyer: ContractAddress,
-        order_type: OrderType
+        buyer: ContractAddress
     );
 
-    fn validate_bid(self: @TState, bid: Bid, bidder: ContractAddress);
-    fn validate_bids(self: @TState, bids: Span<SignedBid>);
+    fn verify_accept_offer(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
+    );
 
-    fn validate_bid_supply(
+    fn verify_fill_bids(
         self: @TState,
         bids: Span<SignedBid>,
-        seller: ContractAddress,
+        seller:  ContractAddress,
         nft_token: ContractAddress,
         token_ids: Span<u128>,
         payment_token: ContractAddress,
         asking_price: u128
     );
 
-    fn validate_order_signature(
-        self: @TState, order: Order, signer: ContractAddress, signature: Span<felt252>,
-    );
-
-    fn validate_bid_signature(
-        self: @TState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
-    );
-
-    fn validate_bid_amounts(self: @TState, bids: Span<SignedBid>, tokenIds: Span<u128>) -> u128;
-
     fn get_version(self: @TState) -> (u32, u32, u32);
+}
+
+#[starknet::interface]
+pub trait IOpenMarkProviderCamel<TState> {
+    fn getChainId(self: @TState) -> felt252;
+    fn getCommission(self: @TState) -> u32;
+    fn verifyPaymentToken(self: @TState, paymentToken: ContractAddress) -> bool;
+    fn isUsedSignature(self: @TState, signature: Span<felt252>) -> bool;
+
+    fn verifyBuy(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
+    );
+
+    fn verifyAcceptOffer(
+        self: @TState,
+        order: Order,
+        signature: Span<felt252>,
+        seller: ContractAddress,
+        buyer: ContractAddress
+    );
+
+    fn verifyFillBids(
+        self: @TState,
+        bids: Span<SignedBid>,
+        seller: ContractAddress,
+        nftToken: ContractAddress,
+        tokenIds: Span<u128>,
+        paymentToken: ContractAddress,
+        askingPrice: u128
+    );
+
+    fn getVersion(self: @TState) -> (u32, u32, u32);
 }
 
 #[starknet::interface]
@@ -92,6 +124,5 @@ pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
     fn add_payment_token(ref self: TState, payment_token: ContractAddress);
     fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
-    fn set_max_fill_bids(ref self: TState, max_bids: u32);
     fn set_max_fill_nfts(ref self: TState, max_nfts: u32);
 }

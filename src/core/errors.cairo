@@ -24,9 +24,6 @@ pub const PRICE_IS_ZERO: felt252 = 'OPENMARK: price is zero';
 /// Invalid order type.
 pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 
-/// Exceeds number of bids allowd in 'fillBids'.
-pub const TOO_MANY_BIDS: felt252 = 'OPENMARK: too many bids';
-
 /// Exceeds number of nfts allowd in 'fillBids'.
 pub const TOO_MANY_NFTS: felt252 = 'OPENMARK: too many nfts';
 
@@ -45,17 +42,8 @@ pub const NFT_MISMATCH: felt252 = 'OPENMARK: nft mismatch';
 /// Payment token does not match the payment in a trade
 pub const PAYMENT_MISMATCH: felt252 = 'OPENMARK: payment mismatch';
 
-/// Number of NFTs provided exceeds number of NFTs in the bid.
-pub const EXCEED_BID_NFTS: felt252 = 'OPENMARK: exceed bid nfts';
-
-/// Number of NFTs provided is less than the minimum required by the bid.
-pub const NOT_ENOUGH_BID_NFTS: felt252 = 'OPENMARK: not enough nfts';
-
 /// Commission exceeds maximum allowed.
 pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
-
-/// Invalid construct with no payment token
-pub const EMPTY_PAYMENT_TOKEN: felt252 = 'OPENMARK: empty payment token';
 
 /// Payment token not allowd
 pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: Invalid payment token';
