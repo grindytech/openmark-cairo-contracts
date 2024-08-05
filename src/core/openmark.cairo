@@ -348,8 +348,8 @@ pub mod OpenMark {
         }
 
         fn get_version(self: @ContractState) -> (u32, u32, u32) {
-            // version 0.2.2
-            (0, 2, 2)
+            // version 0.2.3
+            (0, 2, 3)
         }
     }
 
