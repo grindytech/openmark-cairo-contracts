@@ -226,12 +226,12 @@ fn cancel_bid_works() {
 #[available_gas(2000000)]
 #[should_panic(expected: ('OPENMARK: no valid bids',))]
 fn fill_bids_no_valid_bids_panics() {
-    let (_, openmark_address, nft_token, payment_token, seller, _, _,) = create_bids();
+    let (_, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
 
     start_cheat_caller_address(openmark_address, seller);
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
-    openmark.fill_bids(array![].span(), nft_token, array![].span(), payment_token, 0);
+    openmark.fill_bids(array![].span(), nft_token, token_ids, payment_token, 0);
 }
 
 
@@ -256,7 +256,22 @@ fn fill_bids_too_many_nft_panics() {
 
 #[test]
 #[available_gas(2000000)]
-fn fill_bids_seller_is_zero_panics() {
+fn fill_bids_zero_nfts() {
+    let (mut signed_bids, _, nft_token, _, seller, _, _,) = create_bids();
+
+    let mut new_bid = *signed_bids.at(0);
+    new_bid.signature = array![].span();
+
+    let result = InternalImplTrait::_verify_bid_seller(
+        @get_contract_state_for_testing(), seller, nft_token, array![].span()
+    );
+
+    assert_eq!(result, Result::Err(Errors::ZERO_NFTS));
+}
+
+#[test]
+#[available_gas(2000000)]
+fn fill_bids_seller_is_zero() {
     let (mut signed_bids, _, nft_token, _, _, _, token_ids,) = create_bids();
 
     let mut new_bid = *signed_bids.at(0);

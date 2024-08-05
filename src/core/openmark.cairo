@@ -312,6 +312,12 @@ pub mod OpenMark {
             self._validate_order_signature(order, buyer, signature);
         }
 
+        fn verify_signed_bid(self: @ContractState, bid: SignedBid) {
+            if let Result::Err(err) = self._verify_signed_bid(bid) {
+                panic_with_felt252(err);
+            }
+        }
+
         fn get_valid_bids(
             self: @ContractState,
             bids: Span<SignedBid>,
@@ -382,17 +388,19 @@ pub mod OpenMark {
             self.verify_accept_offer(order, signature, seller, buyer)
         }
 
-        // fn verifyFillBids(
-        //     self: @ContractState,
-        //     bids: Span<SignedBid>,
-        //     seller: ContractAddress,
-        //     nftToken: ContractAddress,
-        //     tokenIds: Span<u128>,
-        //     paymentToken: ContractAddress,
-        //     askingPrice: u128
-        // ) -> Span<SignedBid> {
-        //     self.get_valid_bids(bids, seller, nftToken, tokenIds, paymentToken, askingPrice)
-        // }
+        fn verifySignedBid(self: @ContractState, bid: SignedBid) {
+            self.verify_signed_bid(bid);
+        }
+
+        fn getValidBids(
+            self: @ContractState,
+            bids: Span<SignedBid>,
+            nftToken: ContractAddress,
+            paymentToken: ContractAddress,
+            askingPrice: u128
+        ) -> Span<SignedBid> {
+            self.get_valid_bids(bids, nftToken, paymentToken, askingPrice)
+        }
 
         fn getVersion(self: @ContractState) -> (u32, u32, u32) {
             self.get_version()
@@ -550,6 +558,10 @@ pub mod OpenMark {
             nft_token: ContractAddress,
             token_ids: Span<u128>,
         ) -> Result<(), felt252> {
+            if token_ids.is_empty() {
+                return Result::Err(Errors::ZERO_NFTS);
+            }
+
             if seller.is_zero() {
                 return Result::Err(Errors::ZERO_ADDRESS);
             }

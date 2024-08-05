@@ -27,6 +27,8 @@ pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 /// Exceeds number of nfts allowd in 'fillBids'.
 pub const TOO_MANY_NFTS: felt252 = 'OPENMARK: too many nfts';
 
+pub const ZERO_NFTS: felt252 = 'OPENMARK: zero nfts';
+
 /// There is no valid bid in 'fill_bids'.
 pub const NO_VALID_BIDS: felt252 = 'OPENMARK: no valid bids';
 

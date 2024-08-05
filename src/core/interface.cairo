@@ -70,6 +70,8 @@ pub trait IOpenMarkProvider<TState> {
         buyer: ContractAddress
     );
 
+    fn verify_signed_bid(self: @TState, bid: SignedBid);
+
     fn get_valid_bids(
         self: @TState,
         bids: Span<SignedBid>,
@@ -104,15 +106,15 @@ pub trait IOpenMarkProviderCamel<TState> {
         buyer: ContractAddress
     );
 
-    // fn verifyFillBids(
-    //     self: @TState,
-    //     bids: Span<SignedBid>,
-    //     seller: ContractAddress,
-    //     nftToken: ContractAddress,
-    //     tokenIds: Span<u128>,
-    //     paymentToken: ContractAddress,
-    //     askingPrice: u128
-    // ) -> Span<SignedBid>;
+    fn verifySignedBid(self: @TState, bid: SignedBid);
+
+    fn getValidBids(
+        self: @TState,
+        bids: Span<SignedBid>,
+        nftToken: ContractAddress,
+        paymentToken: ContractAddress,
+        askingPrice: u128
+    ) -> Span<SignedBid>;
 
     fn getVersion(self: @TState) -> (u32, u32, u32);
 }
