@@ -20,9 +20,16 @@ use openmark::{
     },
 };
 use openmark::tests::unit::common::{
-    TEST_SELLER, ZERO, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS, deploy_mock_account
+    ZERO, deploy_mock_account
 };
 
+pub const TEST_SELLER: felt252 = 0x20c29f1c98f3320d56f01c13372c923123c35828bce54f2153aa1cfe61c44f2;
+
+pub const TEST_NFT_ADDRESS: felt252 =
+    0x55FE20463A398171FBDEF9A8DC692E9500D2EBEB8C96D7601D706A253DD8303;
+
+pub const TEST_PAYMENT_ADDRESS: felt252 =
+    0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
 
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
@@ -39,10 +46,10 @@ fn get_order_hash_works() {
     // This value was computed using StarknetJS
     let message_hash = 0x654e997e1cbb22847cc326f215a1697fc98779141a6483e0c419f0aeed0b9c7;
     let order = Order {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        nftContract: TEST_NFT_ADDRESS.try_into().unwrap(),
         tokenId: 2,
         price: 3,
-        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
+        payment: TEST_PAYMENT_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Buy,
@@ -63,10 +70,10 @@ fn get_bid_hash_works() {
     // This value was computed using StarknetJS
     let message_hash = 0x42793086c598ac82585061162a6eeee3a8b54ec0711b04610501c286e12ef04;
     let bid = Bid {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        nftContract: TEST_NFT_ADDRESS.try_into().unwrap(),
         amount: 1,
         unitPrice: 3,
-        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
+        payment: TEST_PAYMENT_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
     };
@@ -123,10 +130,10 @@ fn verify_order_works() {
     let contract_address = deploy_mock_hasher();
 
     let order = Order {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        nftContract: TEST_NFT_ADDRESS.try_into().unwrap(),
         tokenId: 2,
         price: 3,
-        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
+        payment: TEST_PAYMENT_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Buy,
@@ -152,10 +159,10 @@ fn verify_bid_works() {
     let contract_address = deploy_mock_hasher();
 
     let bid = Bid {
-        nftContract: TEST_ERC721_ADDRESS.try_into().unwrap(),
+        nftContract: TEST_NFT_ADDRESS.try_into().unwrap(),
         amount: 1,
         unitPrice: 3,
-        payment: TEST_ETH_ADDRESS.try_into().unwrap(),
+        payment: TEST_PAYMENT_ADDRESS.try_into().unwrap(),
         salt: 4,
         expiry: 5,
     };

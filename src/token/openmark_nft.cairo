@@ -1,5 +1,7 @@
 #[starknet::contract]
 pub mod OpenMarkNFT {
+    use core::array::SpanTrait;
+    use core::integer::BoundedInt;
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
@@ -16,7 +18,8 @@ pub mod OpenMarkNFT {
 
     use starknet::ContractAddress;
     use openmark::token::interface::{
-        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
+        IOpenMarkNFT, IOpenMarkNFTProvider, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel,
+        IOpenMarkNFTCamel
     };
     use starknet::{get_caller_address};
 
@@ -44,6 +47,9 @@ pub mod OpenMarkNFT {
         src5: SRC5Component::Storage,
         token_index: u256,
         token_uris: LegacyMap<u256, ByteArray>,
+        /// 'max_mint' > 0 when enable
+        max_mint: u256,
+        whitelist: LegacyMap<ContractAddress, u256>,
     }
 
     #[event]
@@ -74,61 +80,24 @@ pub mod OpenMarkNFT {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
-        fn safe_mint(ref self: ContractState, to: ContractAddress) {
-            let token_index = next_token_index(ref self);
-            self.erc721.mint(to, token_index);
-
-            self
-                .emit(
-                    TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri: "" }
-                );
-        }
-
-        fn safe_mint_with_uri(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
-            let token_index = next_token_index(ref self);
-            self.erc721.mint(to, token_index);
-            self.token_uris.write(token_index, uri.clone());
-            self.emit(TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri });
-        }
-
-
         fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) {
-            let mut token_indexs = ArrayTrait::new();
+            self._handle_whitelist(to, quantity);
+
             let mut i = 0;
             while i < quantity {
-                let token_index = next_token_index(ref self);
-                self.erc721.mint(to, token_index);
-                token_indexs.append(token_index);
-                self
-                    .emit(
-                        TokenMinted {
-                            caller: get_caller_address(), to, token_id: token_index, uri: ""
-                        }
-                    );
-
+                self._safe_mint(to);
                 i += 1;
             };
         }
 
-
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) {
+            self._handle_whitelist(to, uris.len().into());
+
             let mut i = 0;
             while (i < uris.len()) {
-                let token_index = next_token_index(ref self);
-                self.erc721.mint(to, token_index);
-                self.token_uris.write(token_index, uris.at(i).clone());
-                self
-                    .emit(
-                        TokenMinted {
-                            caller: get_caller_address(),
-                            to,
-                            token_id: token_index,
-                            uri: uris.at(i).clone()
-                        }
-                    );
-
+                self._safe_mint_with_uri(to, uris.at(i).clone());
                 i += 1;
             };
         }
@@ -146,20 +115,44 @@ pub mod OpenMarkNFT {
             self.ownable.assert_only_owner();
             self.erc721._set_base_uri(base_uri);
         }
+
+
+        fn enable_whitelist(
+            ref self: ContractState, minters: Span<ContractAddress>, max_mint: u256
+        ) {
+            self.ownable.assert_only_owner();
+            self.max_mint.write(max_mint);
+
+            self._add_whitelist(minters)
+        }
+
+        fn disable_whitelist(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.max_mint.write(0);
+        }
+
+        fn add_whitelist(ref self: ContractState, minters: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+            self._add_whitelist(minters)
+        }
+
+        fn remove_whitelist(ref self: ContractState, minters: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+            self._remove_whitelist(minters);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl OpenMarkNFTProviderImpl of IOpenMarkNFTProvider<ContractState> {
+        fn get_whitelist(self: @ContractState, minter: ContractAddress) -> Option::<u256> {
+            self._get_whitelist(minter)
+        }
     }
 
     #[abi(embed_v0)]
     impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
-        fn safeMint(ref self: ContractState, to: ContractAddress) {
-            self.safe_mint(to);
-        }
-
         fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
             self.safe_batch_mint(to, quantity);
-        }
-
-        fn safeMintWithURI(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
-            self.safe_mint_with_uri(to, uri);
         }
 
         fn safeBatchMintWithURIs(
@@ -215,11 +208,61 @@ pub mod OpenMarkNFT {
         }
     }
 
-    /// Returns the current token_index and increments it for the next use.
-    /// This ensures each token has a unique ID.
-    fn next_token_index(ref self: ContractState) -> u256 {
-        let current_token_index = self.token_index.read();
-        self.token_index.write(current_token_index + 1);
-        current_token_index
+    #[generate_trait]
+    pub impl InternalImpl of InternalImplTrait {
+        /// Returns the current token_index and increments it for the next use.
+        /// This ensures each token has a unique ID.
+        fn _next_token_index(ref self: ContractState) -> u256 {
+            let current_token_index = self.token_index.read();
+            self.token_index.write(current_token_index + 1);
+            current_token_index
+        }
+
+        fn _safe_mint(ref self: ContractState, to: ContractAddress) {
+            let token_index = self._next_token_index();
+            self.erc721.mint(to, token_index);
+
+            self
+                .emit(
+                    TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri: "" }
+                );
+        }
+
+        fn _safe_mint_with_uri(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
+            let token_index = self._next_token_index();
+            self.erc721.mint(to, token_index);
+            self.token_uris.write(token_index, uri.clone());
+            self.emit(TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri });
+        }
+
+        fn _add_whitelist(ref self: ContractState, minters: Span<ContractAddress>) {
+            let mut i = 0;
+            while (i < minters.len()) {
+                self.whitelist.write(*minters.at(i), self.max_mint.read());
+                i += 1;
+            };
+        }
+
+        fn _remove_whitelist(ref self: ContractState, minters: Span<ContractAddress>) {
+            let mut i = 0;
+            while (i < minters.len()) {
+                self.whitelist.write(*minters.at(i), 0);
+                i += 1;
+            };
+        }
+
+        fn _get_whitelist(self: @ContractState, minter: ContractAddress) -> Option::<u256> {
+            if self.max_mint.read() > 0 {
+                return Option::Some(self.whitelist.read(minter));
+            }
+            Option::None
+        }
+
+        fn _handle_whitelist(ref self: ContractState, minter: ContractAddress, mint_amount: u256) {
+            if let Option::Some(allowance) = self._get_whitelist(minter) {
+                assert(mint_amount <= allowance, 'OpenMark: Whitelist failed');
+                self.whitelist.write(minter, allowance - mint_amount);
+            }
+        }
     }
 }
