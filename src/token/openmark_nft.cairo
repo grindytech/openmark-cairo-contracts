@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod OpenMarkNFT {
-    use core::array::SpanTrait;
+    use core::num::traits::zero::Zero;
+use core::array::SpanTrait;
     use core::integer::BoundedInt;
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
@@ -81,7 +82,7 @@ pub mod OpenMarkNFT {
     #[abi(embed_v0)]
     impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
         fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) {
-            self._handle_whitelist(to, quantity);
+            self._handle_whitelist(get_caller_address(), quantity);
 
             let mut i = 0;
             while i < quantity {
@@ -93,7 +94,7 @@ pub mod OpenMarkNFT {
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) {
-            self._handle_whitelist(to, uris.len().into());
+            self._handle_whitelist(get_caller_address(), uris.len().into());
 
             let mut i = 0;
             while (i < uris.len()) {
@@ -260,7 +261,9 @@ pub mod OpenMarkNFT {
 
         fn _handle_whitelist(ref self: ContractState, minter: ContractAddress, mint_amount: u256) {
             if let Option::Some(allowance) = self._get_whitelist(minter) {
-                assert(mint_amount <= allowance, 'OpenMark: Whitelist failed');
+                assert(allowance.is_non_zero(), 'OpenMark: whitelist failed');
+
+                assert(mint_amount <= allowance, 'OpenMark: whitelist exceed');
                 self.whitelist.write(minter, allowance - mint_amount);
             }
         }
