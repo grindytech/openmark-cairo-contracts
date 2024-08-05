@@ -27,18 +27,37 @@ function getCurrentTimestampPlusDays(days: number): number {
     return futureTimestamp;
 }
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const splitTokenIds = (tokenIds, amounts) => {
+    const result = [];
+    let index = 0;
+
+    for (const amount of amounts) {
+        const chunk = tokenIds.slice(index, index + amount);
+        result.push(chunk);
+        index += amount;
+    }
+
+    return result;
+}
+
 describe("OpenMark Contract Tests", () => {
-    let Seller: Account;
+    let Seller1: Account;
+    let Seller2: Account;
+    let Seller3: Account;
     let Buyer: Account;
     let openmarkContract: Contract;
     let paymentContract: Contract;
     let nftContract: Contract;
 
     beforeAll(async () => {
-        Seller = new Account(provider, process.env.SELLER_ACCOUNT_PUBLIC_KEY, process.env.SELLER_ACCOUNT_PRIVATE_KEY);
+        Seller1 = new Account(provider, process.env.SELLER_ACCOUNT_PUBLIC_KEY1, process.env.SELLER_ACCOUNT_PRIVATE_KEY1);
+        Seller2 = new Account(provider, process.env.SELLER_ACCOUNT_PUBLIC_KEY2, process.env.SELLER_ACCOUNT_PRIVATE_KEY2);
+        Seller3 = new Account(provider, process.env.SELLER_ACCOUNT_PUBLIC_KEY3, process.env.SELLER_ACCOUNT_PRIVATE_KEY3);
         Buyer = new Account(provider, process.env.BUYER_ACCOUNT_PUBLIC_KEY, process.env.BUYER_ACCOUNT_PRIVATE_KEY);
 
-        if (!Seller || !Buyer) {
+        if (!Seller1 || !Seller3 || !Seller3 || !Buyer) {
             throw new Error('Account private and public keys must be set in .env file');
         }
 
@@ -75,8 +94,8 @@ describe("OpenMark Contract Tests", () => {
         let expiry = getCurrentTimestampPlusDays(1);
         // Create and Approve NFT OpenMark
         {
-            nftContract.connect(Seller);
-            let createTx = await nftContract.safe_mint(Seller.address);
+            nftContract.connect(Seller1);
+            let createTx = await nftContract.safe_mint(Seller1.address);
             const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
             if (createReceipt.isSuccess()) {
                 const listEvents = createReceipt.events;
@@ -113,7 +132,7 @@ describe("OpenMark Contract Tests", () => {
                 option: 0,
             };
 
-            let signatures = await createOrderSignature(order, Seller, constants.StarknetChainId.SN_SEPOLIA);
+            let signatures = await createOrderSignature(order, Seller1, constants.StarknetChainId.SN_SEPOLIA);
 
             let cairo_order = {
                 nftContract: nftContract.address,
@@ -126,10 +145,10 @@ describe("OpenMark Contract Tests", () => {
             };
 
             let buyerBeforeBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerBeforeBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerBeforeBalance = await paymentContract.balanceOf(Seller1.address);
 
             openmarkContract.connect(Buyer);
-            let tx = await openmarkContract.buy(Seller.address, cairo_order, [signatures.r, signatures.s]);
+            let tx = await openmarkContract.buy(Seller1.address, cairo_order, [signatures.r, signatures.s]);
             const txReceipt = await provider.waitForTransaction(tx.transaction_hash);
             if (txReceipt.isSuccess()) {
                 console.log("Buy Succeed: ", tx.transaction_hash);
@@ -137,7 +156,7 @@ describe("OpenMark Contract Tests", () => {
 
             // verify balances and ownership
             let buyerAfterBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerAfterBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerAfterBalance = await paymentContract.balanceOf(Seller1.address);
 
             let nft_owner = await nftContract.owner_of(tokenId);
 
@@ -156,8 +175,8 @@ describe("OpenMark Contract Tests", () => {
 
         // Create and Approve NFT OpenMark
         {
-            nftContract.connect(Seller);
-            let createTx = await nftContract.safe_mint(Seller.address);
+            nftContract.connect(Seller1);
+            let createTx = await nftContract.safe_mint(Seller1.address);
             const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
             if (createReceipt.isSuccess()) {
                 const listEvents = createReceipt.events;
@@ -207,9 +226,9 @@ describe("OpenMark Contract Tests", () => {
             };
 
             let buyerBeforeBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerBeforeBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerBeforeBalance = await paymentContract.balanceOf(Seller1.address);
 
-            openmarkContract.connect(Seller);
+            openmarkContract.connect(Seller1);
             let tx = await openmarkContract.acceptOffer(Buyer.address, cairo_order, [signatures.r, signatures.s]);
             const txReceipt = await provider.waitForTransaction(tx.transaction_hash);
             if (txReceipt.isSuccess()) {
@@ -218,7 +237,7 @@ describe("OpenMark Contract Tests", () => {
 
             // verify balances and ownership
             let buyerAfterBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerAfterBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerAfterBalance = await paymentContract.balanceOf(Seller1.address);
 
             let nft_owner = await nftContract.owner_of(tokenId);
 
@@ -237,8 +256,8 @@ describe("OpenMark Contract Tests", () => {
 
         // Create and Approve NFT OpenMark
         {
-            nftContract.connect(Seller);
-            let createTx = await nftContract.safe_mint(Seller.address);
+            nftContract.connect(Seller1);
+            let createTx = await nftContract.safe_mint(Seller1.address);
             const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
             if (createReceipt.isSuccess()) {
                 const listEvents = createReceipt.events;
@@ -285,9 +304,9 @@ describe("OpenMark Contract Tests", () => {
             ]
 
             let buyerBeforeBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerBeforeBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerBeforeBalance = await paymentContract.balanceOf(Seller1.address);
 
-            openmarkContract.connect(Seller);
+            openmarkContract.connect(Seller1);
             let tx = await openmarkContract.fillBids(bids, nftContract.address,
                 [tokenId], paymentContract.address, price);
 
@@ -298,13 +317,115 @@ describe("OpenMark Contract Tests", () => {
 
             // verify balances and ownership
             let buyerAfterBalance = await paymentContract.balanceOf(Buyer.address);
-            let sellerAfterBalance = await paymentContract.balanceOf(Seller.address);
+            let sellerAfterBalance = await paymentContract.balanceOf(Seller1.address);
 
             let nft_owner = await nftContract.owner_of(tokenId);
 
             expect(buyerAfterBalance).toEqual(buyerBeforeBalance - BigInt(price));
             expect(sellerAfterBalance).toEqual(sellerBeforeBalance + BigInt(price));
             expect(compareHex(num.toHexString(nft_owner), Buyer.address)).toEqual(true);
+        }
+    });
+
+    test("Mass fillBids should works", async () => {
+        let NUM_OF_BID = 3;
+        let NFT_AMOUNT = 6;
+        let amounts = [2, 1, 3];
+
+        let tokenIds = [];
+        let price = BigInt(1000000000000000000); // 1 token
+        let expiry = getCurrentTimestampPlusDays(1);
+        let Sellers = [Seller1, Seller2, Seller3];
+
+        // Create and Approve NFT OpenMark
+        {
+            for (let i = 0; i < NUM_OF_BID; i++) {
+
+                nftContract.connect(Sellers[i]);
+                let createTx = await nftContract.safe_batch_mint(Sellers[i].address, amounts[i]);
+                const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
+                if (createReceipt.isSuccess()) {
+                    const listEvents = createReceipt.events;
+                    let ids = listEvents
+                        .filter(event => event.keys.length === 5)
+                        .map(event => event.keys[3]);
+                    tokenIds.push(...ids);
+                }
+
+                let approve_tx = await nftContract.set_approval_for_all(openmarkContract.address, true);
+
+                const approveReceipt = await provider.waitForTransaction(approve_tx.transaction_hash);
+                if (approveReceipt.isSuccess()) {
+                    console.log(`Approve NFT Succeed!`);
+                }
+            }
+            console.log("tokenIds: ", tokenIds);
+
+        }
+
+        // Buyer Approve OpenMark payment token
+        {
+            paymentContract.connect(Buyer);
+            let tx = await paymentContract.approve(openmarkContract.address, price * BigInt(NFT_AMOUNT));
+            const txReceipt = await provider.waitForTransaction(tx.transaction_hash);
+            if (txReceipt.isSuccess()) {
+                console.log("Approve Payment Succeed!");
+            }
+        }
+
+        // Fill Bids
+        {
+            let bids = []
+            for (let i = 0; i < NUM_OF_BID; i++) {
+                const salt = generateSalt(16); // Generates a 16-byte salt
+
+                let bid = {
+                    nftContract: nftContract.address,
+                    payment: paymentContract.address,
+                    amount: amounts[i].toString(16),
+                    unitPrice: price.toString(),
+                    salt: salt,
+                    expiry: expiry.toString(),
+                };
+
+                let signatures = await createBidSignature(bid, Buyer, constants.StarknetChainId.SN_SEPOLIA);
+
+                bids.push(
+                    {
+                        bidder: Buyer.address,
+                        bid: bid,
+                        signature: [signatures.r, signatures.s],
+                    }
+                )
+            }
+
+            let buyerBalance = await paymentContract.balanceOf(Buyer.address);
+            let sellersBalances = [];
+            for (let i = 0; i < NUM_OF_BID; i++) {
+                sellersBalances.push(await paymentContract.balanceOf(Sellers[i].address));
+            }
+
+            let token_ids = splitTokenIds(tokenIds, amounts);
+            let lastTX;
+            for (let i = 0; i < NUM_OF_BID; i++) {
+                openmarkContract.connect(Sellers[i]);
+                lastTX = await openmarkContract.fillBids(bids, nftContract.address, token_ids[i], paymentContract.address, price);
+            }
+
+            let txReceipt = await provider.waitForTransaction(lastTX.transaction_hash);
+            if (txReceipt.isSuccess()) {
+                console.log("fillBids Succeed!");
+            }
+
+            for (const tokenId of tokenIds) {
+                let nft_owner = await nftContract.owner_of(tokenId);
+                expect(compareHex(num.toHexString(nft_owner), Buyer.address)).toEqual(true);
+            }
+
+            expect(buyerBalance).toEqual((await paymentContract.balanceOf(Buyer.address)) + (BigInt(NFT_AMOUNT) * price));
+            for (let i = 0; i < NUM_OF_BID; i++) {
+                expect(sellersBalances[i]).toEqual((await paymentContract.balanceOf(Sellers[i].address)) - (BigInt(amounts[i]) * price));
+            }
         }
     });
 });
