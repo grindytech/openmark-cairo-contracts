@@ -27,52 +27,6 @@ use openmark::tests::unit::common::{create_openmark_nft, TEST_BUYER1, TEST_SELLE
 
 #[test]
 #[available_gas(2000000)]
-fn safe_mint_works() {
-    let contract_address = create_openmark_nft();
-    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-    let ERC721 = IERC721Dispatcher { contract_address };
-
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
-    let mut spy = spy_events(SpyOn::One(contract_address));
-
-    start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
-    OpenMarkNFT.safe_mint(to);
-
-    assert_eq!(ERC721.owner_of(0), to);
-    assert_eq!(ERC721.owner_of(1), to);
-
-    let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 1, uri: "" }
-    );
-    spy.assert_emitted(@array![(contract_address, expected_event)]);
-}
-
-#[test]
-#[available_gas(2000000)]
-fn safe_mint_with_uri_works() {
-    let contract_address = create_openmark_nft();
-    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-    let ERC721 = IERC721Dispatcher { contract_address };
-
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
-    let mut spy = spy_events(SpyOn::One(contract_address));
-
-    start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint_with_uri(to, "hello");
-
-    assert_eq!(ERC721.owner_of(0), to);
-
-    let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 0, uri: "hello" }
-    );
-    spy.assert_emitted(@array![(contract_address, expected_event)]);
-}
-
-#[test]
-#[available_gas(2000000)]
 fn safe_batch_mint_works() {
     let contract_address = create_openmark_nft();
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
@@ -92,7 +46,6 @@ fn safe_batch_mint_works() {
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
-
 
 #[test]
 #[available_gas(2000000)]
@@ -129,7 +82,7 @@ fn set_token_uri_works() {
     let mut spy = spy_events(SpyOn::One(contract_address));
 
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
 
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.set_token_uri(0, "ccc");
@@ -153,7 +106,7 @@ fn set_base_uri_works() {
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
     let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(OpenMarkNFT.token_uri(0), "https://api.openmark.io/0");
@@ -171,7 +124,7 @@ fn get_token_uri_works() {
 
     // 1. Set the base URI and mint a token without a specific URI
     // If only base URI is set, the token URI should concatenate the base URI and token ID
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(0), "https://api.openmark.io/0");
@@ -179,14 +132,14 @@ fn get_token_uri_works() {
     // 2. Set an empty base URI and mint a token with a specific URI
     // If there is no base URI, the token URI should be the specific URI set during minting
     OpenMarkNFT.set_base_uri("");
-    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN1");
+    OpenMarkNFT.safe_batch_mint_with_uris(to, array!["TOKEN1"].span());
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(1), "TOKEN1");
 
     // 3. Set the base URI again and mint a token with a specific URI
     // If both base URI and specific token URI are set, the token URI should concatenate the base URI and specific token URI
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
-    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN2");
+    OpenMarkNFT.safe_batch_mint_with_uris(to, array!["TOKEN2"].span());
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(2), "https://api.openmark.io/TOKEN2");
 }
@@ -202,7 +155,7 @@ fn set_token_uri_unauthorized_panics() {
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
 
     OpenMarkNFT.set_token_uri(0, "ccc");
 }
@@ -218,4 +171,63 @@ fn set_base_uri_unauthorized_panics() {
 
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.set_base_uri("ccc");
+}
+
+#[test]
+#[available_gas(2000000)]
+fn safe_batch_mint_whitelist_works() {
+    let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+    let ERC721 = IERC721Dispatcher { contract_address };
+
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.enable_whitelist(array![to].span(), 1);
+
+    start_cheat_caller_address(contract_address, to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
+
+    assert_eq!(ERC721.owner_of(0), to);
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('OMNFT: not whitelist',))]
+fn safe_batch_mint_not_in_whitelist_panics() {
+   let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+    let ERC721 = IERC721Dispatcher { contract_address };
+
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.enable_whitelist(array![to].span(), 1);
+
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.safe_batch_mint(to, 1);
+
+    assert_eq!(ERC721.owner_of(0), to);
+}
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('OMNFT: whitelist exceeded',))]
+fn safe_batch_mint_exceed_whitelist_amount_panics() {
+   let contract_address = create_openmark_nft();
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+    let ERC721 = IERC721Dispatcher { contract_address };
+
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+
+    start_cheat_caller_address(contract_address, owner);
+    OpenMarkNFT.enable_whitelist(array![to].span(), 1);
+
+    start_cheat_caller_address(contract_address, to);
+    OpenMarkNFT.safe_batch_mint(to, 2);
+
+    assert_eq!(ERC721.owner_of(0), to);
 }
