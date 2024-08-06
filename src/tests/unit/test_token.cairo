@@ -194,7 +194,7 @@ fn safe_batch_mint_whitelist_works() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OpenMark: whitelist failed',))]
+#[should_panic(expected: ('OMNFT: not whitelist',))]
 fn safe_batch_mint_not_in_whitelist_panics() {
    let contract_address = create_openmark_nft();
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
@@ -214,7 +214,7 @@ fn safe_batch_mint_not_in_whitelist_panics() {
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('OpenMark: whitelist exceed',))]
+#[should_panic(expected: ('OMNFT: whitelist exceeded',))]
 fn safe_batch_mint_exceed_whitelist_amount_panics() {
    let contract_address = create_openmark_nft();
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };

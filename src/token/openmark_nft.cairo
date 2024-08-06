@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod OpenMarkNFT {
     use core::num::traits::zero::Zero;
-use core::array::SpanTrait;
+    use core::array::SpanTrait;
     use core::integer::BoundedInt;
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
@@ -16,6 +16,7 @@ use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
 
     use openmark::token::events::{TokenMinted, TokenURIUpdated};
+    use openmark::token::errors as Errors;
 
     use starknet::ContractAddress;
     use openmark::token::interface::{
@@ -261,9 +262,9 @@ use core::array::SpanTrait;
 
         fn _handle_whitelist(ref self: ContractState, minter: ContractAddress, mint_amount: u256) {
             if let Option::Some(allowance) = self._get_whitelist(minter) {
-                assert(allowance.is_non_zero(), 'OpenMark: whitelist failed');
+                assert(allowance.is_non_zero(), Errors::WHITELIST_FAILED);
 
-                assert(mint_amount <= allowance, 'OpenMark: whitelist exceed');
+                assert(mint_amount <= allowance, Errors::WHITELIST_EXCEED_AMOUNT);
                 self.whitelist.write(minter, allowance - mint_amount);
             }
         }
