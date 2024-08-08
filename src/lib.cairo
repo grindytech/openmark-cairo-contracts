@@ -7,6 +7,7 @@ pub mod mocks {
     mod hasher_mock;
     mod account_mock;
     mod erc20_mock;
+    mod nft_mock;
 }
 
 #[cfg(test)]

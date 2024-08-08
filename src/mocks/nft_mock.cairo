@@ -1,5 +1,5 @@
 #[starknet::contract]
-pub mod OpenMarkNFT {
+pub mod OpenMarkNFTMock {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
@@ -16,7 +16,7 @@ pub mod OpenMarkNFT {
 
     use starknet::ContractAddress;
     use openmark::token::interface::{
-        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
+        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel
     };
     use starknet::{get_caller_address};
 
@@ -145,35 +145,6 @@ pub mod OpenMarkNFT {
         fn set_base_uri(ref self: ContractState, base_uri: ByteArray) {
             self.ownable.assert_only_owner();
             self.erc721._set_base_uri(base_uri);
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
-        fn safeMint(ref self: ContractState, to: ContractAddress) {
-            self.safe_mint(to);
-        }
-
-        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
-            self.safe_batch_mint(to, quantity);
-        }
-
-        fn safeMintWithURI(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
-            self.safe_mint_with_uri(to, uri);
-        }
-
-        fn safeBatchMintWithURIs(
-            ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
-        ) {
-            self.safe_batch_mint_with_uris(to, uris);
-        }
-
-        fn setTokenURI(ref self: ContractState, tokenId: u256, tokenURI: ByteArray) {
-            self.set_token_uri(tokenId, tokenURI);
-        }
-
-        fn setBaseURI(ref self: ContractState, baseURI: ByteArray) {
-            self.set_base_uri(baseURI);
         }
     }
 
