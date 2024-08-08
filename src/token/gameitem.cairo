@@ -1,26 +1,5 @@
-use starknet::ContractAddress;
-
-#[starknet::interface]
-pub trait IOpenMarNFTkMetadataMock<T> {
-    fn name(self: @T) -> ByteArray;
-    fn symbol(self: @T) -> ByteArray;
-    fn token_uri(self: @T, token_id: u256) -> ByteArray;
-}
-
-#[starknet::interface]
-pub trait IOpenMarkNFTMock<T> {
-    fn safe_mint(ref self: T, to: ContractAddress);
-    fn safe_batch_mint(ref self: T, to: ContractAddress, quantity: u256);
-
-    fn safe_mint_with_uri(ref self: T, to: ContractAddress, uri: ByteArray);
-    fn safe_batch_mint_with_uris(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
-
-    fn set_token_uri(ref self: T, token_id: u256, uri: ByteArray);
-    fn set_base_uri(ref self: T, base_uri: ByteArray);
-}
-
 #[starknet::contract]
-pub mod OpenMarkNFTMock {
+pub mod GameItem {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
@@ -36,8 +15,10 @@ pub mod OpenMarkNFTMock {
     use openmark::token::events::{TokenMinted, TokenURIUpdated};
 
     use starknet::ContractAddress;
+    use openmark::token::interface::{
+        IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
+    };
     use starknet::{get_caller_address};
-    use super::{IOpenMarNFTkMetadataMock, IOpenMarkNFTMock};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -56,9 +37,7 @@ pub mod OpenMarkNFTMock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
-        #[substorage(v0)]
-        erc721: ERC721Component::Storage,
+        nft: OpenMarkNFTComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         token_index: u256,
@@ -92,7 +71,7 @@ pub mod OpenMarkNFTMock {
     }
 
     #[abi(embed_v0)]
-    impl OpenMarkNFTImpl of IOpenMarkNFTMock<ContractState> {
+    impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
         fn safe_mint(ref self: ContractState, to: ContractAddress) {
             let token_index = next_token_index(ref self);
             self.erc721.mint(to, token_index);
@@ -168,7 +147,36 @@ pub mod OpenMarkNFTMock {
     }
 
     #[abi(embed_v0)]
-    impl IOpenMarNFTkMetadataMockImpl of IOpenMarNFTkMetadataMock<ContractState> {
+    impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
+        fn safeMint(ref self: ContractState, to: ContractAddress) {
+            self.safe_mint(to);
+        }
+
+        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
+            self.safe_batch_mint(to, quantity);
+        }
+
+        fn safeMintWithURI(ref self: ContractState, to: ContractAddress, uri: ByteArray) {
+            self.safe_mint_with_uri(to, uri);
+        }
+
+        fn safeBatchMintWithURIs(
+            ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
+        ) {
+            self.safe_batch_mint_with_uris(to, uris);
+        }
+
+        fn setTokenURI(ref self: ContractState, tokenId: u256, tokenURI: ByteArray) {
+            self.set_token_uri(tokenId, tokenURI);
+        }
+
+        fn setBaseURI(ref self: ContractState, baseURI: ByteArray) {
+            self.set_base_uri(baseURI);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl IOpenMarNFTkMetadataImpl of IOpenMarNFTkMetadata<ContractState> {
         fn name(self: @ContractState) -> ByteArray {
             self.erc721.ERC721_name.read()
         }
@@ -192,17 +200,16 @@ pub mod OpenMarkNFTMock {
     }
 
     #[abi(embed_v0)]
+    impl IOpenMarNFTkMetadataCamelOnlyImpl of IOpenMarkNFTMetadataCamel<ContractState> {
+        fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
+            self.token_uri(tokenId)
+        }
+    }
+
+    #[abi(embed_v0)]
     impl IOpenMarkSRC5Impl of ISRC5<ContractState> {
         fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
             self.erc721.supports_interface(interface_id)
         }
-    }
-
-    /// Returns the current token_index and increments it for the next use.
-    /// This ensures each token has a unique ID.
-    fn next_token_index(ref self: ContractState) -> u256 {
-        let current_token_index = self.token_index.read();
-        self.token_index.write(current_token_index + 1);
-        current_token_index
     }
 }
