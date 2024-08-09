@@ -1,34 +1,6 @@
 use starknet::{ClassHash, ContractAddress};
 
 #[starknet::interface]
-pub trait IOpenMarkFactory<T> {
-    fn create_collection(
-        ref self: T,
-        id: u256,
-        owner: ContractAddress,
-        name: ByteArray,
-        symbol: ByteArray,
-        base_uri: ByteArray,
-    );
-
-    fn get_collection(self: @T, id: u256) -> ContractAddress;
-}
-
-#[starknet::interface]
-pub trait IOpenMarkFactoryCamel<T> {
-    fn createCollection(
-        ref self: T,
-        id: u256,
-        owner: ContractAddress,
-        name: ByteArray,
-        symbol: ByteArray,
-        baseURI: ByteArray,
-    );
-
-    fn getCollection(self: @T, id: u256) -> ContractAddress;
-}
-
-#[starknet::interface]
 pub trait IOpenMarkNFT<T> {
     // fn safe_mint(ref self: T, to: ContractAddress);
     // fn safe_mint_with_uri(ref self: T, to: ContractAddress, uri: ByteArray);

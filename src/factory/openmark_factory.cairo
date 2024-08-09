@@ -9,7 +9,7 @@ pub mod OpenMarkFactory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
-    use openmark::token::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel};
+    use openmark::factory::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel, IFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -121,8 +121,10 @@ pub mod OpenMarkFactory {
     }
 
     #[abi(embed_v0)]
-    fn set_collection_classhash(ref self: ContractState, classhash: ClassHash) {
-        self.ownable.assert_only_owner();
-        self.collection_classhash.write(classhash);
+    impl FactoryManagerImpl of IFactoryManager<ContractState> {
+        fn set_collection_classhash(ref self: ContractState, classhash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.collection_classhash.write(classhash);
+        }
     }
 }
