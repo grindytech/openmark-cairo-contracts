@@ -1,9 +1,9 @@
-use openmark::token::interface::IOpenMarkFactoryDispatcherTrait;
+use openmark::factory::interface::IOpenMarkFactoryDispatcherTrait;
 use core::array::SpanTrait;
 use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
-use openmark::token::interface::{IOpenMarkFactoryDispatcher};
+use openmark::factory::interface::{IOpenMarkFactoryDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{

@@ -7,6 +7,9 @@ pub mod OpenMarkNFT {
     use core::byte_array::ByteArrayTrait;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
+
     use openzeppelin::token::erc721::{
         ERC721Component, ERC721Component::Errors as ERC721Errors, ERC721HooksEmptyImpl
     };
@@ -18,11 +21,12 @@ pub mod OpenMarkNFT {
     use openmark::token::interface::{
         IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
     };
-    use starknet::{get_caller_address};
+    use starknet::{get_caller_address, ClassHash};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     // ERC721 Mixin
     #[abi(embed_v0)]
@@ -33,11 +37,14 @@ pub mod OpenMarkNFT {
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+          #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
@@ -51,6 +58,8 @@ pub mod OpenMarkNFT {
     pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
@@ -185,6 +194,17 @@ pub mod OpenMarkNFT {
     impl IOpenMarkSRC5Impl of ISRC5<ContractState> {
         fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
             self.erc721.supports_interface(interface_id)
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
+
+            // Replace the class hash upgrading the contract
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 
