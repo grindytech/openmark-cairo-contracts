@@ -23,62 +23,45 @@ use openmark::{
     token::events::{TokenMinted, TokenURIUpdated},
     token::openmark_nft::OpenMarkNFT::Event as NFTEvents,
 };
-use openmark::tests::unit::common::{create_openmark_nft, TEST_BUYER1, TEST_SELLER};
+use openmark::tests::unit::common::{TEST_BUYER1, TEST_SELLER};
 
-#[test]
-#[available_gas(2000000)]
-fn safe_mint_works() {
-    let contract_address = create_openmark_nft();
-    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-    let ERC721 = IERC721Dispatcher { contract_address };
-
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
-    let mut spy = spy_events(SpyOn::One(contract_address));
-
-    start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
-    OpenMarkNFT.safe_mint(to);
-
-    assert_eq!(ERC721.owner_of(0), to);
-    assert_eq!(ERC721.owner_of(1), to);
-
-    let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 1, uri: "" }
-    );
-    spy.assert_emitted(@array![(contract_address, expected_event)]);
+pub fn NFT_NAME() -> ByteArray {
+    "OpenMark"
 }
 
-#[test]
-#[available_gas(2000000)]
-fn safe_mint_with_uri_works() {
-    let contract_address = create_openmark_nft();
-    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-    let ERC721 = IERC721Dispatcher { contract_address };
+pub fn NFT_SYMBOL() -> ByteArray {
+    "OM"
+}
 
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
-    let mut spy = spy_events(SpyOn::One(contract_address));
+pub fn NFT_BASE_URI() -> ByteArray {
+    ""
+}
 
-    start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint_with_uri(to, "hello");
+pub fn create_gameitem(
+    owner: ContractAddress,
+) -> ContractAddress {
+    let contract = declare("GameItem").unwrap();
+    let mut constructor_calldata = array![];
 
-    assert_eq!(ERC721.owner_of(0), to);
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(NFT_NAME());
+    constructor_calldata.append_serde(NFT_SYMBOL());
+    constructor_calldata.append_serde(NFT_BASE_URI());
 
-    let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 0, uri: "hello" }
-    );
-    spy.assert_emitted(@array![(contract_address, expected_event)]);
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+
+    contract_address
 }
 
 #[test]
 #[available_gas(2000000)]
 fn safe_batch_mint_works() {
-    let contract_address = create_openmark_nft();
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
     let mut spy = spy_events(SpyOn::One(contract_address));
 
@@ -88,7 +71,7 @@ fn safe_batch_mint_works() {
     assert_eq!(ERC721.owner_of(9), to);
 
     let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 9, uri: "" }
+        TokenMinted { to, token_id: 9, uri: "" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -97,7 +80,9 @@ fn safe_batch_mint_works() {
 #[test]
 #[available_gas(2000000)]
 fn safe_batch_mint_with_uris_works() {
-    let contract_address = create_openmark_nft();
+     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
@@ -111,7 +96,7 @@ fn safe_batch_mint_with_uris_works() {
     assert_eq!(ERC721.owner_of(2), to);
 
     let expected_event = NFTEvents::TokenMinted(
-        TokenMinted { caller: owner, to, token_id: 2, uri: "ccc" }
+        TokenMinted { to, token_id: 2, uri: "ccc" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -119,26 +104,24 @@ fn safe_batch_mint_with_uris_works() {
 #[test]
 #[available_gas(2000000)]
 fn set_token_uri_works() {
-    let contract_address = create_openmark_nft();
-    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
     start_cheat_caller_address(contract_address, owner);
     OpenMarkNFT.set_base_uri("");
 
-    let mut spy = spy_events(SpyOn::One(contract_address));
-
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 10);
 
-    start_cheat_caller_address(contract_address, to);
+    let mut spy = spy_events(SpyOn::One(contract_address));
     OpenMarkNFT.set_token_uri(0, "ccc");
-
     let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(OpenMarkNFT.token_uri(0), "ccc");
 
     let expected_event = NFTEvents::TokenURIUpdated(
-        TokenURIUpdated { who: to, token_id: 0, uri: "ccc" }
+        TokenURIUpdated { token_id: 0, uri: "ccc" }
     );
     spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
@@ -146,14 +129,15 @@ fn set_token_uri_works() {
 #[test]
 #[available_gas(2000000)]
 fn set_base_uri_works() {
-    let contract_address = create_openmark_nft();
+     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+        OpenMarkNFT.safe_batch_mint(to, 10);
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
     let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(OpenMarkNFT.token_uri(0), "https://api.openmark.io/0");
@@ -162,7 +146,9 @@ fn set_base_uri_works() {
 #[test]
 #[available_gas(2000000)]
 fn get_token_uri_works() {
-    let contract_address = create_openmark_nft();
+    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
@@ -171,7 +157,7 @@ fn get_token_uri_works() {
 
     // 1. Set the base URI and mint a token without a specific URI
     // If only base URI is set, the token URI should concatenate the base URI and token ID
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 1);
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(0), "https://api.openmark.io/0");
@@ -179,39 +165,72 @@ fn get_token_uri_works() {
     // 2. Set an empty base URI and mint a token with a specific URI
     // If there is no base URI, the token URI should be the specific URI set during minting
     OpenMarkNFT.set_base_uri("");
-    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN1");
+    OpenMarkNFT.safe_batch_mint_with_uris(to, array!["TOKEN1"].span());
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(1), "TOKEN1");
 
     // 3. Set the base URI again and mint a token with a specific URI
     // If both base URI and specific token URI are set, the token URI should concatenate the base URI and specific token URI
     OpenMarkNFT.set_base_uri("https://api.openmark.io/");
-    OpenMarkNFT.safe_mint_with_uri(to, "TOKEN2");
+    OpenMarkNFT.safe_batch_mint_with_uris(to, array!["TOKEN2"].span());
     let MetadataDispatcher = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(MetadataDispatcher.token_uri(2), "https://api.openmark.io/TOKEN2");
 }
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('ERC721: unauthorized caller',))]
-fn set_token_uri_unauthorized_panics() {
-    let contract_address = create_openmark_nft();
+#[should_panic(expected: ('Caller is missing role',))]
+fn safe_batch_mint_unauthorized_panics() {
+let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    start_cheat_caller_address(contract_address, to);
+    OpenMarkNFT.safe_batch_mint(to, 10);
+}
+
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('Caller is missing role',))]
+fn safe_batch_mint_with_uris_unauthorized_panics() {
+let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+
+    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    start_cheat_caller_address(contract_address, to);
+    OpenMarkNFT.safe_batch_mint_with_uris(to, array!["a", "b"].span());
+}
+
+
+#[test]
+#[available_gas(2000000)]
+#[should_panic(expected: ('Caller is missing role',))]
+fn set_token_uri_unauthorized_panics() {
     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+    let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
+
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
-    OpenMarkNFT.safe_mint(to);
+    OpenMarkNFT.safe_batch_mint(to, 10);
 
+    start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.set_token_uri(0, "ccc");
 }
 
 #[test]
 #[available_gas(2000000)]
-#[should_panic(expected: ('Caller is not the owner',))]
+#[should_panic(expected: ('Caller is missing role',))]
 fn set_base_uri_unauthorized_panics() {
-    let contract_address = create_openmark_nft();
+let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let contract_address = create_gameitem(owner);
+
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
     let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
