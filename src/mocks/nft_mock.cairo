@@ -99,7 +99,8 @@ pub mod OpenMarkNFTMock {
 
             self
                 .emit(
-                    TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri: "" }
+                    TokenMinted { 
+                        to, token_id: token_index, uri: "" }
                 );
         }
 
@@ -107,7 +108,8 @@ pub mod OpenMarkNFTMock {
             let token_index = next_token_index(ref self);
             self.erc721.mint(to, token_index);
             self.token_uris.write(token_index, uri.clone());
-            self.emit(TokenMinted { caller: get_caller_address(), to, token_id: token_index, uri });
+            self.emit(TokenMinted { 
+             to, token_id: token_index, uri });
         }
 
 
@@ -121,7 +123,7 @@ pub mod OpenMarkNFTMock {
                 self
                     .emit(
                         TokenMinted {
-                            caller: get_caller_address(), to, token_id: token_index, uri: ""
+                             to, token_id: token_index, uri: ""
                         }
                     );
 
@@ -141,7 +143,6 @@ pub mod OpenMarkNFTMock {
                 self
                     .emit(
                         TokenMinted {
-                            caller: get_caller_address(),
                             to,
                             token_id: token_index,
                             uri: uris.at(i).clone()
@@ -158,7 +159,7 @@ pub mod OpenMarkNFTMock {
                 ERC721Errors::UNAUTHORIZED
             );
             self.token_uris.write(token_id, uri.clone());
-            self.emit(TokenURIUpdated { who: get_caller_address(), token_id, uri, });
+            self.emit(TokenURIUpdated { token_id, uri, });
         }
 
         fn set_base_uri(ref self: ContractState, base_uri: ByteArray) {

@@ -12,8 +12,8 @@ use snforge_std::{
 };
 use starknet::{ContractAddress};
 
-use openmark::token::openmark_factory::OpenMarkFactory::Event as FactoryEvent;
-use openmark::token::openmark_factory::OpenMarkFactory::CollectionCreated;
+use openmark::factory::openmark_factory::OpenMarkFactory::Event as FactoryEvent;
+use openmark::factory::openmark_factory::OpenMarkFactory::CollectionCreated;
 use openmark::tests::unit::common::{create_openmark_nft, TEST_SELLER};
 
 fn deloy_openmark_factory() -> (ContractAddress, IOpenMarkFactoryDispatcher) {
