@@ -30,7 +30,7 @@ pub mod OpenMarkFactory {
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         factory: LegacyMap<u256, ContractAddress>,
-        openmark_nft: ClassHash,
+        collection_classhash: ClassHash,
     }
 
     #[derive(Drop, PartialEq, starknet::Event)]
@@ -54,9 +54,9 @@ pub mod OpenMarkFactory {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, openmark_nft: ClassHash) {
+    fn constructor(ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash) {
         self.ownable.initializer(owner);
-        self.openmark_nft.write(openmark_nft);
+        self.collection_classhash.write(collection_classhash);
     }
 
     #[abi(embed_v0)]
@@ -78,7 +78,7 @@ pub mod OpenMarkFactory {
             base_uri.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
-                self.openmark_nft.read(), 0, constructor_calldata.span(), false
+                self.collection_classhash.read(), 0, constructor_calldata.span(), false
             )
                 .unwrap_syscall();
 
@@ -121,8 +121,8 @@ pub mod OpenMarkFactory {
     }
 
     #[abi(embed_v0)]
-    fn set_openmark_nft(ref self: ContractState, classhash: ClassHash) {
+    fn set_collection_classhash(ref self: ContractState, classhash: ClassHash) {
         self.ownable.assert_only_owner();
-        self.openmark_nft.write(classhash);
+        self.collection_classhash.write(classhash);
     }
 }
