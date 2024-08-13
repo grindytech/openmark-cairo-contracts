@@ -14,7 +14,7 @@
 pub mod OpenMark {
     use core::array::ArrayTrait;
     use core::option::OptionTrait;
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+    // use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -104,11 +104,11 @@ pub mod OpenMark {
         /// Maximum number of tokens that can be handled in a single fillBids operation
         maxBidNFTs: u32,
         /// store used order signatures
-        usedSignatures: LegacyMap<felt252, bool>,
+        usedSignatures: starknet::storage::Map<felt252, bool>,
         /// store partial bid signatures
-        partialBidSignatures: LegacyMap<felt252, u128>,
+        partialBidSignatures: starknet::storage::Map<felt252, u128>,
         /// store allowed payment tokens
-        paymentTokens: LegacyMap<ContractAddress, bool>,
+        paymentTokens: starknet::storage::Map<ContractAddress, bool>,
     }
 
     #[constructor]

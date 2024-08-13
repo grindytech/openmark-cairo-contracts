@@ -43,7 +43,7 @@ pub mod GameItem {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         token_index: u256,
-        token_uris: LegacyMap<u256, ByteArray>,
+        token_uris: starknet::storage::Map<u256, ByteArray>,
     }
 
     #[event]

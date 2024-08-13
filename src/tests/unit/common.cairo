@@ -10,8 +10,8 @@ use openzeppelin::utils::serde::SerializedAppend;
 use snforge_std::signature::SignerTrait;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address, spy_events, SpyOn, EventAssertions, EventSpy,
-    start_cheat_block_timestamp
+    start_cheat_account_contract_address, spy_events, EventSpy,
+    start_cheat_block_timestamp, EventSpyAssertionsTrait
 };
 
 use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
@@ -25,7 +25,7 @@ use openmark::{
     hasher::interface::{
         IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
     },
-    core::OpenMark::{maxBidNFTsContractMemberStateTrait, ContractState},
+    core::OpenMark::{ContractState},
     token::interface::{IOpenMarkNFTDispatcher}, core::OpenMark::Event as OpenMarkEvent,
     core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
 };

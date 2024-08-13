@@ -2,8 +2,9 @@
 name = "openmark"
 version = "0.1.0"
 edition = "2023_11"
-cairo-version = "2.6.4"
-scarb-version = "2.6.5"
+cairo-version = "2.7.0"
+scarb-version = "2.7.0"
+sierra-version = "2.2.0"
 authors = ["Grindy Technologies <hello@grindy.io>"]
 description = "OpenMark Contracts written in Cairo for StarkNet, a decentralized ZK Rollup"
 documentation = ""
@@ -13,12 +14,12 @@ license-file = "LICENSE"
 keywords = ["openmark", "starknet", "cairo", "contracts"]
 
 [dependencies]
-starknet = "2.6.4"
-# openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "0.15.0-rc.0" }
+starknet = "2.7.0"
+# openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.15.0" }
 openzeppelin = { path = "../cairo-contracts" }
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.25.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.26.0" }
 
 [scripts]
 test = "snforge test"

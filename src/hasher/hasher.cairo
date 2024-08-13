@@ -12,7 +12,7 @@
 pub mod HasherComponent {
     use core::array::ArrayTrait;
     use core::array::SpanTrait;
-    use core::traits::IndexView;
+    use core::ops::index::IndexView;
     use core::option::OptionTrait;
     use core::traits::TryInto;
     use starknet::{ContractAddress, VALIDATED};
