@@ -225,12 +225,9 @@ pub mod OpenMark {
         }
 
         fn batch_buy(ref self: ContractState, bags: Span<Bag>) {
-            let mut i = 0;
-            while (i < bags.len()) {
-                let bag = *bags.at(i);
-                self.buy(bag.seller, bag.order, bag.signature);
-                i += 1;
-            };
+            for bag in bags {
+                self.buy(*bag.seller, *bag.order, *bag.signature);
+            }
         }
     }
 
@@ -327,21 +324,16 @@ pub mod OpenMark {
         ) -> Span<SignedBid> {
             let mut valid_bids = ArrayTrait::new();
 
-            let mut i = 0;
-            while (i < bids.len()) {
-                if let Result::Err(_) = self._verify_signed_bid(*bids.at(i)) {
-                    i += 1;
+            for bid in bids {
+                if let Result::Err(_) = self._verify_signed_bid(*bid) {
                     continue;
                 };
 
                 if let Result::Err(_) = self
-                    ._verify_matching_bid(*bids.at(i).bid, nft_token, payment_token, asking_price) {
-                    i += 1;
+                    ._verify_matching_bid(*bid.bid, nft_token, payment_token, asking_price) {
                     continue;
                 }
-
-                valid_bids.append(*bids.at(i));
-                i += 1;
+                valid_bids.append(*bid);
             };
 
             valid_bids.span()
@@ -570,14 +562,12 @@ pub mod OpenMark {
                 return Result::Err(Errors::TOO_MANY_NFTS);
             }
 
-            let mut i = 0;
             let mut is_owner = true;
-            while (i < token_ids.len()) {
-                if self._nft_owner_of(nft_token, (*token_ids.at(i)).into()) != seller {
+            for token_id in token_ids {
+                if self._nft_owner_of(nft_token, (*token_id).into()) != seller {
                     is_owner = false;
                     break;
                 }
-                i += 1;
             };
 
             if !is_owner {
@@ -672,7 +662,7 @@ pub mod OpenMark {
         }
 
         /// Processes a payment from sender to a receiver.
-        /// 
+        ///
         /// # Parameters:
         /// - `sender`: The sender address.
         /// - `receiver`: The address to receive the payment.
