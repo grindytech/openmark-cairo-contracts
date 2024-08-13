@@ -43,14 +43,14 @@ pub mod OpenMarkNFT {
     struct Storage {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
-          #[substorage(v0)]
+        #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         token_index: u256,
-        token_uris: LegacyMap<u256, ByteArray>,
+        token_uris: starknet::storage::Map<u256, ByteArray>,
     }
 
     #[event]
@@ -90,12 +90,7 @@ pub mod OpenMarkNFT {
                 let token_index = next_token_index(ref self);
                 self.erc721.mint(to, token_index);
                 token_indexs.append(token_index);
-                self
-                    .emit(
-                        TokenMinted {
-                            to, token_id: token_index, uri: ""
-                        }
-                    );
+                self.emit(TokenMinted { to, token_id: token_index, uri: "" });
 
                 i += 1;
             };
@@ -105,22 +100,12 @@ pub mod OpenMarkNFT {
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) {
-            let mut i = 0;
-            while (i < uris.len()) {
+            for uri in uris {
                 let token_index = next_token_index(ref self);
                 self.erc721.mint(to, token_index);
-                self.token_uris.write(token_index, uris.at(i).clone());
-                self
-                    .emit(
-                        TokenMinted {
-                            to,
-                            token_id: token_index,
-                            uri: uris.at(i).clone()
-                        }
-                    );
-
-                i += 1;
-            };
+                self.token_uris.write(token_index, uri.clone());
+                self.emit(TokenMinted { to, token_id: token_index, uri: uri.clone() });
+            }
         }
 
         fn set_token_uri(ref self: ContractState, token_id: u256, uri: ByteArray) {

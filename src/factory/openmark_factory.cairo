@@ -29,7 +29,7 @@ pub mod OpenMarkFactory {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
-        factory: LegacyMap<u256, ContractAddress>,
+        factory: starknet::storage::Map<u256, ContractAddress>,
         collection_classhash: ClassHash,
     }
 

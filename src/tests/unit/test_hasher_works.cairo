@@ -2,7 +2,7 @@ use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin::tests::utils;
+// use openzeppelin::tests::utils;
 use openzeppelin::introspection::interface::ISRC5_ID;
 
 use starknet::{
@@ -33,7 +33,6 @@ fn deploy_mock_hasher() -> ContractAddress {
 
 
 #[test]
-#[available_gas(2000000)]
 fn get_order_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
@@ -57,7 +56,6 @@ fn get_order_hash_works() {
 }
 
 #[test]
-#[available_gas(2000000)]
 fn get_bid_hash_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
@@ -81,7 +79,6 @@ fn get_bid_hash_works() {
 
 
 #[test]
-#[available_gas(2000000)]
 fn verify_signature_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
@@ -99,7 +96,6 @@ fn verify_signature_works() {
 }
 
 #[test]
-#[available_gas(2000000)]
 fn verify_contract_signature_works() {
     let contract_address = deploy_mock_hasher();
     // This value was computed using StarknetJS
@@ -118,7 +114,6 @@ fn verify_contract_signature_works() {
 
 
 #[test]
-#[available_gas(2000000)]
 fn verify_order_works() {
     let contract_address = deploy_mock_hasher();
 
@@ -147,7 +142,6 @@ fn verify_order_works() {
 }
 
 #[test]
-#[available_gas(2000000)]
 fn verify_bid_works() {
     let contract_address = deploy_mock_hasher();
 

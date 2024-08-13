@@ -10,10 +10,14 @@ Before you begin, ensure you have the following tools installed:
 ### Install Scarb
 
 ```sh
-scarb --version
+$ scarb --version
 
-scarb 2.6.5
-cairo: 2.6.4
+scarb 2.7.0
+cairo: 2.7.0
+sierra: 1.6.0
+
+$ universal-sierra-compiler --version
+universal-sierra-compiler 2.2.0
 ```
 
 1. Add the Scarb plugin:
@@ -22,22 +26,22 @@ cairo: 2.6.4
     asdf plugin add scarb
     ```
 
-2. Install the specific version (e.g., 2.6.5):
+2. Install the specific version (e.g., 2.7.0):
 
     ```bash
-    asdf install scarb 2.6.5
+    asdf install scarb 2.7.0
     ```
 
 3. Set the global version:
 
     ```bash
-    asdf global scarb 2.6.5
+    asdf global scarb 2.7.0
     ```
 
 Alternatively, you can install Scarb using the following command:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.6.5
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.7.0
 ```
 
 ### Run tests

@@ -43,7 +43,7 @@ pub mod GameItem {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         token_index: u256,
-        token_uris: LegacyMap<u256, ByteArray>,
+        token_uris: starknet::storage::Map<u256, ByteArray>,
     }
 
     #[event]
@@ -78,19 +78,14 @@ pub mod GameItem {
     impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
         fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
-           
+
             let mut token_indexs = ArrayTrait::new();
             let mut i = 0;
             while i < quantity {
                 let token_index = next_token_index(ref self);
                 self.erc721.mint(to, token_index);
                 token_indexs.append(token_index);
-                self
-                    .emit(
-                        TokenMinted {
-                            to, token_id: token_index, uri: ""
-                        }
-                    );
+                self.emit(TokenMinted { to, token_id: token_index, uri: "" });
 
                 i += 1;
             };
@@ -101,22 +96,11 @@ pub mod GameItem {
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
-
-            let mut i = 0;
-            while (i < uris.len()) {
+            for uri in uris {
                 let token_index = next_token_index(ref self);
                 self.erc721.mint(to, token_index);
-                self.token_uris.write(token_index, uris.at(i).clone());
-                self
-                    .emit(
-                        TokenMinted {
-                            to,
-                            token_id: token_index,
-                            uri: uris.at(i).clone()
-                        }
-                    );
-
-                i += 1;
+                self.token_uris.write(token_index, uri.clone());
+                self.emit(TokenMinted { to, token_id: token_index, uri: uri.clone() });
             };
         }
 
@@ -134,7 +118,7 @@ pub mod GameItem {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
-          fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
+        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
             self.safe_batch_mint(to, quantity);
         }
 
