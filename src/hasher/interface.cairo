@@ -1,4 +1,4 @@
-use openmark::primitives::types::{Order, Bid, SignedBid};
+use openmark::primitives::types::{Order, Bid};
 use starknet::account::Call;
 
 #[starknet::interface]

@@ -1,12 +1,10 @@
 #[starknet::contract]
 pub mod HasherMock {
-    use starknet::ContractAddress;
     use openmark::hasher::interface::{IOffchainMessageHash};
-    use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
+    use openmark::hasher::interface::{IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
 
-    use starknet::{VALIDATED};
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
+    use starknet::{VALIDATED, get_tx_info};
     use openzeppelin::account::utils::{is_valid_stark_signature};
     use openzeppelin::introspection::src5::SRC5Component;
 
@@ -15,7 +13,6 @@ pub mod HasherMock {
     use core::poseidon::poseidon_hash_span;
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
-    use core::ecdsa::check_ecdsa_signature;
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -47,7 +44,7 @@ pub mod HasherMock {
             state = state.update_with(domain.hash_struct());
             state = state.update_with(signer);
             state = state.update_with(order.hash_struct());
-            // Hashing with the amount of elements being hashed 
+            // Hashing with the amount of elements being hashed
             state = state.update_with(4);
             state.finalize()
         }
@@ -61,7 +58,7 @@ pub mod HasherMock {
             state = state.update_with(domain.hash_struct());
             state = state.update_with(signer);
             state = state.update_with(bid.hash_struct());
-            // Hashing with the amount of elements being hashed 
+            // Hashing with the amount of elements being hashed
             state = state.update_with(4);
             state.finalize()
         }

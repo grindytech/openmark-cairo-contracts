@@ -1,28 +1,16 @@
-use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
-use openzeppelin::utils::serde::SerializedAppend;
-// use openzeppelin::tests::utils;
-use openzeppelin::introspection::interface::ISRC5_ID;
 
-use starknet::{
-    ContractAddress, ClassHash, contract_address_const, get_tx_info, get_caller_address,
-};
+use starknet::{ContractAddress};
 
-use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address,
-};
+use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,};
 use openmark::{
-    primitives::types::{Order, Bid, OrderType, SignedBid},
-    hasher::interface::{
-        IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash,
-    },
+    primitives::types::{Order, Bid, OrderType},
+    hasher::interface::{IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait},
 };
 use openmark::tests::unit::common::{
-    TEST_SELLER, ZERO, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS, deploy_mock_account
+    TEST_SELLER, TEST_ETH_ADDRESS, TEST_ERC721_ADDRESS, deploy_mock_account
 };
-
 
 fn deploy_mock_hasher() -> ContractAddress {
     let contract = declare("HasherMock").unwrap();
@@ -30,7 +18,6 @@ fn deploy_mock_hasher() -> ContractAddress {
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
-
 
 #[test]
 fn get_order_hash_works() {

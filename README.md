@@ -12,8 +12,8 @@ Before you begin, ensure you have the following tools installed:
 ```sh
 $ scarb --version
 
-scarb 2.7.0
-cairo: 2.7.0
+scarb 2.8.0
+cairo: 2.8.0
 sierra: 1.6.0
 
 $ universal-sierra-compiler --version
@@ -26,22 +26,22 @@ universal-sierra-compiler 2.2.0
     asdf plugin add scarb
     ```
 
-2. Install the specific version (e.g., 2.7.0):
+2. Install the specific version (e.g., 2.8.0):
 
     ```bash
-    asdf install scarb 2.7.0
+    asdf install scarb 2.8.0
     ```
 
 3. Set the global version:
 
     ```bash
-    asdf global scarb 2.7.0
+    asdf global scarb 2.8.0
     ```
 
 Alternatively, you can install Scarb using the following command:
 
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.7.0
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.8.0
 ```
 
 ### Run tests

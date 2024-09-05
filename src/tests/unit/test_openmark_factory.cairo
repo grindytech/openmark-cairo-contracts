@@ -1,14 +1,11 @@
 use openmark::factory::interface::IOpenMarkFactoryDispatcherTrait;
-use core::array::SpanTrait;
-use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 use openmark::factory::interface::{IOpenMarkFactoryDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address, spy_events,
-    EventSpy, Event, start_cheat_block_timestamp, get_class_hash, EventSpyAssertionsTrait
+    declare, ContractClassTrait,get_class_hash,
 };
 use starknet::{ContractAddress};
 
@@ -34,7 +31,7 @@ fn deloy_openmark_factory() -> (ContractAddress, IOpenMarkFactoryDispatcher) {
 
 #[test]
 fn create_collection_works() {
-    let (contract_address, factory_contract) = deloy_openmark_factory();
+    let (_contract_address, factory_contract) = deloy_openmark_factory();
 
     // let mut spy = spy_events();
 
@@ -45,7 +42,7 @@ fn create_collection_works() {
 
     let nft_address = factory_contract.get_collection(0);
 
-    let expected_event = FactoryEvent::CollectionCreated(
+    let _expected_event = FactoryEvent::CollectionCreated(
         CollectionCreated {
             id: 0,
             address: nft_address,

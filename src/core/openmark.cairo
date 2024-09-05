@@ -31,12 +31,11 @@ pub mod OpenMark {
     };
     use starknet::ClassHash;
     use starknet::SyscallResultTrait;
-    use starknet::syscalls::call_contract_syscall;
 
     use core::num::traits::Zero;
     use core::panic_with_felt252;
 
-    use openmark::primitives::types::{Order, OrderType, IStructHash, Bid, SignedBid, Bag};
+    use openmark::primitives::types::{Order, OrderType, Bid, SignedBid, Bag};
     use openmark::hasher::interface::IOffchainMessageHash;
     use openmark::hasher::{HasherComponent};
     use openmark::core::interface::{

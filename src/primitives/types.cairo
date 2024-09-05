@@ -1,7 +1,6 @@
 use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
-use core::fmt::Debug;
 use openmark::primitives::constants::{
     STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH, BID_STRUCT_TYPE_HASH
 };

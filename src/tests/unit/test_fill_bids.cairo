@@ -1,4 +1,3 @@
-use core::result::ResultTrait;
 use core::array::SpanTrait;
 use core::traits::Into;
 use core::array::ArrayTrait;
@@ -7,33 +6,23 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::signature::SignerTrait;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address, spy_events, EventSpy, EventSpyAssertionsTrait,
-    start_cheat_block_timestamp, Event
+    start_cheat_caller_address, load, map_entry_address
 };
 
-use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
-
 use openmark::{
-    primitives::types::{OrderType},
-    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark,},
+    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
     core::interface::{
-        IOpenMarkProvider, IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
-    },
-    core::interface::{
-        IOpenMarkManager, IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
+        IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
     },
     core::openmark::OpenMark::{InternalImplTrait},
-    core::OpenMark::Event as OpenMarkEvent, core::events::{BidFilled, BidCancelled},
+    core::OpenMark::Event as OpenMarkEvent, core::events::{BidCancelled},
     core::errors as Errors,
 };
 
 use openmark::tests::unit::common::{
-    create_buy, create_offer, create_bids, ZERO, create_mock_hasher, do_create_nft, deploy_erc20,
+    create_bids, ZERO, create_mock_hasher,
     get_contract_state_for_testing
 };
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
@@ -208,7 +197,7 @@ fn cancel_bid_works() {
 
         assert_eq!(*usedSignatures.at(0), true.into());
         // events
-        let expected_event = OpenMarkEvent::BidCancelled(
+        let _expected_event = OpenMarkEvent::BidCancelled(
             BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
         );
         // spy.assert_emitted(@array![(openmark_address, expected_event)]);

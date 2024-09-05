@@ -1,4 +1,3 @@
-use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 
@@ -7,27 +6,19 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use openmark::token::interface::IOpenMarkNFTDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::signature::SignerTrait;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address, spy_events, EventSpy,
-    start_cheat_block_timestamp, EventSpyAssertionsTrait
+    declare, ContractClassTrait, start_cheat_caller_address,
 };
 
-use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
+use starknet::{ContractAddress, contract_address_const};
 
 use openmark::{
     primitives::types::{Order, Bid, OrderType, SignedBid},
-    core::interface::{
-        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark, IOpenMarkProvider,
-        IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
-    },
     hasher::interface::{
-        IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait, IOffchainMessageHash
+        IOffchainMessageHashDispatcher
     },
     core::OpenMark::{ContractState},
-    token::interface::{IOpenMarkNFTDispatcher}, core::OpenMark::Event as OpenMarkEvent,
-    core::events::{OrderFilled, OrderCancelled, BidCancelled}, core::errors as Errors,
+    token::interface::{IOpenMarkNFTDispatcher}
 };
 
 pub fn ZERO() -> ContractAddress {

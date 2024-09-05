@@ -2,13 +2,12 @@
 pub mod OpenMarkFactory {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use openzeppelin::utils::serde::SerializedAppend;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
 
     use core::num::traits::Zero;
 
-    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
     use openmark::factory::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel, IFactoryManager};
 
     /// Ownable

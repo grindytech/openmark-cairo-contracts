@@ -6,8 +6,7 @@ pub trait IAccount<T> {
 
 #[starknet::contract]
 pub(crate) mod AccountMock {
-    use starknet::{ContractAddress, VALIDATED};
-    use core::pedersen::PedersenTrait;
+    use starknet::{VALIDATED};
     use openzeppelin::introspection::src5::SRC5Component;
     use super::IAccount;
 
