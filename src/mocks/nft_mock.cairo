@@ -23,8 +23,8 @@ pub trait IOpenMarkNFTMock<T> {
 pub mod OpenMarkNFTMock {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
-    use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
-    use openzeppelin::token::erc721::interface::{IERC721Metadata, IERC721MetadataDispatcher};
+    use openzeppelin::token::erc721::interface::{IERC721};
+    use openzeppelin::token::erc721::interface::{IERC721Metadata};
     use core::byte_array::ByteArrayTrait;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;

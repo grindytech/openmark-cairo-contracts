@@ -1,19 +1,14 @@
-use core::array::SpanTrait;
-use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::signature::SignerTrait;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, load, map_entry_address,
-    start_cheat_account_contract_address, spy_events, EventSpy, Event,
-    start_cheat_block_timestamp,EventSpyAssertionsTrait
+    declare, ContractClassTrait, start_cheat_caller_address
 };
 
-use starknet::{ContractAddress, contract_address_const, get_tx_info, get_caller_address,};
+use starknet::{ContractAddress};
 
 use openmark::{
     token::interface::{
@@ -69,7 +64,7 @@ fn safe_batch_mint_works() {
 
     assert_eq!(ERC721.owner_of(9), to);
 
-    let expected_event = NFTEvents::TokenMinted(
+    let _expected_event = NFTEvents::TokenMinted(
         TokenMinted { to, token_id: 9, uri: "" }
     );
 //    spy
@@ -98,7 +93,7 @@ fn safe_batch_mint_with_uris_works() {
 
     assert_eq!(ERC721.owner_of(2), to);
 
-    let expected_event = NFTEvents::TokenMinted(
+    let _expected_event = NFTEvents::TokenMinted(
         TokenMinted { to, token_id: 2, uri: "ccc" }
     );
 //    spy
@@ -127,7 +122,7 @@ fn set_token_uri_works() {
     let OpenMarkNFT = IOpenMarNFTkMetadataDispatcher { contract_address };
     assert_eq!(OpenMarkNFT.token_uri(0), "ccc");
 
-    let expected_event = NFTEvents::TokenURIUpdated(
+    let _expected_event = NFTEvents::TokenURIUpdated(
         TokenURIUpdated { token_id: 0, uri: "ccc" }
     );
 //    spy

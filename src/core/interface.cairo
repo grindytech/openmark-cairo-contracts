@@ -1,5 +1,5 @@
-use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Order, OrderType, Bid, SignedBid, Bag};
+use starknet::{ContractAddress};
+use openmark::primitives::types::{Order, Bid, SignedBid, Bag};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {

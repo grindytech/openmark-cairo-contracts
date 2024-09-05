@@ -4,27 +4,19 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::signature::SignerTrait;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, map_entry_address,
-    start_cheat_block_timestamp, spy_events, EventSpy, load, EventSpyAssertionsTrait
+    start_cheat_caller_address, map_entry_address, start_cheat_block_timestamp, load
 };
 
-use starknet::{ContractAddress};
-
 use openmark::{
-    primitives::types::{OrderType},
-    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark},
+    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
     core::interface::{
-        IOpenMarkProvider, IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
+         IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
     },
     core::interface::{
-        IOpenMarkManager, IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
+        IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
     },
-    core::OpenMark::Event as OpenMarkEvent, core::events::{OrderFilled, OrderCancelled},
-    core::errors as Errors,
 };
 use openmark::tests::unit::common::{create_offer, create_buy, create_mock_hasher, ZERO};
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;

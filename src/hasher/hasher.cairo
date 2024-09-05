@@ -11,18 +11,11 @@
 #[starknet::component]
 pub mod HasherComponent {
     use core::array::ArrayTrait;
-    use core::array::SpanTrait;
-    use core::ops::index::IndexView;
-    use core::option::OptionTrait;
     use core::traits::TryInto;
-    use starknet::{ContractAddress, VALIDATED};
-    use starknet::{get_caller_address, get_contract_address, get_tx_info, get_block_timestamp,};
-    use starknet::SyscallResultTrait;
-    use starknet::syscalls::call_contract_syscall;
+    use starknet::{ VALIDATED,  get_tx_info};
 
     use openzeppelin::utils::serde::SerializedAppend;
     use openmark::hasher::interface::{IOffchainMessageHash};
-    use openmark::hasher::interface::{IAccount, IAccountDispatcher, IAccountDispatcherTrait};
     use openmark::primitives::types::{Order, Bid, StarknetDomain, IStructHash};
 
     use openzeppelin::account::utils::{is_valid_stark_signature};
@@ -36,7 +29,6 @@ pub mod HasherComponent {
     use core::poseidon::poseidon_hash_span;
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
-    use core::ecdsa::check_ecdsa_signature;
 
     #[storage]
     struct Storage {}

@@ -1,4 +1,4 @@
-use starknet::{ClassHash, ContractAddress};
+use starknet::{ContractAddress};
 
 #[starknet::interface]
 pub trait IOpenMarkNFT<T> {

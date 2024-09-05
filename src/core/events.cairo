@@ -1,7 +1,5 @@
 use starknet::{ContractAddress};
-use openmark::primitives::types::{OrderType, Order, Bid};
-use core::array::{ArrayTrait};
-
+use openmark::primitives::types::{Order, Bid};
 
 /// Emitted when a trade is filled. This event is triggered when an order is made,
 /// which can be either a buy_nft or accept_offer.

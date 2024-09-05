@@ -4,24 +4,17 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::signature::SignerTrait;
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address, map_entry_address,
-    start_cheat_block_timestamp, EventSpy, spy_events, load, EventSpyAssertionsTrait
+    start_cheat_caller_address, map_entry_address,start_cheat_block_timestamp, load
 };
 
-use starknet::{ContractAddress};
-
 use openmark::{
-    primitives::types::{OrderType},
-    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMark},
+    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
     core::interface::{
-        IOpenMarkProvider, IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
+        IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait
     },
     core::OpenMark::Event as OpenMarkEvent, core::events::{OrderFilled, OrderCancelled},
-    core::errors as Errors,
 };
 use openmark::tests::unit::common::{create_offer, create_mock_hasher, create_buy, ZERO};
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
@@ -53,7 +46,7 @@ fn accept_offer_works() {
     assert_eq!(seller_after_balance, seller_before_balance + order.price.into());
 
     // events
-    let expected_event = OpenMarkEvent::OrderFilled(OrderFilled { seller, buyer, order });
+    let _expected_event = OpenMarkEvent::OrderFilled(OrderFilled { seller, buyer, order });
     //  spy.assert_emitted(
     //         @array![
     //             (openmark_address, expected_event),
@@ -85,7 +78,7 @@ fn cancel_offer_works() {
     assert_eq!(*usedSignatures.at(0), true.into());
 
     // events
-    let expected_event = OpenMarkEvent::OrderCancelled(OrderCancelled { who: buyer, order });
+    let _expected_event = OpenMarkEvent::OrderCancelled(OrderCancelled { who: buyer, order });
     //  spy.assert_emitted(
     //         @array![
     //             (openmark_address, expected_event),

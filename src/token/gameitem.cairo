@@ -2,13 +2,12 @@
 pub mod GameItem {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
-    use openzeppelin::token::erc721::interface::{IERC721, IERC721Dispatcher};
-    use openzeppelin::token::erc721::interface::{IERC721Metadata, IERC721MetadataDispatcher};
+    use openzeppelin::token::erc721::interface::{IERC721Metadata};
     use core::byte_array::ByteArrayTrait;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait as ERC721Internal;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{
-        ERC721Component, ERC721Component::Errors as ERC721Errors, ERC721HooksEmptyImpl
+        ERC721Component, ERC721HooksEmptyImpl
     };
 
     use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
@@ -22,7 +21,6 @@ pub mod GameItem {
     use openmark::token::interface::{
         IOpenMarkNFT, IOpenMarNFTkMetadata, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel
     };
-    use starknet::{get_caller_address};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
