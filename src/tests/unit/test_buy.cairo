@@ -39,7 +39,6 @@ fn buy_works() {
 
     let buyer_before_balance = payment_dispatcher.balance_of(buyer);
     let seller_before_balance = payment_dispatcher.balance_of(seller);
-    // let mut spy = spy_events();
 
     start_cheat_caller_address(payment_token, openmark_address);
     start_cheat_caller_address(openmark_address, buyer);
@@ -52,14 +51,6 @@ fn buy_works() {
     assert_eq!(nft_dispatcher.owner_of(order.tokenId.into()), buyer);
     assert_eq!(buyer_after_balance, buyer_before_balance - order.price.into());
     assert_eq!(seller_after_balance, seller_before_balance + order.price.into());
-
-    // events
-    // let expected_event = OpenMarkEvent::OrderFilled(OrderFilled { seller, buyer, order });
-    // spy.assert_emitted(
-    //         @array![
-    //             (openmark_address, expected_event),
-    //         ]
-    //     );
 }
 
 #[test]
@@ -70,7 +61,6 @@ fn cancel_buy_works() {
 
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
-    // let mut spy = spy_events();
     openmark.cancel_order(order, signature);
     let hasher = create_mock_hasher();
     let hash_sig: felt252 = hasher.hash_array(signature);
@@ -82,14 +72,6 @@ fn cancel_buy_works() {
     );
 
     assert_eq!(*usedSignatures.at(0), true.into());
-
-    // events
-    // let expected_event = OpenMarkEvent::OrderCancelled(OrderCancelled { who: seller, order });
-    //  spy.assert_emitted(
-    //         @array![
-    //             (openmark_address, expected_event),
-    //         ]
-    //     );
 }
 
 #[test]

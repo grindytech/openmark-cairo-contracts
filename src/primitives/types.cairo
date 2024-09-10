@@ -53,7 +53,7 @@ pub struct Bid {
     pub expiry: u128,
 }
 
-#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug)]
+#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
 pub struct Stage {
     pub id: u128,
     pub collection: ContractAddress,

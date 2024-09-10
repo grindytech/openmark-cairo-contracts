@@ -1,5 +1,6 @@
-import { BigNumberish, WeierstrassSignatureType, ec, encode, typedData } from "starknet";
+import { WeierstrassSignatureType, ec } from "starknet";
 import {Order, OrderType, getOrderHash} from './utils';
+import {SELLER1, BUYER1, SELLER_PRIVATE_KEY1, LOCAL_CHAIN_ID} from './constants';
 
 const order: Order = {
   nftContract: "2430974627077655374827931444984473429257053957362777049136691086629713838851",
@@ -11,18 +12,11 @@ const order: Order = {
   option: OrderType.Buy,
 };
 
-const sellerPrivateKey = '0x1234567890987654321';
-const buyerPrivateKey = '0x1234567890123456789';
-const sellerPublicKey = ec.starkCurve.getStarkKey(sellerPrivateKey);
-const buyerPublicKey = ec.starkCurve.getStarkKey(buyerPrivateKey);
-const seller: BigNumberish = sellerPublicKey;
-const buyer: BigNumberish = buyerPublicKey;
+let msgHash = getOrderHash(order, LOCAL_CHAIN_ID, SELLER1);
+console.log(`seller: ${SELLER1};`);
+console.log(`buyer: ${BUYER1};`);
 
-let msgHash = getOrderHash(order, "393402133025997798000961", seller);
-console.log(`seller: ${seller};`);
-console.log(`buyer: ${buyer};`);
-
-const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, sellerPrivateKey);
+const signature: WeierstrassSignatureType = ec.starkCurve.sign(msgHash, SELLER_PRIVATE_KEY1);
 
 console.log("signature r: ", "0x" + signature.r.toString(16));
 console.log("signature s: ", "0x" + signature.s.toString(16));

@@ -65,40 +65,6 @@ fn fill_bids_works() {
     assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
     assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
     assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
-
-    // // events
-    // let expected_event1 = OpenMarkEvent::BidFilled(
-    //     BidFilled {
-    //         seller,
-    //         bidder: *buyers.at(0),
-    //         bid: (*signed_bids.at(0)).bid,
-    //         tokenIds: array![0].span(),
-    //     }
-    // );
-    // let expected_event2 = OpenMarkEvent::BidFilled(
-    //     BidFilled {
-    //         seller,
-    //         bidder: *buyers.at(1),
-    //         bid: (*signed_bids.at(1)).bid,
-    //         tokenIds: array![1, 2].span(),
-    //     }
-    // );
-    // let expected_event3 = OpenMarkEvent::BidFilled(
-    //     BidFilled {
-    //         seller,
-    //         bidder: *buyers.at(2),
-    //         bid: (*signed_bids.at(2)).bid,
-    //         tokenIds: array![3, 4, 5].span(),
-    //     }
-    // );
-    // spy
-    //     .assert_emitted(
-    //         @array![
-    //             (openmark_address, expected_event1),
-    //             (openmark_address, expected_event2),
-    //             (openmark_address, expected_event3)
-    //         ]
-    //     );
 }
 
 #[test]
@@ -182,7 +148,6 @@ fn cancel_bid_works() {
 
     {
         start_cheat_caller_address(openmark_address, *buyers.at(0));
-        // let mut spy = spy_events();
         let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
         let hasher = create_mock_hasher();
         let hash_sig: felt252 = hasher.hash_array(*signed_bids.at(0).signature);
@@ -200,7 +165,6 @@ fn cancel_bid_works() {
         let _expected_event = OpenMarkEvent::BidCancelled(
             BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
         );
-        // spy.assert_emitted(@array![(openmark_address, expected_event)]);
     }
 }
 

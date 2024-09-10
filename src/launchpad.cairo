@@ -1,2 +1,4 @@
+pub mod errors;
 pub mod interface;
-pub use launchpad::launchpad;
+pub mod launchpad;
+pub use launchpad::Launchpad;

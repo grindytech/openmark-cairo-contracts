@@ -18,7 +18,7 @@ use openmark::{
     token::events::{TokenMinted, TokenURIUpdated},
     token::openmark_nft::OpenMarkNFT::Event as NFTEvents,
 };
-use openmark::tests::unit::common::{TEST_BUYER1, TEST_SELLER};
+use openmark::tests::unit::common::{BUYER1, SELLER1};
 
 pub fn NFT_NAME() -> ByteArray {
     "OpenMark"
@@ -50,13 +50,13 @@ pub fn create_gameitem(
 
 #[test]
 fn safe_batch_mint_works() {
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     // let mut spy = spy_events();
 
     start_cheat_caller_address(contract_address, owner);
@@ -78,14 +78,14 @@ fn safe_batch_mint_works() {
 
 #[test]
 fn safe_batch_mint_with_uris_works() {
-     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+     let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     // let mut spy = spy_events();
     let uris = array!["aaa", "bbb", "ccc"];
     start_cheat_caller_address(contract_address, owner);
@@ -106,11 +106,11 @@ fn safe_batch_mint_with_uris_works() {
 
 #[test]
 fn set_token_uri_works() {
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     start_cheat_caller_address(contract_address, owner);
     OpenMarkNFT.set_base_uri("");
 
@@ -135,12 +135,12 @@ fn set_token_uri_works() {
 
 #[test]
 fn set_base_uri_works() {
-     let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+     let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
         OpenMarkNFT.safe_batch_mint(to, 10);
@@ -151,13 +151,13 @@ fn set_base_uri_works() {
 
 #[test]
 fn get_token_uri_works() {
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     start_cheat_caller_address(contract_address, owner);
 
     // 1. Set the base URI and mint a token without a specific URI
@@ -186,12 +186,12 @@ fn get_token_uri_works() {
 
 #[should_panic(expected: ('Caller is missing role',))]
 fn safe_batch_mint_unauthorized_panics() {
-let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.safe_batch_mint(to, 10);
 }
@@ -201,12 +201,12 @@ let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
 
 #[should_panic(expected: ('Caller is missing role',))]
 fn safe_batch_mint_with_uris_unauthorized_panics() {
-let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.safe_batch_mint_with_uris(to, array!["a", "b"].span());
 }
@@ -216,11 +216,11 @@ let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
 
 #[should_panic(expected: ('Caller is missing role',))]
 fn set_token_uri_unauthorized_panics() {
-    let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+    let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, owner);
     OpenMarkNFT.safe_batch_mint(to, 10);
@@ -233,12 +233,12 @@ fn set_token_uri_unauthorized_panics() {
 
 #[should_panic(expected: ('Caller is missing role',))]
 fn set_base_uri_unauthorized_panics() {
-let owner: ContractAddress = TEST_SELLER.try_into().unwrap();
+let owner: ContractAddress = SELLER1.try_into().unwrap();
     let contract_address = create_gameitem(owner);
 
     let OpenMarkNFT = IOpenMarkNFTDispatcher { contract_address };
 
-    let to: ContractAddress = TEST_BUYER1.try_into().unwrap();
+    let to: ContractAddress = BUYER1.try_into().unwrap();
 
     start_cheat_caller_address(contract_address, to);
     OpenMarkNFT.set_base_uri("ccc");
