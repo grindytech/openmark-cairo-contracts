@@ -1,13 +1,9 @@
 import { BigNumberish, WeierstrassSignatureType, ec } from "starknet";
-import { Bid, getBidHash} from './utils';
-
-const buyerPrivateKey1 = '0x1234567890123456789';
-const buyerPrivateKey2 = '0x12345678901234567891';
-const buyerPrivateKey3 = '0x12345678901234567892';
-
-const buyer1: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey1);
-const buyer2: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey2);
-const buyer3: BigNumberish = ec.starkCurve.getStarkKey(buyerPrivateKey3);
+import { Bid, getBidHash } from './utils';
+import {
+  BUYER1, BUYER2, BUYER3,
+  BUYER_PRIVATE_KEY1, BUYER_PRIVATE_KEY2, BUYER_PRIVATE_KEY3
+} from './constants';
 
 const bid1: Bid = {
   nftContract: "2430974627077655374827931444984473429257053957362777049136691086629713838851",
@@ -36,17 +32,17 @@ const bid3: Bid = {
   expiry: "5",
 };
 
-let msgHash1 = getBidHash(bid1, "393402133025997798000961", buyer1);
-let msgHash2 = getBidHash(bid2, "393402133025997798000961", buyer2);
-let msgHash3 = getBidHash(bid3, "393402133025997798000961", buyer3);
+let msgHash1 = getBidHash(bid1, "393402133025997798000961", BUYER1);
+let msgHash2 = getBidHash(bid2, "393402133025997798000961", BUYER2);
+let msgHash3 = getBidHash(bid3, "393402133025997798000961", BUYER3);
 
-console.log(`buyer1: ${buyer1};`);
-console.log(`buyer2: ${buyer2};`);
-console.log(`buyer3: ${buyer3};`);
+console.log(`buyer1: ${BUYER1};`);
+console.log(`buyer2: ${BUYER2};`);
+console.log(`buyer3: ${BUYER3};`);
 
-const signature1: WeierstrassSignatureType = ec.starkCurve.sign(msgHash1, buyerPrivateKey1);
-const signature2: WeierstrassSignatureType = ec.starkCurve.sign(msgHash2, buyerPrivateKey2);
-const signature3: WeierstrassSignatureType = ec.starkCurve.sign(msgHash3, buyerPrivateKey3);
+const signature1: WeierstrassSignatureType = ec.starkCurve.sign(msgHash1, BUYER_PRIVATE_KEY1);
+const signature2: WeierstrassSignatureType = ec.starkCurve.sign(msgHash2, BUYER_PRIVATE_KEY2);
+const signature3: WeierstrassSignatureType = ec.starkCurve.sign(msgHash3, BUYER_PRIVATE_KEY3);
 
 console.log("signature1 r: ", "0x" + signature1.r.toString(16));
 console.log("signature1 s: ", "0x" + signature1.s.toString(16));
