@@ -1,5 +1,5 @@
 #[starknet::contract]
-pub mod OpenMarkFactory {
+pub mod NFTFactory {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
@@ -8,7 +8,7 @@ pub mod OpenMarkFactory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use openmark::factory::interface::{IOpenMarkFactory, IOpenMarkFactoryCamel, IFactoryManager};
+    use openmark::factory::interface::{INFTFactory, INFTFactoryCamel, IFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -59,7 +59,7 @@ pub mod OpenMarkFactory {
     }
 
     #[abi(embed_v0)]
-    impl OpenMarkFactoryImpl of IOpenMarkFactory<ContractState> {
+    impl NFTFactoryImpl of INFTFactory<ContractState> {
         fn create_collection(
             ref self: ContractState,
             id: u256,
@@ -91,7 +91,7 @@ pub mod OpenMarkFactory {
     }
 
     #[abi(embed_v0)]
-    impl OpenMarkFactoryCamelImpl of IOpenMarkFactoryCamel<ContractState> {
+    impl NFTFactoryCamelImpl of INFTFactoryCamel<ContractState> {
         fn createCollection(
             ref self: ContractState,
             id: u256,

@@ -53,6 +53,18 @@ pub struct Bid {
     pub expiry: u128,
 }
 
+#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug)]
+pub struct Stage {
+    pub id: u128,
+    pub collection: ContractAddress,
+    pub payment: ContractAddress,
+    pub price: u128,
+    pub maxAllocation: u128,
+    pub limit: u128,
+    pub startTime: u128,
+    pub endTime: u128,
+}
+
 pub trait IStructHash<T> {
     fn hash_struct(self: @T) -> felt252;
 }

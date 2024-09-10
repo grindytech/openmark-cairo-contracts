@@ -14,7 +14,6 @@
 pub mod OpenMark {
     use core::array::ArrayTrait;
     use core::option::OptionTrait;
-    // use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
