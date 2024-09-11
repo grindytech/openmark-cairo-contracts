@@ -75,7 +75,6 @@ fn cancel_buy_works() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: invalid sig len',))]
 fn buy_invalid_signature_len_panics() {
     let (order, _, openmark_address, _, payment_token, seller, buyer,) = create_buy();
@@ -88,7 +87,6 @@ fn buy_invalid_signature_len_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: sig used',))]
 fn buy_signature_used_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
@@ -103,7 +101,6 @@ fn buy_signature_used_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: order expired',))]
 fn buy_order_expired_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
@@ -116,7 +113,6 @@ fn buy_order_expired_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: invalid order type',))]
 fn buy_invalid_order_type_panics() {
     let (order, signature, openmark_address, _, _, seller, buyer) = create_offer();
@@ -125,7 +121,6 @@ fn buy_invalid_order_type_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: address is zero',))]
 fn buy_seller_is_zero_panics() {
     let (order, signature, openmark_address, _, _, _, buyer) = create_buy();
@@ -135,7 +130,6 @@ fn buy_seller_is_zero_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: not nft owner',))]
 fn buy_seller_not_owner_panics() {
     let (order, signature, openmark_address, nft_token, _, seller, buyer) = create_buy();
@@ -149,7 +143,6 @@ fn buy_seller_not_owner_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: price is zero',))]
 fn buy_price_is_zero_panics() {
     let (mut order, signature, openmark_address, _, _, seller, buyer) = create_buy();
@@ -159,7 +152,6 @@ fn buy_price_is_zero_panics() {
 }
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: Invalid payment token',))]
 fn invalid_payment_token_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer) = create_buy();

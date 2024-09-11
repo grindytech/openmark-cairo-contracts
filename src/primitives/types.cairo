@@ -1,6 +1,9 @@
 use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
+
+pub type ID = u128;
+
 use openmark::primitives::constants::{
     STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH, BID_STRUCT_TYPE_HASH
 };
@@ -55,7 +58,7 @@ pub struct Bid {
 
 #[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
 pub struct Stage {
-    pub id: u128,
+    pub id: ID,
     pub collection: ContractAddress,
     pub payment: ContractAddress,
     pub price: u128,
