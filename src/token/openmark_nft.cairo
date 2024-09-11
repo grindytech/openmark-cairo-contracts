@@ -82,29 +82,34 @@ pub mod OpenMarkNFT {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
-        fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) {
-            let mut token_indexs = ArrayTrait::new();
+        fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) -> Span<u256>{
+            let mut minted_tokens = ArrayTrait::new();
             let mut i = 0;
             while i < quantity {
-                let token_index = next_token_index(ref self);
+                let token_index = _next_mint_index(ref self);
                 self.erc721.mint(to, token_index);
-                token_indexs.append(token_index);
+                minted_tokens.append(token_index);
                 self.emit(TokenMinted { to, token_id: token_index, uri: "" });
 
                 i += 1;
             };
+            return minted_tokens.span();
         }
 
 
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
-        ) {
+        ) -> Span<u256>{
+            let mut minted_tokens = ArrayTrait::new();
+
             for uri in uris {
-                let token_index = next_token_index(ref self);
+                let token_index = _next_mint_index(ref self);
                 self.erc721.mint(to, token_index);
                 self.token_uris.write(token_index, uri.clone());
+                minted_tokens.append(token_index);
                 self.emit(TokenMinted { to, token_id: token_index, uri: uri.clone() });
-            }
+            };
+            return minted_tokens.span();
         }
 
         fn set_token_uri(ref self: ContractState, token_id: u256, uri: ByteArray) {
@@ -124,14 +129,14 @@ pub mod OpenMarkNFT {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
-        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) {
-            self.safe_batch_mint(to, quantity);
+        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256) -> Span<u256>{
+            self.safe_batch_mint(to, quantity)
         }
 
         fn safeBatchMintWithURIs(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
-        ) {
-            self.safe_batch_mint_with_uris(to, uris);
+        ) -> Span<u256>{
+            self.safe_batch_mint_with_uris(to, uris)
         }
 
         fn setTokenURI(ref self: ContractState, tokenId: u256, tokenURI: ByteArray) {
@@ -194,7 +199,7 @@ pub mod OpenMarkNFT {
 
     /// Returns the current token_index and increments it for the next use.
     /// This ensures each token has a unique ID.
-    fn next_token_index(ref self: ContractState) -> u256 {
+    fn _next_mint_index(ref self: ContractState) -> u256 {
         let current_token_index = self.token_index.read();
         self.token_index.write(current_token_index + 1);
         current_token_index

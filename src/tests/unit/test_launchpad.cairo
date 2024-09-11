@@ -5,13 +5,19 @@ use openmark::launchpad::interface::{
     ILaunchpadDispatcher, ILaunchpadProviderDispatcherTrait, ILaunchpadProviderDispatcher,
 };
 use openzeppelin::utils::serde::SerializedAppend;
+use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-use snforge_std::{declare, ContractClassTrait};
+use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address};
 use starknet::{ContractAddress};
-use openmark::tests::unit::common::{SELLER1, BUYER1, TEST_NFT, TEST_PAYMENT, toAddress, ZERO_HASH};
+use openmark::tests::unit::common::{SELLER1, BUYER1, TEST_NFT, TEST_PAYMENT,
+ toAddress, ZERO_HASH,deploy_erc20_at, create_openmark_nft_at};
 use openmark::primitives::types::{Stage};
 
 fn create_launchpad(owner: ContractAddress) -> (ContractAddress, ILaunchpadDispatcher) {
+    let payment_token = deploy_erc20_at(toAddress(TEST_PAYMENT));
+    let nft_token: ContractAddress = create_openmark_nft_at(toAddress(TEST_NFT));
+
     let contract = declare("Launchpad").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(owner);
@@ -35,15 +41,15 @@ const PROOF: [
 fn update_stages_works() {
     let owner = toAddress(SELLER1);
     let (contract_address, launchpad_contract) = create_launchpad(owner);
-
+    let id = 10;
     let new_stages = array![
         Stage {
-            id: 0,
+            id: id,
             collection: toAddress(TEST_NFT),
             payment: toAddress(TEST_PAYMENT),
             price: 1,
             maxAllocation: 10,
-            limit: 1,
+            limit: 10,
             startTime: 0,
             endTime: 0,
         }
@@ -53,9 +59,9 @@ fn update_stages_works() {
 
     launchpad_contract.updateStages(new_stages.span(), whitelists.span());
     let provider = ILaunchpadProviderDispatcher { contract_address };
-    assert_eq!(provider.getStage(0).id, 0);
-    assert_eq!(provider.getActiveStage(0).id, 0);
-    assert_eq!(provider.getWhitelist(0), Option::Some(ROOT));
+    assert_eq!(provider.getStage(id).id, id);
+    assert_eq!(provider.getActiveStage(id).id, id);
+    assert_eq!(provider.getWhitelist(id), Option::Some(ROOT));
 }
 
 #[test]
@@ -145,3 +151,48 @@ fn verify_whitelist_works() {
 
     assert!(provider.verifyWhitelist(ROOT, PROOF.span(), toAddress(BUYER1)));
 }
+
+#[test]
+fn buy_works() {
+    let owner = toAddress(SELLER1);
+    let amount = 2;
+    let price = 2;
+    let (contract_address, launchpad_contract) = create_launchpad(owner);
+
+    let new_stages = array![
+        Stage {
+            id: 0,
+            collection: toAddress(TEST_NFT),
+            payment: toAddress(TEST_PAYMENT),
+            price: price,
+            maxAllocation: 10,
+            limit: 10,
+            startTime: 0,
+            endTime: 0,
+        }
+    ];
+
+    launchpad_contract.updateStages(new_stages.span(), array![Option::None].span());
+
+    let payment_dispatcher = IERC20Dispatcher { contract_address: toAddress(TEST_PAYMENT) };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: toAddress(TEST_NFT) };
+
+    let buyer_before_balance = payment_dispatcher.balance_of(toAddress(BUYER1));
+    let seller_before_balance = payment_dispatcher.balance_of(contract_address);
+
+
+    start_cheat_caller_address(contract_address, BUYER1.try_into().unwrap());
+    launchpad_contract.buy(0, amount, array![].span());
+
+
+    let buyer_after_balance = payment_dispatcher.balance_of(toAddress(BUYER1));
+    let seller_after_balance = payment_dispatcher.balance_of(contract_address);
+
+    assert_eq!(nft_dispatcher.owner_of(0), toAddress(BUYER1));
+    assert_eq!(nft_dispatcher.owner_of(1), toAddress(BUYER1));
+
+    let cost: u256 = (amount.into() * price).into();
+    assert_eq!(buyer_after_balance, buyer_before_balance - cost );
+    assert_eq!(seller_after_balance, seller_before_balance + cost);
+}
+

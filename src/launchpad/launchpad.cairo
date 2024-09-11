@@ -1,20 +1,30 @@
 #[starknet::contract]
 pub mod Launchpad {
+    use openzeppelin_utils::serde::SerializedAppend;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin_merkle_tree::merkle_proof::{verify};
     use openzeppelin_merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
-
-    use core::num::traits::Zero;
-
-    use starknet::{storage::Map, ClassHash, ContractAddress, get_block_timestamp};
-    use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
-    use openmark::primitives::types::{Stage, ID};
-    use openmark::launchpad::errors as Errors;
+    use openzeppelin::utils::{try_selector_with_fallback};
+    use openzeppelin::utils::UnwrapAndCast;
+    use openzeppelin::utils::selectors;
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::pedersen::{PedersenTrait, pedersen};
+
+    use starknet::{
+        ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address
+    };
+    use starknet::storage::{
+        StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
+    };
+    use starknet::SyscallResultTrait;
+    use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
+    use openmark::primitives::types::{Stage, ID};
+    use openmark::primitives::selectors as openmark_selectors;
+    use openmark::launchpad::errors as Errors;
+    use openmark::primitives::utils::{_safe_batch_mint, _payment_transfer_from};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -66,9 +76,10 @@ pub mod Launchpad {
 
             let mut i = 0;
             while (i < stages.len()) {
-                self.isStageOn.write(*stages.at(i).id, true);
-                self.launchpadStages.write(1_u128, *stages.at(i));
-                self.stageWhitelist.write(*stages.at(i).id, *merkleRoots.at(i));
+                let stageId = *stages.at(i).id;
+                self.isStageOn.write(stageId, true);
+                self.launchpadStages.write(stageId, *stages.at(i));
+                self.stageWhitelist.write(stageId, *merkleRoots.at(i));
                 i += 1;
             }
         }
@@ -101,7 +112,37 @@ pub mod Launchpad {
             };
         }
 
-        fn buy(ref self: ContractState, stageId: ID, amount: u32, merkleProof: Span<felt252>) {}
+        fn buy(ref self: ContractState, stageId: ID, amount: u32, merkleProof: Span<felt252>) {
+            assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
+
+            let minter: ContractAddress = get_caller_address();
+            let mintAmount: u128 = amount.into();
+            let stage = self.getActiveStage(stageId);
+
+            assert(amount > 0, Errors::INVALID_MINT_AMOUNT);
+
+            let stageMintedAmount = self.stageMintedCount.read(stageId);
+            let userMintedAmount = self.userMintedCount.entry(minter).read(stageId);
+
+            println!("Mint amount: {:?}", stageMintedAmount + mintAmount);
+            println!("Max amount: {:?}", stage.maxAllocation);
+
+            assert(stageMintedAmount + mintAmount <= stage.maxAllocation, Errors::SOLD_OUT);
+            assert(userMintedAmount + mintAmount <= stage.limit, Errors::EXCEED_LIMIT);
+
+            if let Option::Some(root) = self.getWhitelist(stageId) {
+                assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
+            }
+
+            let mintedTokens = _safe_batch_mint(stage.collection, minter, mintAmount.into());
+
+            // let price = mintAmount * stage.price;
+
+            // _payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+
+            self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
+            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
+        }
 
         fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {}
     }
