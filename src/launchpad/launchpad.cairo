@@ -7,7 +7,7 @@ pub mod Launchpad {
     use openzeppelin_merkle_tree::merkle_proof::{
         process_proof, process_multi_proof, verify, verify_multi_proof, verify_pedersen
     };
-    use openzeppelin_merkle_tree::hashes::{PedersenCHasher};
+    use openzeppelin_merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
 
     use core::num::traits::Zero;
 
@@ -15,6 +15,8 @@ pub mod Launchpad {
     use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
     use openmark::primitives::types::{Stage};
     use openmark::launchpad::errors as Errors;
+    use core::hash::{HashStateTrait, HashStateExTrait};
+    use core::pedersen::{PedersenTrait, pedersen};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -92,21 +94,30 @@ pub mod Launchpad {
         fn getWhitelist(self: @ContractState, stageId: u128) -> Option<felt252> {
             return Option::None;
         }
+
         fn getMintedCount(self: @ContractState, stageId: u128) -> u128 {
             0
         }
+
         fn getUserMintedCount(
             self: @ContractState, minter: ContractAddress, stageId: u128
         ) -> u128 {
             0
         }
+
         fn verifyWhitelist(
             self: @ContractState,
             merkleRoot: felt252,
             merkleProof: Span<felt252>,
             minter: ContractAddress
         ) -> bool {
-            verify::<PedersenCHasher>(merkleProof, merkleRoot, minter.into())
+            let leaf_hash = _leaf_hash(minter, 0);
+            return verify::<PedersenCHasher>(merkleProof, merkleRoot, leaf_hash);
         }
+    }
+
+    fn _leaf_hash(address: ContractAddress, value: u128) -> felt252 {
+        let hash_state = PedersenTrait::new(0);
+        pedersen(0, hash_state.update_with(address).update_with(value).update_with(2).finalize())
     }
 }

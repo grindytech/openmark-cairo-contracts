@@ -3,12 +3,12 @@ import { BUYER1, BUYER2, BUYER3 } from "./constants";
 import { StandardMerkleTree } from "@ericnordelo/strk-merkle-tree";
 
 const values = [
-    [BUYER1],
-    [BUYER2],
-    [BUYER3]
+    [BUYER1, 0],
+    [BUYER2, 0],
+    [BUYER3, 0]
 ];
 
-const tree = StandardMerkleTree.of(values, ["ContractAddress"]);
+const tree = StandardMerkleTree.of(values, ["ContractAddress", "u128"]);
 
 console.log('Merkle Root:', tree.root);
 

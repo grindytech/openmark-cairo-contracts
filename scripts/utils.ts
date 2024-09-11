@@ -30,7 +30,6 @@ export enum OrderType {
   Offer,
 }
 
-
 export interface Order {
   nftContract: string,
   tokenId: string,

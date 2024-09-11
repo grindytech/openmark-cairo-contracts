@@ -27,8 +27,11 @@ pub trait ILaunchpadProvider<T> {
     fn getMintedCount(self: @T, stageId: u128) -> u128;
 
     fn getUserMintedCount(self: @T, minter: ContractAddress, stageId: u128) -> u128;
-    
+
     fn verifyWhitelist(
-        self: @T, merkleRoot: felt252, merkleProof: Span<felt252>, minter: ContractAddress
+        self: @T,
+        merkleRoot: felt252,
+        merkleProof: Span<felt252>,
+        minter: ContractAddress
     ) -> bool;
 }
