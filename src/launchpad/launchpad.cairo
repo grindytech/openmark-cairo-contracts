@@ -1,15 +1,11 @@
 #[starknet::contract]
 pub mod Launchpad {
-    use openzeppelin_utils::serde::SerializedAppend;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin_merkle_tree::merkle_proof::{verify};
     use openzeppelin_merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
-    use openzeppelin::utils::{try_selector_with_fallback};
-    use openzeppelin::utils::UnwrapAndCast;
-    use openzeppelin::utils::selectors;
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::pedersen::{PedersenTrait, pedersen};
 
@@ -19,12 +15,12 @@ pub mod Launchpad {
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
     };
-    use starknet::SyscallResultTrait;
     use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
     use openmark::primitives::types::{Stage, ID};
-    use openmark::primitives::selectors as openmark_selectors;
     use openmark::launchpad::errors as Errors;
-    use openmark::primitives::utils::{_safe_batch_mint, _payment_transfer_from};
+    use openmark::primitives::utils::{
+        _safe_batch_mint, _payment_transfer_from, _payment_transfer, _payment_balance_of
+    };
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -72,6 +68,7 @@ pub mod Launchpad {
         fn updateStages(
             ref self: ContractState, stages: Span<Stage>, merkleRoots: Span<Option<felt252>>
         ) {
+            self.ownable.assert_only_owner();
             assert(stages.len() == merkleRoots.len(), Errors::LENGTH_MISMATCH);
 
             let mut i = 0;
@@ -85,6 +82,7 @@ pub mod Launchpad {
         }
 
         fn removeStages(ref self: ContractState, stageIds: Span<ID>) {
+            self.ownable.assert_only_owner();
             for stageId in stageIds {
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.isStageOn.write(*stageId, false);
@@ -94,8 +92,8 @@ pub mod Launchpad {
         fn updateWhitelist(
             ref self: ContractState, stageIds: Span<u128>, merkleRoots: Span<Option<felt252>>
         ) {
+            self.ownable.assert_only_owner();
             assert(stageIds.len() == merkleRoots.len(), Errors::LENGTH_MISMATCH);
-
             let mut i = 0;
             while (i < stageIds.len()) {
                 let stageId = *stageIds.at(i);
@@ -106,13 +104,14 @@ pub mod Launchpad {
         }
 
         fn removeWhitelist(ref self: ContractState, stageIds: Span<u128>) {
+            self.ownable.assert_only_owner();
             for stageId in stageIds {
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(*stageId, Option::None);
             };
         }
 
-        fn buy(ref self: ContractState, stageId: ID, amount: u32, merkleProof: Span<felt252>) {
+        fn buy(ref self: ContractState, stageId: ID, amount: u128, merkleProof: Span<felt252>) {
             assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
 
             let minter: ContractAddress = get_caller_address();
@@ -140,7 +139,15 @@ pub mod Launchpad {
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
         }
 
-        fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {}
+        fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+
+            let owner = get_caller_address();
+            let launchpad = get_contract_address();
+            for token in tokens {
+                _payment_transfer(*token, owner, _payment_balance_of(*token, launchpad));
+            };
+        }
     }
 
     #[abi(embed_v0)]
@@ -152,7 +159,10 @@ pub mod Launchpad {
 
         fn getActiveStage(self: @ContractState, stageId: ID) -> Stage {
             let stage = self.getStage(stageId);
-            assert(_is_active_stage(stage.startTime, stage.endTime), Errors::STAGE_INACTIVE);
+            let currentTimestamp = get_block_timestamp().into();
+
+            assert(currentTimestamp >= stage.startTime, Errors::STAGE_NOT_STARTED);
+            assert(currentTimestamp <= stage.endTime , Errors::STAGE_ENDED);
             return stage;
         }
 
@@ -161,11 +171,11 @@ pub mod Launchpad {
         }
 
         fn getMintedCount(self: @ContractState, stageId: ID) -> u128 {
-            0
+            return self.stageMintedCount.read(stageId);
         }
 
         fn getUserMintedCount(self: @ContractState, minter: ContractAddress, stageId: ID) -> u128 {
-            0
+            return self.userMintedCount.entry(minter).read(stageId);
         }
 
         fn verifyWhitelist(
@@ -182,9 +192,5 @@ pub mod Launchpad {
     fn _leaf_hash(address: ContractAddress) -> felt252 {
         let hash_state = PedersenTrait::new(0);
         pedersen(0, hash_state.update_with(address).update_with(1).finalize())
-    }
-
-    fn _is_active_stage(startTime: u128, endTime: u128) -> bool {
-        return startTime <= get_block_timestamp().into() && endTime >= get_block_timestamp().into();
     }
 }

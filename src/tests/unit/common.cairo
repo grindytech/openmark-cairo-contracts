@@ -53,7 +53,7 @@ pub fn NFT_BASE_URI() -> ByteArray {
 
 pub fn deploy_openmark() -> ContractAddress {
     let contract = declare("OpenMark").unwrap();
-    let payment_token = deploy_erc20_at(TEST_PAYMENT.try_into().unwrap());
+    let payment_token = setup_balance_at(TEST_PAYMENT.try_into().unwrap());
 
     let mut constructor_calldata = array![];
 
@@ -92,15 +92,25 @@ pub fn deploy_erc20() -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
+pub fn setup_balance_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkCoinMock").unwrap();
     let mut constructor_calldata = array![];
     let initial_supply = 1000000000000000000000000000_u256;
-    let recipient: ContractAddress = BUYER1.try_into().unwrap();
+    let recipient: ContractAddress = toAddress(BUYER1);
 
     constructor_calldata.append_serde(initial_supply);
     constructor_calldata.append_serde(recipient);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
+
+    let erc20_dispatcher = IERC20Dispatcher{contract_address};
+    start_cheat_caller_address(contract_address, toAddress(BUYER1));
+
+    erc20_dispatcher.transfer(toAddress(BUYER1), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(BUYER2), 10000000000000000);
+    
+    erc20_dispatcher.transfer(toAddress(SELLER1), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(SELLER2), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(SELLER3), 10000000000000000);
     contract_address
 }
 

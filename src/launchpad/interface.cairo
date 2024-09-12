@@ -11,7 +11,7 @@ pub trait ILaunchpad<T> {
 
     fn removeWhitelist(ref self: T, stageIds: Span<ID>);
 
-    fn buy(ref self: T, stageId: ID, amount: u32, merkleProof: Span<felt252>);
+    fn buy(ref self: T, stageId: ID, amount: u128, merkleProof: Span<felt252>);
 
     fn withdrawSales(ref self: T, tokens: Span<ContractAddress>);
 }

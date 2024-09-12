@@ -1,5 +1,6 @@
 pub const STAGE_NOT_FOUND: felt252 = 'Launchpad: stage not found';
-pub const STAGE_INACTIVE: felt252 = 'Launchpad: stage inactive';
+pub const STAGE_NOT_STARTED: felt252 = 'Launchpad: stage not started';
+pub const STAGE_ENDED: felt252 = 'Launchpad: stage has ended';
 pub const EXCEED_LIMIT: felt252 = 'Launchpad: exceed limit';
 pub const SOLD_OUT: felt252 = 'Launchpad: sold out';
 pub const WHITELIST_FAILED: felt252 = 'Launchpad: whitelist failed';
