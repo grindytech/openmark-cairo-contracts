@@ -6,9 +6,7 @@ pub mod GameItem {
     use core::byte_array::ByteArrayTrait;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait as ERC721Internal;
     use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc721::{
-        ERC721Component, ERC721HooksEmptyImpl
-    };
+    use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
 
     use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -28,9 +26,14 @@ pub mod GameItem {
 
     // ERC721 Mixin
     #[abi(embed_v0)]
-    impl ERC721ImplImpl = ERC721Component::ERC721Impl<ContractState>;
+    impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
     impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl AccessControlImpl =
+        AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlCamelImpl = AccessControlComponent::AccessControlCamelImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -74,7 +77,9 @@ pub mod GameItem {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTImpl of IOpenMarkNFT<ContractState> {
-        fn safe_batch_mint(ref self: ContractState, to: ContractAddress, quantity: u256) -> Span<u256> {
+        fn safe_batch_mint(
+            ref self: ContractState, to: ContractAddress, quantity: u256
+        ) -> Span<u256> {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
             let mut minted_tokens = ArrayTrait::new();
@@ -94,9 +99,9 @@ pub mod GameItem {
 
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
-        ) -> Span<u256>{
+        ) -> Span<u256> {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
-            
+
             let mut minted_tokens = ArrayTrait::new();
             for uri in uris {
                 let token_index = next_token_index(ref self);
@@ -122,13 +127,15 @@ pub mod GameItem {
 
     #[abi(embed_v0)]
     impl OpenMarkNFTCamelImpl of IOpenMarkNFTCamel<ContractState> {
-        fn safeBatchMint(ref self: ContractState, to: ContractAddress, quantity: u256)-> Span<u256> {
+        fn safeBatchMint(
+            ref self: ContractState, to: ContractAddress, quantity: u256
+        ) -> Span<u256> {
             self.safe_batch_mint(to, quantity)
         }
 
         fn safeBatchMintWithURIs(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
-        ) -> Span<u256>{
+        ) -> Span<u256> {
             self.safe_batch_mint_with_uris(to, uris)
         }
 

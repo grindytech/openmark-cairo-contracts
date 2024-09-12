@@ -39,15 +39,15 @@ pub fn toAddress(addr: felt252) -> ContractAddress {
     return addr.try_into().unwrap();
 }
 
-pub fn OPENMARK_NFT_NAME() -> ByteArray {
+pub fn NFT_NAME() -> ByteArray {
     "OpenMark NFT"
 }
 
-pub fn OPENMARK_NFT_SYMBOL() -> ByteArray {
+pub fn NFT_SYMBOL() -> ByteArray {
     "OM"
 }
 
-pub fn OPENMARK_NFT_BASE_URI() -> ByteArray {
+pub fn NFT_BASE_URI() -> ByteArray {
     "https://nft-api.openmark.io/"
 }
 
@@ -123,9 +123,9 @@ pub fn do_create_nft(
 pub fn create_openmark_nft() -> ContractAddress {
     do_create_nft(
         SELLER1.try_into().unwrap(),
-        OPENMARK_NFT_NAME(),
-        OPENMARK_NFT_SYMBOL(),
-        OPENMARK_NFT_BASE_URI()
+        NFT_NAME(),
+        NFT_SYMBOL(),
+        NFT_BASE_URI()
     )
 }
 
@@ -133,9 +133,9 @@ pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkNFTMock").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(SELLER1);
-    constructor_calldata.append_serde(OPENMARK_NFT_NAME());
-    constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
-    constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
+    constructor_calldata.append_serde(NFT_NAME());
+    constructor_calldata.append_serde(NFT_SYMBOL());
+    constructor_calldata.append_serde(NFT_BASE_URI());
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
 }

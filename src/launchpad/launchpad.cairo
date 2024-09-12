@@ -124,9 +124,6 @@ pub mod Launchpad {
             let stageMintedAmount = self.stageMintedCount.read(stageId);
             let userMintedAmount = self.userMintedCount.entry(minter).read(stageId);
 
-            println!("Mint amount: {:?}", stageMintedAmount + mintAmount);
-            println!("Max amount: {:?}", stage.maxAllocation);
-
             assert(stageMintedAmount + mintAmount <= stage.maxAllocation, Errors::SOLD_OUT);
             assert(userMintedAmount + mintAmount <= stage.limit, Errors::EXCEED_LIMIT);
 
@@ -136,9 +133,8 @@ pub mod Launchpad {
 
             let mintedTokens = _safe_batch_mint(stage.collection, minter, mintAmount.into());
 
-            // let price = mintAmount * stage.price;
-
-            // _payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+            let price = mintAmount * stage.price;
+            _payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
