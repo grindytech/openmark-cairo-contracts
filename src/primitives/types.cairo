@@ -3,6 +3,7 @@ use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 
 pub type ID = u128;
+pub type Balance = u128;
 
 use openmark::primitives::constants::{
     STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH, BID_STRUCT_TYPE_HASH

@@ -16,6 +16,10 @@ pub mod Launchpad {
         StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
     };
     use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
+    use openmark::launchpad::events::{
+        StageUpdated, StageRemoved, WhitelistUpdated, WhitelistRemoved, SalesWithdrawn,
+        TokensBought, LaunchpadClosed
+    };
     use openmark::primitives::types::{Stage, ID};
     use openmark::launchpad::errors as Errors;
     use openmark::primitives::utils::{
@@ -56,11 +60,20 @@ pub mod Launchpad {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+
+        StageUpdated: StageUpdated,
+        StageRemoved: StageRemoved,
+        WhitelistUpdated: WhitelistUpdated,
+        WhitelistRemoved: WhitelistRemoved,
+        SalesWithdrawn: SalesWithdrawn,
+        TokensBought: TokensBought,
+        LaunchpadClosed: LaunchpadClosed,
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
+        self.isClosed.write(false);
     }
 
     #[abi(embed_v0)]
@@ -77,6 +90,15 @@ pub mod Launchpad {
                 self.isStageOn.write(stageId, true);
                 self.launchpadStages.write(stageId, *stages.at(i));
                 self.stageWhitelist.write(stageId, *merkleRoots.at(i));
+                self
+                    .emit(
+                        StageUpdated {
+                            owner: get_caller_address(),
+                            stage: *stages.at(i),
+                            merkleRoot: *merkleRoots.at(i)
+                        }
+                    );
+
                 i += 1;
             }
         }
@@ -86,6 +108,7 @@ pub mod Launchpad {
             for stageId in stageIds {
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.isStageOn.write(*stageId, false);
+                self.emit(StageRemoved { stageId: *stageId, });
             };
         }
 
@@ -99,6 +122,7 @@ pub mod Launchpad {
                 let stageId = *stageIds.at(i);
                 assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(stageId, *merkleRoots.at(i));
+                self.emit(WhitelistUpdated { stageId, merkleRoot: *merkleRoots.at(i) });
                 i += 1;
             }
         }
@@ -108,6 +132,7 @@ pub mod Launchpad {
             for stageId in stageIds {
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(*stageId, Option::None);
+                self.emit(WhitelistRemoved { stageId: *stageId, });
             };
         }
 
@@ -137,6 +162,18 @@ pub mod Launchpad {
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
+
+            self
+                .emit(
+                    TokensBought {
+                        buyer: minter,
+                        stageId,
+                        amount,
+                        paymentToken: stage.payment,
+                        price: stage.price,
+                        mintedTokens
+                    }
+                );
         }
 
         fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {
@@ -145,8 +182,21 @@ pub mod Launchpad {
             let owner = get_caller_address();
             let launchpad = get_contract_address();
             for token in tokens {
-                _payment_transfer(*token, owner, _payment_balance_of(*token, launchpad));
+                let balance = _payment_balance_of(*token, launchpad);
+                _payment_transfer(*token, owner, balance);
+                self
+                    .emit(
+                        SalesWithdrawn {
+                            owner, tokenPayment: *token, amount: balance.try_into().unwrap()
+                        }
+                    );
             };
+        }
+        
+        fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+            self.isClosed.write(true);
+            self.withdrawSales(tokens);
         }
     }
 
@@ -162,7 +212,7 @@ pub mod Launchpad {
             let currentTimestamp = get_block_timestamp().into();
 
             assert(currentTimestamp >= stage.startTime, Errors::STAGE_NOT_STARTED);
-            assert(currentTimestamp <= stage.endTime , Errors::STAGE_ENDED);
+            assert(currentTimestamp <= stage.endTime, Errors::STAGE_ENDED);
             return stage;
         }
 

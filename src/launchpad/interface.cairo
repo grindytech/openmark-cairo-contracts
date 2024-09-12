@@ -14,6 +14,8 @@ pub trait ILaunchpad<T> {
     fn buy(ref self: T, stageId: ID, amount: u128, merkleProof: Span<felt252>);
 
     fn withdrawSales(ref self: T, tokens: Span<ContractAddress>);
+
+    fn closeLaunchpad(ref self: T, tokens: Span<ContractAddress>);
 }
 
 #[starknet::interface]
