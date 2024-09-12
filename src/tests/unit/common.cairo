@@ -20,6 +20,10 @@ pub fn ZERO() -> ContractAddress {
     contract_address_const::<0>()
 }
 
+pub fn ZERO_HASH() -> felt252 {
+    0x0
+}
+
 pub const TEST_PAYMENT: felt252 = 0x64948D425BCD9983F21E80124AFE95D1D6987717380B813FAD8A3EA2C4D31C8;
 pub const TEST_NFT: felt252 = 0x55FE20463A398171FBDEF9A8DC692E9500D2EBEB8C96D7601D706A253DD8303;
 
@@ -31,21 +35,25 @@ pub const BUYER1: felt252 = 0x78406570d44f1293762fd99f7e42b034a8a5973542a990a1d1
 pub const BUYER2: felt252 = 0x19661066e96a8b9f06a1d136881ee924dfb6a885239caa5fd3f87a54c6b25c4;
 pub const BUYER3: felt252 = 0x4bfad94c8eaa1d5281d9699d0217a69de2f432164f5837b2313c807d3123123;
 
-pub fn OPENMARK_NFT_NAME() -> ByteArray {
+pub fn toAddress(addr: felt252) -> ContractAddress {
+    return addr.try_into().unwrap();
+}
+
+pub fn NFT_NAME() -> ByteArray {
     "OpenMark NFT"
 }
 
-pub fn OPENMARK_NFT_SYMBOL() -> ByteArray {
+pub fn NFT_SYMBOL() -> ByteArray {
     "OM"
 }
 
-pub fn OPENMARK_NFT_BASE_URI() -> ByteArray {
+pub fn NFT_BASE_URI() -> ByteArray {
     "https://nft-api.openmark.io/"
 }
 
 pub fn deploy_openmark() -> ContractAddress {
     let contract = declare("OpenMark").unwrap();
-    let payment_token = deploy_erc20_at(TEST_PAYMENT.try_into().unwrap());
+    let payment_token = setup_balance_at(TEST_PAYMENT.try_into().unwrap());
 
     let mut constructor_calldata = array![];
 
@@ -84,15 +92,25 @@ pub fn deploy_erc20() -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_erc20_at(addr: ContractAddress) -> ContractAddress {
+pub fn setup_balance_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkCoinMock").unwrap();
     let mut constructor_calldata = array![];
     let initial_supply = 1000000000000000000000000000_u256;
-    let recipient: ContractAddress = BUYER1.try_into().unwrap();
+    let recipient: ContractAddress = toAddress(BUYER1);
 
     constructor_calldata.append_serde(initial_supply);
     constructor_calldata.append_serde(recipient);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
+
+    let erc20_dispatcher = IERC20Dispatcher{contract_address};
+    start_cheat_caller_address(contract_address, toAddress(BUYER1));
+
+    erc20_dispatcher.transfer(toAddress(BUYER1), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(BUYER2), 10000000000000000);
+    
+    erc20_dispatcher.transfer(toAddress(SELLER1), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(SELLER2), 10000000000000000);
+    erc20_dispatcher.transfer(toAddress(SELLER3), 10000000000000000);
     contract_address
 }
 
@@ -115,9 +133,9 @@ pub fn do_create_nft(
 pub fn create_openmark_nft() -> ContractAddress {
     do_create_nft(
         SELLER1.try_into().unwrap(),
-        OPENMARK_NFT_NAME(),
-        OPENMARK_NFT_SYMBOL(),
-        OPENMARK_NFT_BASE_URI()
+        NFT_NAME(),
+        NFT_SYMBOL(),
+        NFT_BASE_URI()
     )
 }
 
@@ -125,9 +143,9 @@ pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkNFTMock").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(SELLER1);
-    constructor_calldata.append_serde(OPENMARK_NFT_NAME());
-    constructor_calldata.append_serde(OPENMARK_NFT_SYMBOL());
-    constructor_calldata.append_serde(OPENMARK_NFT_BASE_URI());
+    constructor_calldata.append_serde(NFT_NAME());
+    constructor_calldata.append_serde(NFT_SYMBOL());
+    constructor_calldata.append_serde(NFT_BASE_URI());
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
 }

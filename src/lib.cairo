@@ -3,6 +3,7 @@ pub mod hasher;
 pub mod core;
 pub mod token;
 pub mod factory;
+pub mod launchpad;
 
 pub mod mocks {
     mod hasher_mock;

@@ -1,8 +1,8 @@
 import { BigNumberish, WeierstrassSignatureType, ec } from "starknet";
 import { Bid, getBidHash } from './utils';
 import {
-  BUYER1, BUYER2, BUYER3,
-  BUYER_PRIVATE_KEY1, BUYER_PRIVATE_KEY2, BUYER_PRIVATE_KEY3
+  BUYER1, BUYER2, BUYER3, BUYER_PRIVATE_KEY1, BUYER_PRIVATE_KEY2,
+  BUYER_PRIVATE_KEY3, LOCAL_CHAIN_ID
 } from './constants';
 
 const bid1: Bid = {
@@ -32,9 +32,9 @@ const bid3: Bid = {
   expiry: "5",
 };
 
-let msgHash1 = getBidHash(bid1, "393402133025997798000961", BUYER1);
-let msgHash2 = getBidHash(bid2, "393402133025997798000961", BUYER2);
-let msgHash3 = getBidHash(bid3, "393402133025997798000961", BUYER3);
+let msgHash1 = getBidHash(bid1, LOCAL_CHAIN_ID, BUYER1);
+let msgHash2 = getBidHash(bid2, LOCAL_CHAIN_ID, BUYER2);
+let msgHash3 = getBidHash(bid3, LOCAL_CHAIN_ID, BUYER3);
 
 console.log(`buyer1: ${BUYER1};`);
 console.log(`buyer2: ${BUYER2};`);

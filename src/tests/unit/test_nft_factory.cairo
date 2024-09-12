@@ -1,7 +1,7 @@
-use openmark::factory::interface::IOpenMarkFactoryDispatcherTrait;
+use openmark::factory::interface::INFTFactoryDispatcherTrait;
 use core::option::OptionTrait;
 use core::traits::TryInto;
-use openmark::factory::interface::{IOpenMarkFactoryDispatcher};
+use openmark::factory::interface::{INFTFactoryDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{
@@ -9,15 +9,15 @@ use snforge_std::{
 };
 use starknet::{ContractAddress};
 
-use openmark::factory::openmark_factory::OpenMarkFactory::Event as FactoryEvent;
-use openmark::factory::openmark_factory::OpenMarkFactory::CollectionCreated;
+use openmark::factory::nft_factory::NFTFactory::Event as FactoryEvent;
+use openmark::factory::nft_factory::NFTFactory::CollectionCreated;
 use openmark::tests::unit::common::{create_openmark_nft, SELLER1};
 
-fn deloy_openmark_factory() -> (ContractAddress, IOpenMarkFactoryDispatcher) {
+fn deloy_nft_factory() -> (ContractAddress, INFTFactoryDispatcher) {
     let nft_token = create_openmark_nft();
     let nft_classhash = get_class_hash(nft_token);
 
-    let contract = declare("OpenMarkFactory").unwrap();
+    let contract = declare("NFTFactory").unwrap();
 
     let mut constructor_calldata = array![];
 
@@ -26,12 +26,12 @@ fn deloy_openmark_factory() -> (ContractAddress, IOpenMarkFactoryDispatcher) {
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
-    (contract_address, IOpenMarkFactoryDispatcher { contract_address })
+    (contract_address, INFTFactoryDispatcher { contract_address })
 }
 
 #[test]
 fn create_collection_works() {
-    let (_contract_address, factory_contract) = deloy_openmark_factory();
+    let (_contract_address, factory_contract) = deloy_nft_factory();
 
     factory_contract
         .create_collection(
@@ -56,7 +56,7 @@ fn create_collection_works() {
 
 #[should_panic(expected: ('OMFactory: ID in use',))]
 fn create_collection_id_used_panics() {
-    let (_, factory_contract) = deloy_openmark_factory();
+    let (_, factory_contract) = deloy_nft_factory();
 
     factory_contract
         .create_collection(

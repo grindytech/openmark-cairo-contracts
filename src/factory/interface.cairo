@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
-pub trait IOpenMarkFactory<T> {
+pub trait INFTFactory<T> {
     fn create_collection(
         ref self: T,
         id: u256,
@@ -16,7 +16,7 @@ pub trait IOpenMarkFactory<T> {
 
 
 #[starknet::interface]
-pub trait IOpenMarkFactoryCamel<T> {
+pub trait INFTFactoryCamel<T> {
     fn createCollection(
         ref self: T,
         id: u256,
