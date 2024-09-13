@@ -117,7 +117,7 @@ pub fn create_openmark_nft() -> ContractAddress {
 }
 
 pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
-    let contract = declare("OpenMarkNFT").unwrap();
+    let contract = declare("GameItem").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(SELLER1);
     constructor_calldata.append_serde(NFT_NAME());

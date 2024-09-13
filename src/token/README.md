@@ -1,8 +1,8 @@
-# OpenMarkNFT API Documentation
+# OpenNFT API Documentation
 
 ## Overview
 
-The `OpenMarkNFT` contract is a Cairo implementation of an NFT contract with ERC721-like functionalities, including minting tokens with and without URIs, batch minting, and setting URIs.
+The `OpenNFT` contract is a Cairo implementation of an NFT contract with ERC721-like functionalities, including minting tokens with and without URIs, batch minting, and setting URIs.
 
 ## Functions
 
@@ -95,4 +95,4 @@ Sets a new base URI for the token collection. Can only be called by the owner.
 
 ---
 
-This documentation provides an overview of the `OpenMarkNFT` contract's API, including its functions, events, and deployment details. For more information, refer to the contract's source code.
+This documentation provides an overview of the `OpenNFT` contract's API, including its functions, events, and deployment details. For more information, refer to the contract's source code.
