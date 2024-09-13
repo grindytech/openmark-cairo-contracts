@@ -1,17 +1,13 @@
 #[starknet::contract]
-pub mod GameItem {
+pub mod CommunityNFT {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait as ERC721Internal;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
-
-    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
-    use openzeppelin::access::accesscontrol::AccessControlComponent;
-    use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
+    use openzeppelin::access::ownable::OwnableComponent;
 
     use openmark::token::om_erc721::OMERC721Component;
-    use openmark::primitives::constants::{MINTER_ROLE};
 
     use starknet::ContractAddress;
     use openmark::token::interface::{IOpenMarkNFT, IOpenMarkNFTMetadataCamel, IOpenMarkNFTCamel};
@@ -20,7 +16,9 @@ pub mod GameItem {
     component!(path: OMERC721Component, storage: om_erc721, event: OMERC721Event);
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
-    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
+
+    /// Ownable
+    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
     // ERC721 Mixin
     #[abi(embed_v0)]
@@ -31,19 +29,15 @@ pub mod GameItem {
     impl OMERC721Impl = OMERC721Component::OMERC721Impl<ContractState>;
     impl OMERC721InternalImpl = OMERC721Component::InternalImpl<ContractState>;
 
+    /// Ownable
     #[abi(embed_v0)]
-    impl AccessControlImpl =
-        AccessControlComponent::AccessControlImpl<ContractState>;
-    impl AccessControlCamelImpl = AccessControlComponent::AccessControlCamelImpl<ContractState>;
-
-    // SRC5
-    // #[abi(embed_v0)]
-    // impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        accesscontrol: AccessControlComponent::Storage,
+        ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         erc721: ERC721Component::Storage,
         #[substorage(v0)]
@@ -56,7 +50,7 @@ pub mod GameItem {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         #[flat]
-        AccessControlEvent: AccessControlComponent::Event,
+        OwnableEvent: OwnableComponent::Event,
         #[flat]
         OMERC721Event: OMERC721Component::Event,
         #[flat]
@@ -73,9 +67,7 @@ pub mod GameItem {
         symbol: ByteArray,
         base_uri: ByteArray
     ) {
-        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
-        self.accesscontrol._grant_role(MINTER_ROLE, owner);
-
+        self.ownable.initializer(owner);
         self.erc721.initializer(name, symbol, base_uri);
     }
 
@@ -84,15 +76,12 @@ pub mod GameItem {
         fn safe_batch_mint(
             ref self: ContractState, to: ContractAddress, quantity: u256
         ) -> Span<u256> {
-            self.accesscontrol.assert_only_role(MINTER_ROLE);
-
             return self.om_erc721._safe_batch_mint(to, quantity);
         }
 
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) -> Span<u256> {
-            self.accesscontrol.assert_only_role(MINTER_ROLE);
             return self.om_erc721._safe_batch_mint_with_uris(to, uris);
         }
     }
