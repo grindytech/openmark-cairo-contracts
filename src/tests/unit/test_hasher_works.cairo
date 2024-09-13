@@ -82,7 +82,6 @@ fn verify_signature_works() {
 #[test]
 fn verify_contract_signature_works() {
     let contract_address = deploy_mock_hasher();
-    // This value was computed using StarknetJS
     let message_hash = 1;
 
     let mut signature = array![1, 2];
