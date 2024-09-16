@@ -243,4 +243,15 @@ pub mod Launchpad {
         let hash_state = PedersenTrait::new(0);
         pedersen(0, hash_state.update_with(address).update_with(1).finalize())
     }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
+
+            // Replace the class hash upgrading the contract
+            self.upgradeable.upgrade(new_class_hash);
+        }
+    }
 }

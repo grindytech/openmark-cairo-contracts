@@ -21,15 +21,31 @@ pub fn _payment_transfer_from(
         .unwrap_syscall();
 }
 
+pub fn _nft_transfer_from(
+    target: ContractAddress,
+    sender: ContractAddress,
+    receiver: ContractAddress,
+    token_id: u256
+) {
+    let mut args = array![];
+    args.append_serde(sender);
+    args.append_serde(receiver);
+    args.append_serde(token_id);
+
+    try_selector_with_fallback(
+        target, selectors::transfer_from, selectors::transferFrom, args.span()
+    )
+        .unwrap_syscall();
+}
+
 pub fn _payment_transfer(
     target: ContractAddress, recipient: ContractAddress, amount: u256
-) -> bool{
+) -> bool {
     let mut args = array![];
-        args.append_serde(recipient);
-        args.append_serde(amount);
+    args.append_serde(recipient);
+    args.append_serde(amount);
 
-        call_contract_syscall(target, selectors::transfer, args.span())
-            .unwrap_and_cast()
+    call_contract_syscall(target, selectors::transfer, args.span()).unwrap_and_cast()
 }
 
 pub fn _nft_owner_of(target: ContractAddress, token_id: u256) -> ContractAddress {

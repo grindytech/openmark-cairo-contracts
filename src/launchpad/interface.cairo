@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, ClassHash};
+use starknet::{ContractAddress};
 use openmark::primitives::types::{Stage, ID};
 
 #[starknet::interface]
