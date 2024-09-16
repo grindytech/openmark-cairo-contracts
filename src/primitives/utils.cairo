@@ -7,7 +7,7 @@ use starknet::SyscallResultTrait;
 use starknet::syscalls::call_contract_syscall;
 use openmark::primitives::selectors as openmark_selectors;
 
-pub fn _payment_transfer_from(
+pub fn payment_transfer_from(
     target: ContractAddress, sender: ContractAddress, recipient: ContractAddress, amount: u256
 ) {
     let mut args = array![];
@@ -21,11 +21,8 @@ pub fn _payment_transfer_from(
         .unwrap_syscall();
 }
 
-pub fn _nft_transfer_from(
-    target: ContractAddress,
-    sender: ContractAddress,
-    receiver: ContractAddress,
-    token_id: u256
+pub fn nft_transfer_from(
+    target: ContractAddress, sender: ContractAddress, receiver: ContractAddress, token_id: u256
 ) {
     let mut args = array![];
     args.append_serde(sender);
@@ -38,7 +35,7 @@ pub fn _nft_transfer_from(
         .unwrap_syscall();
 }
 
-pub fn _payment_transfer(
+pub fn payment_transfer(
     target: ContractAddress, recipient: ContractAddress, amount: u256
 ) -> bool {
     let mut args = array![];
@@ -48,7 +45,7 @@ pub fn _payment_transfer(
     call_contract_syscall(target, selectors::transfer, args.span()).unwrap_and_cast()
 }
 
-pub fn _nft_owner_of(target: ContractAddress, token_id: u256) -> ContractAddress {
+pub fn nft_owner_of(target: ContractAddress, token_id: u256) -> ContractAddress {
     let mut args = array![];
     args.append_serde(token_id);
 
@@ -56,7 +53,7 @@ pub fn _nft_owner_of(target: ContractAddress, token_id: u256) -> ContractAddress
         .unwrap_and_cast()
 }
 
-pub fn _payment_balance_of(target: ContractAddress, account: ContractAddress) -> u256 {
+pub fn payment_balance_of(target: ContractAddress, account: ContractAddress) -> u256 {
     let mut args = array![];
     args.append_serde(account);
 
@@ -64,7 +61,7 @@ pub fn _payment_balance_of(target: ContractAddress, account: ContractAddress) ->
         .unwrap_and_cast()
 }
 
-pub fn _safe_batch_mint(
+pub fn nft_safe_batch_mint(
     target: ContractAddress, to: ContractAddress, quantity: u256,
 ) -> Span<u256> {
     let mut args = array![];
@@ -76,3 +73,4 @@ pub fn _safe_batch_mint(
     )
         .unwrap_and_cast()
 }
+

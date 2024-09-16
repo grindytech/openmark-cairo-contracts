@@ -38,7 +38,7 @@ pub mod OpenMark {
     use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
     use openmark::core::errors::OMErrors as Errors;
     use openmark::primitives::utils::{
-        _nft_transfer_from, _payment_transfer_from, _payment_balance_of, _nft_owner_of
+        nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of
     };
 
     /// Ownable
@@ -126,7 +126,7 @@ pub mod OpenMark {
             self.verify_buy(order, signature, seller, buyer);
 
             // 3. make trade
-            _nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
+            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
             self._process_payment(buyer, seller, price, order.payment);
@@ -148,7 +148,7 @@ pub mod OpenMark {
             self.verify_accept_offer(order, signature, seller, buyer);
 
             // 3. make trade
-            _nft_transfer_from(
+            nft_transfer_from(
                 order.nftContract, get_caller_address(), buyer, order.tokenId.into()
             );
 
@@ -455,14 +455,14 @@ pub mod OpenMark {
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(
-                _nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
+                nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
                 Errors::NOT_NFT_OWNER
             );
 
             let price: u256 = order.price.into();
 
             assert(
-                _payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
+                payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
             );
 
             assert(price > 0, Errors::PRICE_IS_ZERO);
@@ -493,7 +493,7 @@ pub mod OpenMark {
                 return Result::Err(Errors::PRICE_IS_ZERO);
             }
 
-            if _payment_balance_of(bid.payment, bidder) < price {
+            if payment_balance_of(bid.payment, bidder) < price {
                 return Result::Err(Errors::INSUFFICIENT_BALANCE);
             }
 
@@ -558,7 +558,7 @@ pub mod OpenMark {
 
             let mut is_owner = true;
             for token_id in token_ids {
-                if _nft_owner_of(nft_token, (*token_id).into()) != seller {
+                if nft_owner_of(nft_token, (*token_id).into()) != seller {
                     is_owner = false;
                     break;
                 }
@@ -627,7 +627,7 @@ pub mod OpenMark {
             while (token_index < trade_amount) {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
 
-                _nft_transfer_from(
+                nft_transfer_from(
                     signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
                 );
 
@@ -670,10 +670,10 @@ pub mod OpenMark {
             let commission = self._calculate_commission(amount);
             let payout = amount - commission;
 
-            _payment_transfer_from(payment_token, sender, receiver, payout);
+            payment_transfer_from(payment_token, sender, receiver, payout);
 
             if commission > 0 {
-                _payment_transfer_from(payment_token, sender, get_contract_address(), commission);
+                payment_transfer_from(payment_token, sender, get_contract_address(), commission);
             }
         }
     }

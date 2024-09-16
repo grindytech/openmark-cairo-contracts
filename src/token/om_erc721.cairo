@@ -77,7 +77,7 @@ pub mod OMERC721Component {
         impl SRC5: SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>
     > of InternalTrait<TContractState> {
-        fn _safe_batch_mint(
+        fn nft_safe_batch_mint(
             ref self: ComponentState<TContractState>, to: ContractAddress, quantity: u256
         ) -> Span<u256> {
             let mut minted_tokens = ArrayTrait::new();

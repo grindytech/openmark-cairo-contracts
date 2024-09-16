@@ -23,7 +23,7 @@ pub mod Launchpad {
     use openmark::primitives::types::{Stage, ID};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        _safe_batch_mint, _payment_transfer_from, _payment_transfer, _payment_balance_of
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of
     };
 
     /// Ownable
@@ -155,10 +155,10 @@ pub mod Launchpad {
                 assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
             }
 
-            let mintedTokens = _safe_batch_mint(stage.collection, minter, mintAmount.into());
+            let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
 
             let price = mintAmount * stage.price;
-            _payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+            payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
@@ -182,8 +182,8 @@ pub mod Launchpad {
             let owner = get_caller_address();
             let launchpad = get_contract_address();
             for token in tokens {
-                let balance = _payment_balance_of(*token, launchpad);
-                _payment_transfer(*token, owner, balance);
+                let balance = payment_balance_of(*token, launchpad);
+                payment_transfer(*token, owner, balance);
                 self
                     .emit(
                         SalesWithdrawn {
