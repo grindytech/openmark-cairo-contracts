@@ -8,7 +8,7 @@ pub mod LaunchpadFactory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use starknet::{get_caller_address,};
+    use starknet::{get_caller_address, get_contract_address};
     use starknet::storage::{Map};
     use openmark::factory::interface::{
         ILaunchpadFactory, ILaunchpadFactoryCamel, ILaunchpadFactoryManager,
@@ -39,7 +39,7 @@ pub mod LaunchpadFactory {
         commission: u32,
         paymentTokens: Map<ContractAddress, bool>,
         lockAmount: Balance,
-        lockPaymentToken: ContractAddress,
+        lockTokenAddress: ContractAddress,
         launchpad_classhash: ClassHash,
     }
 
@@ -66,11 +66,13 @@ pub mod LaunchpadFactory {
         ref self: ContractState,
         owner: ContractAddress,
         lockAmount: Balance,
+        lockTokenAddress: ContractAddress,
         paymentTokens: Span<ContractAddress>,
         launchpad_classhash: ClassHash,
     ) {
         self.ownable.initializer(owner);
         self.lockAmount.write(lockAmount);
+        self.lockTokenAddress.write(lockTokenAddress);
 
         for paymentToken in paymentTokens {
             self.paymentTokens.write(*paymentToken, true);
@@ -89,6 +91,9 @@ pub mod LaunchpadFactory {
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
             uri.serialize(ref constructor_calldata);
+            self.lockAmount.read().serialize(ref constructor_calldata);
+            self.lockTokenAddress.read().serialize(ref constructor_calldata);
+            get_contract_address().serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
                 self.launchpad_classhash.read(), 0, constructor_calldata.span(), false
@@ -96,7 +101,7 @@ pub mod LaunchpadFactory {
                 .unwrap_syscall();
 
             payment_transfer_from(
-                self.lockPaymentToken.read(),
+                self.lockTokenAddress.read(),
                 get_caller_address(),
                 address,
                 self.lockAmount.read().into()

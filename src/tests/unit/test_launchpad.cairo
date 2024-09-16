@@ -44,6 +44,7 @@ fn create_launchpad(
     let contract = declare("Launchpad").unwrap();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(NFT_BASE_URI());
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 

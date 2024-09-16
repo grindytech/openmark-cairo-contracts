@@ -20,7 +20,7 @@ pub mod Launchpad {
         StageUpdated, StageRemoved, WhitelistUpdated, WhitelistRemoved, SalesWithdrawn,
         TokensBought, LaunchpadClosed
     };
-    use openmark::primitives::types::{Stage, ID};
+    use openmark::primitives::types::{Stage, ID, Balance};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
         nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of
@@ -44,13 +44,26 @@ pub mod Launchpad {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
-        isClosed: bool,
-        depositAmount: u128,
+        // Mapping of all stages by ID
         launchpadStages: Map<ID, Stage>,
+        // Mapping to indicate if a stage is active
         isStageOn: Map<ID, bool>,
+        // Mapping of Merkle roots for whitelist verification by stage ID
         stageWhitelist: Map<ID, Option<felt252>>,
+        // Mapping of total NFTs minted in a stage by stage ID
         stageMintedCount: Map<ID, u128>,
+        // Mapping of NFTs minted by a specific wallet in a stage
         userMintedCount: Map<ContractAddress, Map<ID, u128>>,
+        // Total deposit for create launchpad
+        depositAmount: Balance,
+        // Token address of depositAmount
+        depositPaymentToken: ContractAddress,
+        // Flag indicating if the launchpad is closed
+        isClosed: bool,
+        // URI for the launchpad metadata
+        uri: ByteArray,
+        // Address of the factory contract
+        factory: ContractAddress,
     }
 
     #[event]
@@ -60,7 +73,6 @@ pub mod Launchpad {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
-
         StageUpdated: StageUpdated,
         StageRemoved: StageRemoved,
         WhitelistUpdated: WhitelistUpdated,
@@ -71,9 +83,21 @@ pub mod Launchpad {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.ownable.initializer(owner);
+    fn constructor(
+        ref self: ContractState,
+        owner: ContractAddress,
+        uri: ByteArray,
+        depositAmount: Balance,
+        depositPaymentToken: ContractAddress,
+        factory: ContractAddress,
+    ) {
         self.isClosed.write(false);
+
+        self.ownable.initializer(owner);
+        self.uri.write(uri);
+        self.depositAmount.write(depositAmount);
+        self.depositPaymentToken.write(depositPaymentToken);
+        self.factory.write(factory);
     }
 
     #[abi(embed_v0)]
@@ -192,7 +216,7 @@ pub mod Launchpad {
                     );
             };
         }
-        
+
         fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
             self.ownable.assert_only_owner();
             self.isClosed.write(true);

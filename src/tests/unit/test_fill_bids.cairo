@@ -7,23 +7,17 @@ use core::traits::TryInto;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-use snforge_std::{
-    start_cheat_caller_address, load, map_entry_address
-};
+use snforge_std::{start_cheat_caller_address, load, map_entry_address};
 
 use openmark::{
     core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
-    core::interface::{
-        IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
-    },
-    core::openmark::OpenMark::{InternalImplTrait},
-    core::OpenMark::Event as OpenMarkEvent, core::events::{BidCancelled},
-    core::errors::OMErrors as Errors,
+    core::interface::{IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait},
+    core::openmark::OpenMark::{InternalImplTrait}, core::OpenMark::Event as OpenMarkEvent,
+    core::events::{BidCancelled}, core::errors::OMErrors as Errors,
 };
 
 use openmark::tests::unit::common::{
-    create_bids, ZERO, create_mock_hasher,
-    get_contract_state_for_testing
+    create_bids, ZERO, create_mock_hasher, get_contract_state_for_testing
 };
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
@@ -146,31 +140,28 @@ fn fill_bids_partial_works() {
 fn cancel_bid_works() {
     let (mut signed_bids, openmark_address, _, _, _, buyers, _) = create_bids();
 
-    {
-        start_cheat_caller_address(openmark_address, *buyers.at(0));
-        let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-        let hasher = create_mock_hasher();
-        let hash_sig: felt252 = hasher.hash_array(*signed_bids.at(0).signature);
+    start_cheat_caller_address(openmark_address, *buyers.at(0));
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+    let hasher = create_mock_hasher();
+    let hash_sig: felt252 = hasher.hash_array(*signed_bids.at(0).signature);
 
-        openmark.cancel_bid(*signed_bids.at(0).bid, *signed_bids.at(0).signature);
+    openmark.cancel_bid(*signed_bids.at(0).bid, *signed_bids.at(0).signature);
 
-        let usedSignatures = load(
-            openmark_address,
-            map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
-            1,
-        );
+    let usedSignatures = load(
+        openmark_address,
+        map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+        1,
+    );
 
-        assert_eq!(*usedSignatures.at(0), true.into());
-        // events
-        let _expected_event = OpenMarkEvent::BidCancelled(
-            BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
-        );
-    }
+    assert_eq!(*usedSignatures.at(0), true.into());
+    // events
+    let _expected_event = OpenMarkEvent::BidCancelled(
+        BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
+    );
 }
 
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: no valid bids',))]
 fn fill_bids_no_valid_bids_panics() {
     let (_, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
@@ -183,7 +174,6 @@ fn fill_bids_no_valid_bids_panics() {
 
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: too many nfts',))]
 fn fill_bids_too_many_nft_panics() {
     let (mut signed_bids, openmark_address, nft_token, payment_token, seller, _, tokenIds) =
