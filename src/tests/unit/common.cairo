@@ -123,6 +123,7 @@ pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
     constructor_calldata.append_serde(NFT_NAME());
     constructor_calldata.append_serde(NFT_SYMBOL());
     constructor_calldata.append_serde(NFT_BASE_URI());
+    constructor_calldata.append_serde(1000000_u256);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
 }

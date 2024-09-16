@@ -9,6 +9,7 @@ pub trait INFTFactory<T> {
         name: ByteArray,
         symbol: ByteArray,
         base_uri: ByteArray,
+        total_supply: u256,
     );
 
     fn get_collection(self: @T, id: u256) -> ContractAddress;
@@ -24,6 +25,7 @@ pub trait INFTFactoryCamel<T> {
         name: ByteArray,
         symbol: ByteArray,
         baseURI: ByteArray,
+        totalSupply: u256,
     );
 
     fn getCollection(self: @T, id: u256) -> ContractAddress;

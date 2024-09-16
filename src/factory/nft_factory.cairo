@@ -40,6 +40,7 @@ pub mod NFTFactory {
         pub name: ByteArray,
         pub symbol: ByteArray,
         pub base_uri: ByteArray,
+        pub total_supply: u256,
     }
 
     #[event]
@@ -67,6 +68,7 @@ pub mod NFTFactory {
             name: ByteArray,
             symbol: ByteArray,
             base_uri: ByteArray,
+            total_supply: u256
         ) {
             assert(self.get_collection(id).is_zero(), 'OMFactory: ID in use');
 
@@ -75,6 +77,7 @@ pub mod NFTFactory {
             name.serialize(ref constructor_calldata);
             symbol.serialize(ref constructor_calldata);
             base_uri.serialize(ref constructor_calldata);
+            total_supply.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
                 self.collection_classhash.read(), 0, constructor_calldata.span(), false
@@ -82,7 +85,7 @@ pub mod NFTFactory {
                 .unwrap_syscall();
 
             self.factory.write(id, address);
-            self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri });
+            self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri, total_supply });
         }
 
         fn get_collection(self: @ContractState, id: u256) -> ContractAddress {
@@ -99,8 +102,9 @@ pub mod NFTFactory {
             name: ByteArray,
             symbol: ByteArray,
             baseURI: ByteArray,
+            totalSupply: u256
         ) {
-            self.create_collection(id, owner, name, symbol, baseURI);
+            self.create_collection(id, owner, name, symbol, baseURI, totalSupply);
         }
 
         fn getCollection(self: @ContractState, id: u256) -> ContractAddress {

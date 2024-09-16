@@ -11,6 +11,7 @@ pub mod GameItem {
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
 
     use openmark::token::om_erc721::OMERC721Component;
+    use openmark::token::errors::NFTErrors as Errors;
     use openmark::primitives::constants::{MINTER_ROLE};
 
     use starknet::ContractAddress;
@@ -36,10 +37,6 @@ pub mod GameItem {
         AccessControlComponent::AccessControlImpl<ContractState>;
     impl AccessControlCamelImpl = AccessControlComponent::AccessControlCamelImpl<ContractState>;
 
-    // SRC5
-    // #[abi(embed_v0)]
-    // impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
-
     #[storage]
     struct Storage {
         #[substorage(v0)]
@@ -50,6 +47,7 @@ pub mod GameItem {
         om_erc721: OMERC721Component::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        totalSupply: u256,
     }
 
     #[event]
@@ -71,12 +69,14 @@ pub mod GameItem {
         owner: ContractAddress,
         name: ByteArray,
         symbol: ByteArray,
-        base_uri: ByteArray
+        baseURI: ByteArray,
+        totalSupply: u256,
     ) {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
 
-        self.erc721.initializer(name, symbol, base_uri);
+        self.erc721.initializer(name, symbol, baseURI);
+        self.totalSupply.write(totalSupply);
     }
 
     #[abi(embed_v0)]
@@ -84,6 +84,10 @@ pub mod GameItem {
         fn safe_batch_mint(
             ref self: ContractState, to: ContractAddress, quantity: u256
         ) -> Span<u256> {
+            assert(
+                self.om_erc721.current_mint_index() + quantity <= self.totalSupply.read(),
+                Errors::EXCEED_TOTAL_SUPPLY
+            );
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
             return self.om_erc721._safe_batch_mint(to, quantity);
@@ -92,6 +96,11 @@ pub mod GameItem {
         fn safe_batch_mint_with_uris(
             ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>
         ) -> Span<u256> {
+            assert(
+                self.om_erc721.current_mint_index() + uris.len().into() <= self.totalSupply.read(),
+                Errors::EXCEED_TOTAL_SUPPLY
+            );
+
             self.accesscontrol.assert_only_role(MINTER_ROLE);
             return self.om_erc721._safe_batch_mint_with_uris(to, uris);
         }
