@@ -25,10 +25,6 @@ pub mod OMERC721Component {
         TokenURIUpdated: TokenURIUpdated,
     }
 
-    pub mod Errors {
-        pub const OUT_OF_BOUNDS_INDEX: felt252 = 'ERC721Enum: out of bounds index';
-    }
-
     #[embeddable_as(OMERC721Impl)]
     impl OMERC721<
         TContractState,

@@ -21,7 +21,7 @@ pub mod Launchpad {
         TokensBought, LaunchpadClosed
     };
     use openmark::primitives::types::{Stage, ID};
-    use openmark::launchpad::errors as Errors;
+    use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
         _safe_batch_mint, _payment_transfer_from, _payment_transfer, _payment_balance_of
     };

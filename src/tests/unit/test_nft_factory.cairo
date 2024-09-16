@@ -35,7 +35,7 @@ fn create_collection_works() {
 
     factory_contract
         .create_collection(
-            0, SELLER1.try_into().unwrap(), "Starknet NFT", "Stark NFT", "https://starknet.io"
+            0, SELLER1.try_into().unwrap(), "Starknet NFT", "Stark NFT", "https://starknet.io", 1000_u256
         );
 
     let nft_address = factory_contract.get_collection(0);
@@ -47,7 +47,8 @@ fn create_collection_works() {
             owner: SELLER1.try_into().unwrap(),
             name: "Starknet NFT",
             symbol: "Stark NFT",
-            base_uri: "https://starknet.io"
+            base_uri: "https://starknet.io",
+            total_supply: 1000_u256,
         }
     );
 }
@@ -60,10 +61,10 @@ fn create_collection_id_used_panics() {
 
     factory_contract
         .create_collection(
-            0, SELLER1.try_into().unwrap(), "Starknet NFT", "Stark NFT", "https://starknet.io"
+            0, SELLER1.try_into().unwrap(), "Starknet NFT", "Stark NFT", "https://starknet.io", 1000_u256
         );
     factory_contract
         .create_collection(
-            0, SELLER1.try_into().unwrap(), "Starknet", "Stark", "https://starknet.io"
+            0, SELLER1.try_into().unwrap(), "Starknet", "Stark", "https://starknet.io", 1000_u256
         );
 }

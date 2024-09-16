@@ -23,9 +23,8 @@ pub fn NFT_SYMBOL() -> ByteArray {
 pub fn NFT_BASE_URI() -> ByteArray {
     ""
 }
-
 pub fn do_create_gameitem(
-    owner: ContractAddress, name: ByteArray, symbol: ByteArray, baseURI: ByteArray
+    owner: ContractAddress, name: ByteArray, symbol: ByteArray, baseURI: ByteArray, totalSupply: u256
 ) -> ContractAddress {
     let contract = declare("GameItem").unwrap_syscall();
     let mut constructor_calldata = array![];
@@ -34,13 +33,14 @@ pub fn do_create_gameitem(
     constructor_calldata.append_serde(name);
     constructor_calldata.append_serde(symbol);
     constructor_calldata.append_serde(baseURI);
+    constructor_calldata.append_serde(totalSupply);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
 
 pub fn create_gameitem(owner: ContractAddress,) -> ContractAddress {
-    return do_create_gameitem(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI());
+    return do_create_gameitem(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100);
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn get_token_uri_only_baseURI_works() {
     let to: ContractAddress = toAddress(BUYER1);
 
     let baseURI = "https://api.openmark.io/";
-    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI);
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100);
 
     let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
     let NFTMetadata = IOMERC721Dispatcher { contract_address };
@@ -103,7 +103,7 @@ fn get_token_uri_without_baseURI_works() {
     let owner: ContractAddress = toAddress(SELLER1);
     let to: ContractAddress = toAddress(BUYER1);
 
-    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "");
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", 100);
     let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
     let NFTMetadata = IOMERC721Dispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner);
@@ -122,7 +122,7 @@ fn get_token_uri_with_baseURI_and_tokenURI_works() {
     let owner: ContractAddress = toAddress(SELLER1);
     let to: ContractAddress = toAddress(BUYER1);
 
-    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI);
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100);
     let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
     let NFTMetadata = IOMERC721Dispatcher { contract_address };
     start_cheat_caller_address(contract_address, owner);
@@ -155,4 +155,28 @@ let owner: ContractAddress = toAddress(SELLER1);
    let to: ContractAddress = toAddress(BUYER1);
     start_cheat_caller_address(contract_address, to);
     OpenNFT.safe_batch_mint_with_uris(to, array!["a", "b"].span());
+}
+
+#[test]
+#[should_panic(expected: ('OMNFT: exceed total supply',))]
+fn safe_batch_mint_exceed_total_supply_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let totalSupply = 5_u256;
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", totalSupply);
+    let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner);
+
+    OpenNFT.safe_batch_mint(owner, totalSupply + 1);
+}
+
+#[test]
+#[should_panic(expected: ('OMNFT: exceed total supply',))]
+fn safe_batch_mint_with_uris_exceed_total_supply_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let totalSupply = 5_u256;
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", totalSupply);
+    let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
+    start_cheat_caller_address(contract_address, owner);
+
+    OpenNFT.safe_batch_mint_with_uris(owner, array!["1", "2", "3", "4", "5", "6"].span());
 }

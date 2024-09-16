@@ -41,7 +41,7 @@ pub mod OpenMark {
         IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkProviderCamel, IOpenMarkManager
     };
     use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
-    use openmark::core::errors as Errors;
+    use openmark::core::errors::OMErrors as Errors;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);

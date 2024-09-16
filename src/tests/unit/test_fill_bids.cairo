@@ -18,7 +18,7 @@ use openmark::{
     },
     core::openmark::OpenMark::{InternalImplTrait},
     core::OpenMark::Event as OpenMarkEvent, core::events::{BidCancelled},
-    core::errors as Errors,
+    core::errors::OMErrors as Errors,
 };
 
 use openmark::tests::unit::common::{
