@@ -6,7 +6,7 @@ use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Disp
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 use snforge_std::{
-    start_cheat_caller_address, map_entry_address, start_cheat_block_timestamp, load
+    start_cheat_caller_address, map_entry_address, start_cheat_block_timestamp, load,
 };
 
 use openmark::{
@@ -48,9 +48,9 @@ fn buy_works() {
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
     let seller_after_balance = payment_dispatcher.balance_of(seller);
 
-    assert_eq!(nft_dispatcher.owner_of(order.tokenId.into()), buyer);
-    assert_eq!(buyer_after_balance, buyer_before_balance - order.price.into());
-    assert_eq!(seller_after_balance, seller_before_balance + order.price.into());
+    assert(nft_dispatcher.owner_of(order.tokenId.into())== buyer, 'NFT owner not correct');
+    assert(buyer_after_balance== buyer_before_balance - order.price.into(), 'Buyer balance not correct');
+    assert(seller_after_balance==seller_before_balance + order.price.into(), 'Seller balance not correct');
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn cancel_buy_works() {
         1,
     );
 
-    assert_eq!(*usedSignatures.at(0), true.into());
+    assert(*usedSignatures.at(0) == true.into(), 'Cancel order failed');
 }
 
 #[test]
