@@ -8,7 +8,7 @@ pub mod NFTFactory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use openmark::factory::interface::{INFTFactory, INFTFactoryCamel, IFactoryManager};
+    use openmark::factory::interface::{INFTFactory, INFTFactoryCamel, INFTFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -124,8 +124,8 @@ pub mod NFTFactory {
     }
 
     #[abi(embed_v0)]
-    impl FactoryManagerImpl of IFactoryManager<ContractState> {
-        fn set_collection_classhash(ref self: ContractState, classhash: ClassHash) {
+    impl FactoryManagerImpl of INFTFactoryManager<ContractState> {
+        fn set_classhash(ref self: ContractState, classhash: ClassHash) {
             self.ownable.assert_only_owner();
             self.collection_classhash.write(classhash);
         }

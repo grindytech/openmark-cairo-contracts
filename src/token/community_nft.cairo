@@ -76,7 +76,7 @@ pub mod CommunityNFT {
         fn safe_batch_mint(
             ref self: ContractState, to: ContractAddress, quantity: u256
         ) -> Span<u256> {
-            return self.om_erc721._safe_batch_mint(to, quantity);
+            return self.om_erc721.nft_safe_batch_mint(to, quantity);
         }
 
         fn safe_batch_mint_with_uris(

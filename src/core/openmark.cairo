@@ -20,16 +20,11 @@ pub mod OpenMark {
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
-    use openzeppelin::utils::serde::SerializedAppend;
-    use openzeppelin::utils::{try_selector_with_fallback};
-    use openzeppelin::utils::selectors;
-    use openzeppelin::utils::UnwrapAndCast;
 
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
     use starknet::ClassHash;
-    use starknet::SyscallResultTrait;
 
     use core::num::traits::Zero;
     use core::panic_with_felt252;
@@ -42,6 +37,9 @@ pub mod OpenMark {
     };
     use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
     use openmark::core::errors::OMErrors as Errors;
+    use openmark::primitives::utils::{
+        nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of
+    };
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -128,7 +126,7 @@ pub mod OpenMark {
             self.verify_buy(order, signature, seller, buyer);
 
             // 3. make trade
-            self._nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
+            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
             self._process_payment(buyer, seller, price, order.payment);
@@ -150,10 +148,9 @@ pub mod OpenMark {
             self.verify_accept_offer(order, signature, seller, buyer);
 
             // 3. make trade
-            self
-                ._nft_transfer_from(
-                    order.nftContract, get_caller_address(), buyer, order.tokenId.into()
-                );
+            nft_transfer_from(
+                order.nftContract, get_caller_address(), buyer, order.tokenId.into()
+            );
 
             let price: u256 = order.price.into();
             self._process_payment(buyer, get_caller_address(), price, order.payment);
@@ -458,15 +455,14 @@ pub mod OpenMark {
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
 
             assert(
-                self._nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
+                nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
                 Errors::NOT_NFT_OWNER
             );
 
             let price: u256 = order.price.into();
 
             assert(
-                self._payment_balance_of(order.payment, buyer) >= price,
-                Errors::INSUFFICIENT_BALANCE
+                payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
             );
 
             assert(price > 0, Errors::PRICE_IS_ZERO);
@@ -497,7 +493,7 @@ pub mod OpenMark {
                 return Result::Err(Errors::PRICE_IS_ZERO);
             }
 
-            if self._payment_balance_of(bid.payment, bidder) < price {
+            if payment_balance_of(bid.payment, bidder) < price {
                 return Result::Err(Errors::INSUFFICIENT_BALANCE);
             }
 
@@ -562,7 +558,7 @@ pub mod OpenMark {
 
             let mut is_owner = true;
             for token_id in token_ids {
-                if self._nft_owner_of(nft_token, (*token_id).into()) != seller {
+                if nft_owner_of(nft_token, (*token_id).into()) != seller {
                     is_owner = false;
                     break;
                 }
@@ -627,15 +623,13 @@ pub mod OpenMark {
 
             let mut traded_ids = ArrayTrait::new();
             let mut token_index: u128 = 0;
-            let state = @self;
 
             while (token_index < trade_amount) {
                 let token_id: u128 = *trade_token_ids.pop_front().unwrap();
 
-                state
-                    ._nft_transfer_from(
-                        signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
-                    );
+                nft_transfer_from(
+                    signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
+                );
 
                 traded_ids.append(token_id);
                 token_index += 1;
@@ -676,72 +670,11 @@ pub mod OpenMark {
             let commission = self._calculate_commission(amount);
             let payout = amount - commission;
 
-            self._payment_transfer_from(payment_token, sender, receiver, payout);
+            payment_transfer_from(payment_token, sender, receiver, payout);
 
             if commission > 0 {
-                self
-                    ._payment_transfer_from(
-                        payment_token, sender, get_contract_address(), commission
-                    );
+                payment_transfer_from(payment_token, sender, get_contract_address(), commission);
             }
-        }
-
-        fn _payment_transfer_from(
-            self: @ContractState,
-            target: ContractAddress,
-            sender: ContractAddress,
-            receiver: ContractAddress,
-            amount: u256
-        ) {
-            let mut args = array![];
-            args.append_serde(sender);
-            args.append_serde(receiver);
-            args.append_serde(amount);
-
-            try_selector_with_fallback(
-                target, selectors::transfer_from, selectors::transferFrom, args.span()
-            )
-                .unwrap_syscall();
-        }
-
-        fn _nft_transfer_from(
-            self: @ContractState,
-            target: ContractAddress,
-            sender: ContractAddress,
-            receiver: ContractAddress,
-            token_id: u256
-        ) {
-            let mut args = array![];
-            args.append_serde(sender);
-            args.append_serde(receiver);
-            args.append_serde(token_id);
-
-            try_selector_with_fallback(
-                target, selectors::transfer_from, selectors::transferFrom, args.span()
-            )
-                .unwrap_syscall();
-        }
-
-        fn _nft_owner_of(
-            self: @ContractState, target: ContractAddress, token_id: u256
-        ) -> ContractAddress {
-            let mut args = array![];
-            args.append_serde(token_id);
-
-            try_selector_with_fallback(target, selectors::owner_of, selectors::ownerOf, args.span())
-                .unwrap_and_cast()
-        }
-
-        fn _payment_balance_of(
-            self: @ContractState, target: ContractAddress, account: ContractAddress
-        ) -> u256 {
-            let mut args = array![];
-            args.append_serde(account);
-
-            try_selector_with_fallback(
-                target, selectors::balance_of, selectors::balanceOf, args.span()
-            )
-                .unwrap_and_cast()
         }
     }
 }

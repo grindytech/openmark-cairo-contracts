@@ -6,7 +6,7 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use openmark::token::interface::IOpenMarkNFTDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,};
+use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash};
 
 use starknet::{ContractAddress, contract_address_const};
 
@@ -15,6 +15,7 @@ use openmark::{
     hasher::interface::{IOffchainMessageHashDispatcher}, core::OpenMark::{ContractState},
     token::interface::{IOpenMarkNFTDispatcher}
 };
+use openmark::factory::interface::{ILaunchpadFactoryDispatcher,};
 
 pub fn ZERO() -> ContractAddress {
     contract_address_const::<0>()
@@ -52,7 +53,7 @@ pub fn NFT_BASE_URI() -> ByteArray {
 }
 
 pub fn deploy_openmark(payment_token: ContractAddress) -> ContractAddress {
-    let contract = declare("OpenMark").unwrap();
+    let contract = declare("OpenMark").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(SELLER1);
@@ -64,7 +65,7 @@ pub fn deploy_openmark(payment_token: ContractAddress) -> ContractAddress {
 }
 
 pub fn create_mock_hasher() -> IOffchainMessageHashDispatcher {
-    let contract = declare("HasherMock").unwrap();
+    let contract = declare("HasherMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let hasher_contract = IOffchainMessageHashDispatcher { contract_address };
@@ -72,14 +73,14 @@ pub fn create_mock_hasher() -> IOffchainMessageHashDispatcher {
 }
 
 pub fn deploy_mock_account() -> ContractAddress {
-    let contract = declare("AccountMock").unwrap();
+    let contract = declare("AccountMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
 
 pub fn deploy_erc20() -> ContractAddress {
-    let contract = declare("OpenMarkCoinMock").unwrap();
+    let contract = declare("OpenMarkCoinMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let initial_supply = 1000000000000000000000000000_u256;
     let recipient: ContractAddress = toAddress(BUYER1);
@@ -91,7 +92,7 @@ pub fn deploy_erc20() -> ContractAddress {
 }
 
 pub fn setup_balance_at(addr: ContractAddress) -> ContractAddress {
-    let contract = declare("OpenMarkCoinMock").unwrap();
+    let contract = declare("OpenMarkCoinMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let initial_supply = 1000000000000000000000000000_u256;
     let recipient: ContractAddress = toAddress(BUYER1);
@@ -117,7 +118,7 @@ pub fn create_openmark_nft() -> ContractAddress {
 }
 
 pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
-    let contract = declare("GameItem").unwrap();
+    let contract = declare("GameItem").unwrap().contract_class();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(SELLER1);
     constructor_calldata.append_serde(NFT_NAME());
@@ -330,6 +331,44 @@ pub fn create_bids() -> (
         array![buyer1, buyer2, buyer3].span(),
         tokenIds
     )
+}
+
+
+fn create_launchpad_template() -> ContractAddress {
+    let contract = declare("Launchpad").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+    constructor_calldata.append_serde(toAddress(SELLER1));
+    constructor_calldata.append_serde(NFT_BASE_URI());
+    constructor_calldata.append_serde(0_u128);
+    constructor_calldata.append_serde(toAddress(TEST_PAYMENT));
+    constructor_calldata.append_serde(toAddress(TEST_PAYMENT));
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    return contract_address;
+}
+
+pub fn create_launchpad_factory(
+    owner: ContractAddress,
+    lockAmount: u128,
+    lockTokenAddress: ContractAddress,
+    paymentTokens: Span<ContractAddress>
+) -> (ContractAddress, ILaunchpadFactoryDispatcher) {
+    let launchpad = create_launchpad_template();
+    let launchpad_classhash = get_class_hash(launchpad);
+
+    let contract = declare("LaunchpadFactory").unwrap().contract_class();
+
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(lockAmount);
+    constructor_calldata.append_serde(lockTokenAddress);
+    constructor_calldata.append_serde(paymentTokens);
+    constructor_calldata.append_serde(launchpad_classhash);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+
+    (contract_address, ILaunchpadFactoryDispatcher { contract_address })
 }
 
 pub fn get_contract_state_for_testing() -> ContractState {

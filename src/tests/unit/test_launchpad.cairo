@@ -1,3 +1,4 @@
+use super::super::super::factory::interface::ILaunchpadFactoryProviderDispatcherTrait;
 use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
 use openmark::launchpad::interface::{
     ILaunchpadDispatcher, ILaunchpadProviderDispatcherTrait, ILaunchpadProviderDispatcher,
@@ -11,18 +12,21 @@ use openzeppelin::access::accesscontrol::interface::{
 
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
-    start_cheat_block_timestamp
+    start_cheat_block_timestamp, DeclareResultTrait
 };
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
     SELLER1, BUYER1, BUYER2, TEST_PAYMENT, toAddress, setup_balance_at, NFT_NAME, NFT_SYMBOL,
-    NFT_BASE_URI
+    NFT_BASE_URI, create_launchpad_factory
 };
 use openmark::primitives::types::{Stage};
 use openmark::primitives::constants::{MINTER_ROLE};
+use openmark::factory::interface::{
+    ILaunchpadFactoryDispatcherTrait, ILaunchpadFactoryProviderDispatcher
+};
 
 pub fn create_game_item(owner: ContractAddress) -> ContractAddress {
-    let contract = declare("GameItem").unwrap();
+    let contract = declare("GameItem").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
@@ -38,16 +42,37 @@ pub fn create_game_item(owner: ContractAddress) -> ContractAddress {
 fn create_launchpad(
     owner: ContractAddress
 ) -> (ContractAddress, ILaunchpadDispatcher, ContractAddress, ContractAddress) {
+    let owner = toAddress(SELLER1);
+    let lockAmount = 1000_u128;
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
+
+    let lockPaymentTokens = array![payment_token].span();
+
+    let (factory_address, factory_contract) = create_launchpad_factory(
+        owner, lockAmount, payment_token, lockPaymentTokens
+    );
+
+    let erc20_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    start_cheat_caller_address(payment_token, owner);
+    erc20_dispatcher.approve(factory_address, 10000000);
+    stop_cheat_caller_address(payment_token);
+
     let nft_token: ContractAddress = create_game_item(owner);
+    start_cheat_caller_address(factory_address, owner);
 
-    let contract = declare("Launchpad").unwrap();
-    let mut constructor_calldata = array![];
-    constructor_calldata.append_serde(owner);
+    factory_contract.create_launchpad(0, toAddress(SELLER1), "https://starknet.io");
+    let factory_provider = ILaunchpadFactoryProviderDispatcher {
+        contract_address: factory_address
+    };
 
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    let launchpad_address = factory_provider.getLaunchpad(0);
 
-    (contract_address, ILaunchpadDispatcher { contract_address }, payment_token, nft_token)
+    (
+        launchpad_address,
+        ILaunchpadDispatcher { contract_address: launchpad_address },
+        payment_token,
+        nft_token
+    )
 }
 
 fn setup_stage(
@@ -129,9 +154,9 @@ fn update_stages_works() {
     start_cheat_caller_address(contract_address, owner);
     launchpad_contract.updateStages(new_stages.span(), whitelists.span());
     let provider = ILaunchpadProviderDispatcher { contract_address };
-    assert_eq!(provider.getStage(id).id, id);
-    assert_eq!(provider.getActiveStage(id).id, id);
-    assert_eq!(provider.getWhitelist(id), Option::Some(ROOT));
+    assert(provider.getStage(id).id == id, 'Get stage failed');
+    assert(provider.getActiveStage(id).id == id, 'Get active stage failed');
+    assert(provider.getWhitelist(id) == Option::Some(ROOT), 'Get whitelist failed');
 }
 
 #[test]
@@ -162,13 +187,13 @@ fn update_and_whitelist_works() {
     let stage = *stages.at(0);
     start_cheat_caller_address(launchpad_address, seller);
     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
-    assert_eq!(provider.getWhitelist(stage.id), Option::None);
+    assert(provider.getWhitelist(stage.id) == Option::None, 'Whitelist must be none');
 
     launchpad_contract.updateWhitelist(array![stage.id].span(), array![Option::Some(ROOT)].span());
-    assert_eq!(provider.getWhitelist(stage.id), Option::Some(ROOT));
+    assert(provider.getWhitelist(stage.id) == Option::Some(ROOT), 'Whitelist incorrect');
 
     launchpad_contract.removeWhitelist(array![stage.id].span());
-    assert_eq!(provider.getWhitelist(0), Option::None);
+    assert(provider.getWhitelist(0) == Option::None, 'Whitelist must be none');
 }
 
 
@@ -206,16 +231,19 @@ fn buy_works() {
     let seller_after_balance = payment_dispatcher.balance_of(launchpad_address);
 
     // Verify balance
-    assert_eq!(nft_dispatcher.owner_of(0), buyer1);
-    assert_eq!(nft_dispatcher.owner_of(1), buyer1);
+    assert(nft_dispatcher.owner_of(0) == buyer1, 'NFT owner incorrect');
+    assert(nft_dispatcher.owner_of(1) == buyer1, 'NFT owner incorrect');
 
-    assert_eq!(buyer_after_balance, buyer_before_balance - cost.into());
-    assert_eq!(seller_after_balance, seller_before_balance + cost.into());
+    assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incoorect');
+    assert(seller_after_balance == seller_before_balance + cost.into(), 'Seller balance incoorect');
 
     // Verify states
     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
-    assert_eq!(provider.getMintedCount(stage.id), amount.into());
-    assert_eq!(provider.getUserMintedCount(buyer1, stage.id), amount.into());
+    assert(provider.getMintedCount(stage.id) == amount.into(), 'Minted count incorrect');
+    assert(
+        provider.getUserMintedCount(buyer1, stage.id) == amount.into(),
+        'User minted count incorrect'
+    );
 }
 
 #[test]
@@ -246,16 +274,19 @@ fn buy_with_whitelist_works() {
     let seller_after_balance = payment_dispatcher.balance_of(launchpad_address);
 
     // Verify balance
-    assert_eq!(nft_dispatcher.owner_of(0), buyer1);
-    assert_eq!(nft_dispatcher.owner_of(1), buyer1);
+    assert(nft_dispatcher.owner_of(0) == buyer1, 'NFT owner incorrect');
+    assert(nft_dispatcher.owner_of(1) == buyer1, 'NFT owner incorrect');
 
-    assert_eq!(buyer_after_balance, buyer_before_balance - cost.into());
-    assert_eq!(seller_after_balance, seller_before_balance + cost.into());
+    assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incorrect');
+    assert(seller_after_balance == seller_before_balance + cost.into(), 'Seller balance incorrect');
 
     // Verify states
     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
-    assert_eq!(provider.getMintedCount(stage.id), amount.into());
-    assert_eq!(provider.getUserMintedCount(buyer1, stage.id), amount.into());
+    assert(provider.getMintedCount(stage.id) == amount.into(), 'Minted count incorrect');
+    assert(
+        provider.getUserMintedCount(buyer1, stage.id) == amount.into(),
+        'User minted count incorrect'
+    );
 }
 
 #[test]
@@ -279,8 +310,13 @@ fn withdraw_sales_works() {
     let owner_after_balance = payment_dispatcher.balance_of(owner);
     let launchpad_after_balance = payment_dispatcher.balance_of(launchpad_address);
 
-    assert_eq!(owner_after_balance, owner_before_balance + transfer_amount);
-    assert_eq!(launchpad_after_balance, launchpad_before_balance - transfer_amount);
+    assert(
+        owner_after_balance == owner_before_balance + transfer_amount, 'Owner balance incorrect'
+    );
+    assert(
+        launchpad_after_balance == launchpad_before_balance - transfer_amount,
+        'Launchpad balance incorrect'
+    );
 }
 
 #[test]

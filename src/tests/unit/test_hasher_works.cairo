@@ -3,17 +3,15 @@ use core::traits::TryInto;
 
 use starknet::{ContractAddress};
 
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address,};
+use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address, DeclareResultTrait};
 use openmark::{
     primitives::types::{Order, Bid, OrderType},
     hasher::interface::{IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait},
 };
-use openmark::tests::unit::common::{
-    SELLER1, TEST_PAYMENT, TEST_NFT, deploy_mock_account
-};
+use openmark::tests::unit::common::{SELLER1, TEST_PAYMENT, TEST_NFT, deploy_mock_account};
 
 fn deploy_mock_hasher() -> ContractAddress {
-    let contract = declare("HasherMock").unwrap();
+    let contract = declare("HasherMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
@@ -38,7 +36,7 @@ fn get_order_hash_works() {
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
 
     let result = dispatcher.get_order_hash(order, SELLER1);
-    assert_eq!(result, message_hash);
+    assert(result == message_hash, 'Order hash not correct');
 }
 
 #[test]
@@ -59,7 +57,7 @@ fn get_bid_hash_works() {
 
     let result = dispatcher.get_bid_hash(bid, SELLER1);
 
-    assert_eq!(result, message_hash);
+    assert(result== message_hash, 'Bid hash not correct');
 }
 
 
@@ -76,7 +74,7 @@ fn verify_signature_works() {
     let dispatcher = IOffchainMessageHashDispatcher { contract_address };
     let result = dispatcher.verify_signature(message_hash, SELLER1, signature.span());
 
-    assert_eq!(result, true);
+    assert(result, 'Verify signature failed');
 }
 
 #[test]
@@ -92,7 +90,7 @@ fn verify_contract_signature_works() {
 
     let result = dispatcher.verify_signature(message_hash, account.into(), signature.span());
 
-    assert_eq!(result, true);
+    assert(result, 'Verify contract account failed');
 }
 
 
@@ -121,7 +119,7 @@ fn verify_order_works() {
 
     let result = dispatcher.verify_order(order, SELLER1, signature.span());
 
-    assert_eq!(result, true);
+    assert(result, 'Verify order failed');
 }
 
 #[test]
@@ -146,6 +144,6 @@ fn verify_bid_works() {
 
     let result = dispatcher.verify_bid(bid, SELLER1, signature.span());
 
-    assert_eq!(result, true);
+    assert(result, 'Verify bid failed');
 }
 

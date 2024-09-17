@@ -90,7 +90,7 @@ pub mod GameItem {
             );
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
-            return self.om_erc721._safe_batch_mint(to, quantity);
+            return self.om_erc721.nft_safe_batch_mint(to, quantity);
         }
 
         fn safe_batch_mint_with_uris(

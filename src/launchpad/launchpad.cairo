@@ -20,10 +20,10 @@ pub mod Launchpad {
         StageUpdated, StageRemoved, WhitelistUpdated, WhitelistRemoved, SalesWithdrawn,
         TokensBought, LaunchpadClosed
     };
-    use openmark::primitives::types::{Stage, ID};
+    use openmark::primitives::types::{Stage, ID, Balance};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        _safe_batch_mint, _payment_transfer_from, _payment_transfer, _payment_balance_of
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of
     };
 
     /// Ownable
@@ -44,13 +44,26 @@ pub mod Launchpad {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
-        isClosed: bool,
-        depositAmount: u128,
+        // Mapping of all stages by ID
         launchpadStages: Map<ID, Stage>,
+        // Mapping to indicate if a stage is active
         isStageOn: Map<ID, bool>,
+        // Mapping of Merkle roots for whitelist verification by stage ID
         stageWhitelist: Map<ID, Option<felt252>>,
+        // Mapping of total NFTs minted in a stage by stage ID
         stageMintedCount: Map<ID, u128>,
+        // Mapping of NFTs minted by a specific wallet in a stage
         userMintedCount: Map<ContractAddress, Map<ID, u128>>,
+        // Total deposit for create launchpad
+        depositAmount: Balance,
+        // Token address of depositAmount
+        depositPaymentToken: ContractAddress,
+        // Flag indicating if the launchpad is closed
+        isClosed: bool,
+        // URI for the launchpad metadata
+        uri: ByteArray,
+        // Address of the factory contract
+        factory: ContractAddress,
     }
 
     #[event]
@@ -60,7 +73,6 @@ pub mod Launchpad {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
-
         StageUpdated: StageUpdated,
         StageRemoved: StageRemoved,
         WhitelistUpdated: WhitelistUpdated,
@@ -71,9 +83,21 @@ pub mod Launchpad {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.ownable.initializer(owner);
+    fn constructor(
+        ref self: ContractState,
+        owner: ContractAddress,
+        uri: ByteArray,
+        depositAmount: Balance,
+        depositPaymentToken: ContractAddress,
+        factory: ContractAddress,
+    ) {
         self.isClosed.write(false);
+
+        self.ownable.initializer(owner);
+        self.uri.write(uri);
+        self.depositAmount.write(depositAmount);
+        self.depositPaymentToken.write(depositPaymentToken);
+        self.factory.write(factory);
     }
 
     #[abi(embed_v0)]
@@ -155,10 +179,10 @@ pub mod Launchpad {
                 assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
             }
 
-            let mintedTokens = _safe_batch_mint(stage.collection, minter, mintAmount.into());
+            let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
 
             let price = mintAmount * stage.price;
-            _payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+            payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
@@ -182,8 +206,8 @@ pub mod Launchpad {
             let owner = get_caller_address();
             let launchpad = get_contract_address();
             for token in tokens {
-                let balance = _payment_balance_of(*token, launchpad);
-                _payment_transfer(*token, owner, balance);
+                let balance = payment_balance_of(*token, launchpad);
+                payment_transfer(*token, owner, balance);
                 self
                     .emit(
                         SalesWithdrawn {
@@ -192,7 +216,7 @@ pub mod Launchpad {
                     );
             };
         }
-        
+
         fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
             self.ownable.assert_only_owner();
             self.isClosed.write(true);
@@ -242,5 +266,16 @@ pub mod Launchpad {
     fn _leaf_hash(address: ContractAddress) -> felt252 {
         let hash_state = PedersenTrait::new(0);
         pedersen(0, hash_state.update_with(address).update_with(1).finalize())
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
+
+            // Replace the class hash upgrading the contract
+            self.upgradeable.upgrade(new_class_hash);
+        }
     }
 }

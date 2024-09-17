@@ -1,8 +1,7 @@
-use core::starknet::SyscallResultTrait;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address};
+use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address};
 
 use starknet::{ContractAddress};
 
@@ -24,9 +23,13 @@ pub fn NFT_BASE_URI() -> ByteArray {
     ""
 }
 pub fn do_create_gameitem(
-    owner: ContractAddress, name: ByteArray, symbol: ByteArray, baseURI: ByteArray, totalSupply: u256
+    owner: ContractAddress,
+    name: ByteArray,
+    symbol: ByteArray,
+    baseURI: ByteArray,
+    totalSupply: u256
 ) -> ContractAddress {
-    let contract = declare("GameItem").unwrap_syscall();
+    let contract = declare("GameItem").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
@@ -55,7 +58,7 @@ fn safe_batch_mint_works() {
     start_cheat_caller_address(contract_address, owner);
     OpenNFT.safe_batch_mint(to, 10);
 
-    assert_eq!(ERC721.owner_of(9), to);
+    assert(ERC721.owner_of(9) == to, 'NFT owner not correct');
 }
 
 #[test]
@@ -73,7 +76,7 @@ fn safe_batch_mint_with_uris_works() {
     start_cheat_caller_address(contract_address, owner);
     OpenNFT.safe_batch_mint_with_uris(to, uris.span());
 
-    assert_eq!(ERC721.owner_of(2), to);
+    assert(ERC721.owner_of(2) == to, 'NFT owner not correct');
 }
 
 #[test]
@@ -92,7 +95,7 @@ fn get_token_uri_only_baseURI_works() {
     start_cheat_caller_address(contract_address, owner);
     OpenNFT.safe_batch_mint(to, 1);
 
-    assert_eq!(NFTMetadata.token_uri(0), "https://api.openmark.io/0");
+    assert(NFTMetadata.token_uri(0) == "https://api.openmark.io/0", 'Token uri not correct');
 }
 
 
@@ -109,7 +112,7 @@ fn get_token_uri_without_baseURI_works() {
     start_cheat_caller_address(contract_address, owner);
 
     OpenNFT.safe_batch_mint_with_uris(to, array!["TOKEN1"].span());
-    assert_eq!(NFTMetadata.token_uri(0), "TOKEN1");
+    assert(NFTMetadata.token_uri(0) == "TOKEN1", 'Token uri not correct');
 }
 
 #[test]
@@ -128,18 +131,18 @@ fn get_token_uri_with_baseURI_and_tokenURI_works() {
     start_cheat_caller_address(contract_address, owner);
 
     OpenNFT.safe_batch_mint_with_uris(to, array!["TOKEN2"].span());
-    assert_eq!(NFTMetadata.token_uri(0), "https://api.openmark.io/TOKEN2");
+    assert(NFTMetadata.token_uri(0) == "https://api.openmark.io/TOKEN2", 'Token uri not correct');
 }
 
 #[test]
 #[should_panic(expected: ('Caller is missing role',))]
 fn safe_batch_mint_unauthorized_panics() {
-let owner: ContractAddress = toAddress(SELLER1);
+    let owner: ContractAddress = toAddress(SELLER1);
     let contract_address = create_gameitem(owner);
 
     let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
 
-   let to: ContractAddress = toAddress(BUYER1);
+    let to: ContractAddress = toAddress(BUYER1);
     start_cheat_caller_address(contract_address, to);
     OpenNFT.safe_batch_mint(to, 10);
 }
@@ -147,12 +150,12 @@ let owner: ContractAddress = toAddress(SELLER1);
 #[test]
 #[should_panic(expected: ('Caller is missing role',))]
 fn safe_batch_mint_with_uris_unauthorized_panics() {
-let owner: ContractAddress = toAddress(SELLER1);
+    let owner: ContractAddress = toAddress(SELLER1);
     let contract_address = create_gameitem(owner);
 
     let OpenNFT = IOpenMarkNFTDispatcher { contract_address };
 
-   let to: ContractAddress = toAddress(BUYER1);
+    let to: ContractAddress = toAddress(BUYER1);
     start_cheat_caller_address(contract_address, to);
     OpenNFT.safe_batch_mint_with_uris(to, array!["a", "b"].span());
 }

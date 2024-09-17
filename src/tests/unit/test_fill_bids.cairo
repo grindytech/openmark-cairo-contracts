@@ -7,23 +7,17 @@ use core::traits::TryInto;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-use snforge_std::{
-    start_cheat_caller_address, load, map_entry_address
-};
+use snforge_std::{start_cheat_caller_address, load, map_entry_address};
 
 use openmark::{
     core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
-    core::interface::{
-        IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait
-    },
-    core::openmark::OpenMark::{InternalImplTrait},
-    core::OpenMark::Event as OpenMarkEvent, core::events::{BidCancelled},
-    core::errors::OMErrors as Errors,
+    core::interface::{IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait},
+    core::openmark::OpenMark::{InternalImplTrait}, core::OpenMark::Event as OpenMarkEvent,
+    core::events::{BidCancelled}, core::errors::OMErrors as Errors,
 };
 
 use openmark::tests::unit::common::{
-    create_bids, ZERO, create_mock_hasher,
-    get_contract_state_for_testing
+    create_bids, ZERO, create_mock_hasher, get_contract_state_for_testing
 };
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
@@ -53,18 +47,29 @@ fn fill_bids_works() {
     let buyer2_after_balance = payment_dispatcher.balance_of(*buyers.at(1));
     let buyer3_after_balance = payment_dispatcher.balance_of(*buyers.at(2));
 
-    assert_eq!(nft_dispatcher.owner_of(0), *buyers.at(0));
-    assert_eq!(nft_dispatcher.owner_of(1), *buyers.at(1));
-    assert_eq!(nft_dispatcher.owner_of(2), *buyers.at(1));
-    assert_eq!(nft_dispatcher.owner_of(3), *buyers.at(2));
-    assert_eq!(nft_dispatcher.owner_of(4), *buyers.at(2));
-    assert_eq!(nft_dispatcher.owner_of(5), *buyers.at(2));
+    assert(nft_dispatcher.owner_of(0) == *buyers.at(0), 'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(1) == *buyers.at(1), 'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(2) == *buyers.at(1), 'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(3) == *buyers.at(2), 'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(4) == *buyers.at(2), 'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(5) == *buyers.at(2), 'NFT owner not correct');
 
-    assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * 6));
-
-    assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
-    assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
-    assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
+    assert(
+        seller_after_balance == seller_before_balance + (unitPrice.into() * 6),
+        'Seller balance not correct'
+    );
+    assert(
+        buyer1_after_balance == buyer1_before_balance - unitPrice.into(),
+        'Buyer balance not correct'
+    );
+    assert(
+        buyer2_after_balance == buyer2_before_balance - (unitPrice.into() * 2),
+        'Buyer balance not correct'
+    );
+    assert(
+        buyer3_after_balance == buyer3_before_balance - (unitPrice.into() * 3),
+        'Buyer balance not correct'
+    );
 }
 
 #[test]
@@ -95,17 +100,16 @@ fn fill_bids_partial_works() {
     let buyer2_after_balance = payment_dispatcher.balance_of(*buyers.at(1));
     let buyer3_after_balance = payment_dispatcher.balance_of(*buyers.at(2));
 
-    assert_eq!(nft_dispatcher.owner_of(0), *buyers.at(0));
-    assert_eq!(nft_dispatcher.owner_of(1), *buyers.at(1));
-    assert_eq!(nft_dispatcher.owner_of(2), *buyers.at(1));
-    assert_eq!(nft_dispatcher.owner_of(3), *buyers.at(2));
-    assert_eq!(nft_dispatcher.owner_of(4), *buyers.at(2));
+    assert(nft_dispatcher.owner_of(0) == *buyers.at(0),'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(1) == *buyers.at(1),'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(2) == *buyers.at(1),'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(3) == *buyers.at(2),'NFT owner not correct');
+    assert(nft_dispatcher.owner_of(4) == *buyers.at(2),'NFT owner not correct');
 
-    assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * 5));
-
-    assert_eq!(buyer1_after_balance, buyer1_before_balance - unitPrice.into());
-    assert_eq!(buyer2_after_balance, buyer2_before_balance - (unitPrice.into() * 2));
-    assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 2));
+    assert(seller_after_balance== seller_before_balance + (unitPrice.into() * 5), 'Seller balance not correct');
+    assert(buyer1_after_balance== buyer1_before_balance - unitPrice.into(), 'Buyer balance not correct');
+    assert(buyer2_after_balance== buyer2_before_balance - (unitPrice.into() * 2), 'Buyer balance not correct');
+    assert(buyer3_after_balance== buyer3_before_balance - (unitPrice.into() * 2), 'Buyer balance not correct');
     let hasher = create_mock_hasher();
     let hash_sig: felt252 = hasher.hash_array((*signed_bids.at(2)).signature);
     let partialBidSignatures = load(
@@ -113,32 +117,32 @@ fn fill_bids_partial_works() {
         map_entry_address(selector!("partialBidSignatures"), array![hash_sig].span()),
         1,
     );
-    assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 1_u128);
+    assert((*partialBidSignatures.at(0)).try_into().unwrap() == 1_u128, 'Partial signature not correct');
 
     openmark
         .fill_bids(
             array![*signed_bids.at(2)].span(), nft_token, array![5].span(), payment_token, unitPrice
         );
 
-    assert_eq!(nft_dispatcher.owner_of(5), *buyers.at(2));
+    assert(nft_dispatcher.owner_of(5) == *buyers.at(2), 'NFT owner not correct');
 
     let seller_after_balance = payment_dispatcher.balance_of(seller);
     let buyer3_after_balance = payment_dispatcher.balance_of(*buyers.at(2));
-    assert_eq!(seller_after_balance, seller_before_balance + (unitPrice.into() * 6));
-    assert_eq!(buyer3_after_balance, buyer3_before_balance - (unitPrice.into() * 3));
+    assert(seller_after_balance == seller_before_balance + (unitPrice.into() * 6), 'Seller balance not correct');
+    assert(buyer3_after_balance == buyer3_before_balance - (unitPrice.into() * 3), 'Buyer balance not correct');
 
     let partialBidSignatures = load(
         openmark_address,
         map_entry_address(selector!("partialBidSignatures"), array![hash_sig].span()),
         1,
     );
-    assert_eq!((*partialBidSignatures.at(0)).try_into().unwrap(), 0_u128);
+    assert((*partialBidSignatures.at(0)).try_into().unwrap() == 0_u128, 'Partial signature not coorect');
     let usedSignatures = load(
         openmark_address,
         map_entry_address(selector!("usedSignatures"), array![hash_sig].span()),
         1,
     );
-    assert_eq!(*usedSignatures.at(0), true.into());
+    assert(*usedSignatures.at(0) == true.into(), 'Signature must be used');
 }
 
 
@@ -146,31 +150,28 @@ fn fill_bids_partial_works() {
 fn cancel_bid_works() {
     let (mut signed_bids, openmark_address, _, _, _, buyers, _) = create_bids();
 
-    {
-        start_cheat_caller_address(openmark_address, *buyers.at(0));
-        let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-        let hasher = create_mock_hasher();
-        let hash_sig: felt252 = hasher.hash_array(*signed_bids.at(0).signature);
+    start_cheat_caller_address(openmark_address, *buyers.at(0));
+    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
+    let hasher = create_mock_hasher();
+    let hash_sig: felt252 = hasher.hash_array(*signed_bids.at(0).signature);
 
-        openmark.cancel_bid(*signed_bids.at(0).bid, *signed_bids.at(0).signature);
+    openmark.cancel_bid(*signed_bids.at(0).bid, *signed_bids.at(0).signature);
 
-        let usedSignatures = load(
-            openmark_address,
-            map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
-            1,
-        );
+    let usedSignatures = load(
+        openmark_address,
+        map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+        1,
+    );
 
-        assert_eq!(*usedSignatures.at(0), true.into());
-        // events
-        let _expected_event = OpenMarkEvent::BidCancelled(
-            BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
-        );
-    }
+    assert(*usedSignatures.at(0)== true.into(), 'Signature must be used');
+    // events
+    let _expected_event = OpenMarkEvent::BidCancelled(
+        BidCancelled { who: *buyers.at(0), bid: (*signed_bids.at(0)).bid }
+    );
 }
 
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: no valid bids',))]
 fn fill_bids_no_valid_bids_panics() {
     let (_, openmark_address, nft_token, payment_token, seller, _, token_ids,) = create_bids();
@@ -183,7 +184,6 @@ fn fill_bids_no_valid_bids_panics() {
 
 
 #[test]
-
 #[should_panic(expected: ('OPENMARK: too many nfts',))]
 fn fill_bids_too_many_nft_panics() {
     let (mut signed_bids, openmark_address, nft_token, payment_token, seller, _, tokenIds) =
@@ -212,7 +212,7 @@ fn fill_bids_zero_nfts() {
         @get_contract_state_for_testing(), seller, nft_token, array![].span()
     );
 
-    assert_eq!(result, Result::Err(Errors::ZERO_NFTS));
+    assert(result == Result::Err(Errors::ZERO_NFTS), 'Verify bid failed');
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn fill_bids_seller_is_zero() {
         @get_contract_state_for_testing(), ZERO(), nft_token, token_ids
     );
 
-    assert_eq!(result, Result::Err(Errors::ZERO_ADDRESS));
+    assert(result== Result::Err(Errors::ZERO_ADDRESS), 'Verify bid failed');
 }
 
 #[test]
@@ -244,7 +244,7 @@ fn fill_bids_seller_not_owner() {
         @get_contract_state_for_testing(), seller, nft_token, token_ids
     );
 
-    assert_eq!(result, Result::Err(Errors::NOT_NFT_OWNER));
+    assert(result== Result::Err(Errors::NOT_NFT_OWNER), 'Verify bid failed');
 }
 
 
@@ -259,7 +259,7 @@ fn fill_bids_invalid_signature_len() {
         @get_contract_state_for_testing(), new_bid.bid, new_bid.bidder, new_bid.signature
     );
 
-    assert_eq!(result, Result::Err(Errors::INVALID_SIGNATURE_LEN));
+    assert(result== Result::Err(Errors::INVALID_SIGNATURE_LEN), 'Verify bid failed');
 }
 
 #[test]
@@ -281,7 +281,7 @@ fn fill_bids_signature_used() {
         @state, new_bid.bid, new_bid.bidder, new_bid.signature
     );
 
-    assert_eq!(result, Result::Err(Errors::SIGNATURE_USED));
+    assert(result== Result::Err(Errors::SIGNATURE_USED), 'Verify bid failed');
 }
 
 
@@ -294,7 +294,7 @@ fn fill_bids_buyer_is_zero() {
         @get_contract_state_for_testing(), new_bid.bid, ZERO()
     );
 
-    assert_eq!(result, Result::Err(Errors::ZERO_ADDRESS));
+    assert(result== Result::Err(Errors::ZERO_ADDRESS), 'Verify bid failed');
 }
 
 
@@ -308,7 +308,7 @@ fn fill_bids_invalid_payment() {
 
     let result = InternalImplTrait::_verify_bid(@state, new_bid.bid, new_bid.bidder,);
 
-    assert_eq!(result, Result::Err(Errors::INVALID_PAYMENT_TOKEN));
+    assert(result== Result::Err(Errors::INVALID_PAYMENT_TOKEN), 'Verify bid failed');
 }
 
 #[test]
@@ -323,7 +323,7 @@ fn fill_bids_zero_amount() {
 
     let result = InternalImplTrait::_verify_bid(@state, new_bid.bid, new_bid.bidder,);
 
-    assert_eq!(result, Result::Err(Errors::ZERO_BIDS_AMOUNT));
+    assert(result== Result::Err(Errors::ZERO_BIDS_AMOUNT), 'Verify bid failed');
 }
 
 #[test]
@@ -338,7 +338,7 @@ fn fill_bids_zero_price() {
 
     let result = InternalImplTrait::_verify_bid(@state, new_bid.bid, new_bid.bidder,);
 
-    assert_eq!(result, Result::Err(Errors::PRICE_IS_ZERO));
+    assert(result== Result::Err(Errors::PRICE_IS_ZERO), 'Verify bid failed');
 }
 
 #[test]
@@ -356,7 +356,7 @@ fn fill_bids_insufficient_balance() {
 
     let result = InternalImplTrait::_verify_bid(@state, new_bid.bid, new_bid.bidder,);
 
-    assert_eq!(result, Result::Err(Errors::INSUFFICIENT_BALANCE));
+    assert(result== Result::Err(Errors::INSUFFICIENT_BALANCE), 'Verify bid failed');
 }
 
 #[test]
@@ -371,7 +371,7 @@ fn fill_bids_bid_expired() {
 
     let result = InternalImplTrait::_verify_bid(@state, new_bid.bid, new_bid.bidder,);
 
-    assert_eq!(result, Result::Err(Errors::BID_EXPIRED));
+    assert(result== Result::Err(Errors::BID_EXPIRED), 'Verify bid failed');
 }
 
 #[test]
@@ -388,7 +388,7 @@ fn fill_bids_nft_mismatch() {
         @state, new_bid.bid, payment_token, payment_token, new_bid.bid.unitPrice
     );
 
-    assert_eq!(result, Result::Err(Errors::NFT_MISMATCH));
+    assert(result== Result::Err(Errors::NFT_MISMATCH), 'Verify matching failed');
 }
 
 #[test]
@@ -405,7 +405,7 @@ fn fill_bids_payment_mismatch() {
         @state, new_bid.bid, nft_token, nft_token, new_bid.bid.unitPrice
     );
 
-    assert_eq!(result, Result::Err(Errors::PAYMENT_MISMATCH));
+    assert(result== Result::Err(Errors::PAYMENT_MISMATCH), 'Verify matching failed');
 }
 
 #[test]
@@ -422,6 +422,6 @@ fn fill_bids_asking_too_high() {
         @state, new_bid.bid, nft_token, payment_token, new_bid.bid.unitPrice + 1
     );
 
-    assert_eq!(result, Result::Err(Errors::ASKING_PRICE_TOO_HIGH));
+    assert(result== Result::Err(Errors::ASKING_PRICE_TOO_HIGH), 'Verify matching failed');
 }
 
