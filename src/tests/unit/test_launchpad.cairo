@@ -2,6 +2,8 @@ use super::super::super::factory::interface::ILaunchpadFactoryProviderDispatcher
 use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
 use openmark::launchpad::interface::{
     ILaunchpadDispatcher, ILaunchpadProviderDispatcherTrait, ILaunchpadProviderDispatcher,
+    ILaunchpadManagerDispatcher, ILaunchpadManagerDispatcherTrait, ILaunchpadHelperDispatcher,
+    ILaunchpadHelperDispatcherTrait,
 };
 use openzeppelin::utils::serde::SerializedAppend;
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
@@ -294,7 +296,7 @@ fn withdraw_sales_works() {
     let owner = toAddress(SELLER1);
     let buyer = toAddress(BUYER1);
     let transfer_amount = 100;
-    let (launchpad_address, launchpad_contract, payment_address, _) = create_launchpad(owner);
+    let (launchpad_address, _, payment_address, _) = create_launchpad(owner);
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
     start_cheat_caller_address(payment_address, buyer);
@@ -302,19 +304,20 @@ fn withdraw_sales_works() {
     stop_cheat_caller_address(payment_address);
 
     let owner_before_balance = payment_dispatcher.balance_of(owner);
-    let launchpad_before_balance = payment_dispatcher.balance_of(launchpad_address);
 
     start_cheat_caller_address(launchpad_address, owner);
-    launchpad_contract.withdrawSales(array![payment_address].span());
+    let manager_dispatcher = ILaunchpadManagerDispatcher { contract_address: launchpad_address };
 
-    let owner_after_balance = payment_dispatcher.balance_of(owner);
-    let launchpad_after_balance = payment_dispatcher.balance_of(launchpad_address);
+    manager_dispatcher.withdrawSales(array![payment_address].span());
 
+    let helper_dispatcher = ILaunchpadHelperDispatcher { contract_address: launchpad_address };
+    let (_, deposit_amount) = helper_dispatcher.launchpadDeposit();
     assert(
-        owner_after_balance == owner_before_balance + transfer_amount, 'Owner balance incorrect'
+        payment_dispatcher.balance_of(owner) == owner_before_balance + transfer_amount,
+        'Owner balance incorrect'
     );
     assert(
-        launchpad_after_balance == launchpad_before_balance - transfer_amount,
+        payment_dispatcher.balance_of(launchpad_address) == deposit_amount.into(),
         'Launchpad balance incorrect'
     );
 }
@@ -497,9 +500,11 @@ fn withdraw_sales_not_owner_panics() {
     let buyer1 = toAddress(BUYER1);
     let not_owner = 0x1.try_into().unwrap();
 
-    let (launchpad_address, launchpad_contract, payment_address, _, _) = setup_stage(
+    let (launchpad_address, _, payment_address, _, _) = setup_stage(
         1, seller, array![buyer1].span()
     );
     start_cheat_caller_address(launchpad_address, not_owner);
-    launchpad_contract.withdrawSales(array![payment_address].span());
+    let manager_dispatcher = ILaunchpadManagerDispatcher { contract_address: launchpad_address };
+
+    manager_dispatcher.withdrawSales(array![payment_address].span());
 }

@@ -15,7 +15,9 @@ pub mod Launchpad {
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
     };
-    use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
+    use openmark::launchpad::interface::{
+        ILaunchpad, ILaunchpadProvider, ILaunchpadManager, ILaunchpadHelper
+    };
     use openmark::launchpad::events::{
         StageUpdated, StageRemoved, WhitelistUpdated, WhitelistRemoved, SalesWithdrawn,
         TokensBought, LaunchpadClosed
@@ -199,33 +201,13 @@ pub mod Launchpad {
                     }
                 );
         }
-
-        fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {
-            self.ownable.assert_only_owner();
-
-            let owner = get_caller_address();
-            let launchpad = get_contract_address();
-            for token in tokens {
-                let balance = payment_balance_of(*token, launchpad);
-                payment_transfer(*token, owner, balance);
-                self
-                    .emit(
-                        SalesWithdrawn {
-                            owner, tokenPayment: *token, amount: balance.try_into().unwrap()
-                        }
-                    );
-            };
-        }
-
-        fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
-            self.ownable.assert_only_owner();
-            self.isClosed.write(true);
-            self.withdrawSales(tokens);
-        }
     }
 
     #[abi(embed_v0)]
     impl LaunchpadProviderImpl of ILaunchpadProvider<ContractState> {
+        fn validateStage(self: @ContractState, stage: Stage) {}
+
+
         fn getStage(self: @ContractState, stageId: ID) -> Stage {
             assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
             return self.launchpadStages.read(stageId);
@@ -260,6 +242,60 @@ pub mod Launchpad {
         ) -> bool {
             let leaf_hash = _leaf_hash(minter);
             return verify::<PedersenCHasher>(merkleProof, merkleRoot, leaf_hash);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl LaunchpadHelperImpl of ILaunchpadHelper<ContractState> {
+        fn setLaunchpadUri(ref self: ContractState, uri: ByteArray) {
+            self.ownable.assert_only_owner();
+            self.uri.write(uri);
+        }
+
+        fn getLaunchpadUri(self: @ContractState) -> ByteArray {
+            self.uri.read()
+        }
+
+        fn getFactory(self: @ContractState) -> ContractAddress {
+            self.factory.read()
+        }
+
+        fn isClosed(self: @ContractState) -> bool {
+            self.isClosed.read()
+        }
+
+        fn launchpadDeposit(self: @ContractState) -> (ContractAddress, Balance) {
+            (self.depositPaymentToken.read(), self.depositAmount.read())
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl LaunchpadManagerImpl of ILaunchpadManager<ContractState> {
+        fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+
+            let owner = get_caller_address();
+            let launchpad = get_contract_address();
+            for token in tokens {
+                let mut balance = payment_balance_of(*token, launchpad);
+
+                if (*token == self.depositPaymentToken.read()) {
+                    balance -= self.depositAmount.read().into();
+                }
+                payment_transfer(*token, owner, balance);
+                self
+                    .emit(
+                        SalesWithdrawn {
+                            owner, tokenPayment: *token, amount: balance.try_into().unwrap()
+                        }
+                    );
+            };
+        }
+
+        fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
+            self.ownable.assert_only_owner();
+            self.isClosed.write(true);
+            self.withdrawSales(tokens);
         }
     }
 

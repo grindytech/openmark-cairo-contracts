@@ -1,5 +1,5 @@
 #[starknet::contract]
-pub mod CommunityNFT {
+pub mod OpenCollection {
     use openzeppelin::token::erc721::interface::ERC721ABI;
     use openzeppelin::introspection::interface::ISRC5;
     use openzeppelin::token::erc721::erc721::ERC721Component::InternalTrait as ERC721Internal;
