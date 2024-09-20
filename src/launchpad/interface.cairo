@@ -16,7 +16,7 @@ pub trait ILaunchpad<T> {
 
 #[starknet::interface]
 pub trait ILaunchpadProvider<T> {
-    fn validateStage(self: @T, stage: Stage);
+    fn validateStage(self: @T, stage: Stage, owner: ContractAddress);
 
     fn getStage(self: @T, stageId: ID) -> Stage;
 

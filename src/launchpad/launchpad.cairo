@@ -5,6 +5,7 @@ pub mod Launchpad {
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin_merkle_tree::merkle_proof::{verify};
+    use openzeppelin_access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin_merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::pedersen::{PedersenTrait, pedersen};
@@ -23,9 +24,11 @@ pub mod Launchpad {
         TokensBought, LaunchpadClosed
     };
     use openmark::primitives::types::{Stage, ID, Balance};
+    use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of,
+        access_has_role, verify_payment_token, get_commission
     };
 
     /// Ownable
@@ -110,20 +113,15 @@ pub mod Launchpad {
             self.ownable.assert_only_owner();
             assert(stages.len() == merkleRoots.len(), Errors::LENGTH_MISMATCH);
 
+            let owner = get_caller_address();
             let mut i = 0;
             while (i < stages.len()) {
-                let stageId = *stages.at(i).id;
-                self.isStageOn.write(stageId, true);
-                self.launchpadStages.write(stageId, *stages.at(i));
-                self.stageWhitelist.write(stageId, *merkleRoots.at(i));
-                self
-                    .emit(
-                        StageUpdated {
-                            owner: get_caller_address(),
-                            stage: *stages.at(i),
-                            merkleRoot: *merkleRoots.at(i)
-                        }
-                    );
+                let stage = *stages.at(i);
+                self.validateStage(stage, owner);
+                let merkleRoot = *merkleRoots.at(i);
+
+                self._set_stage(stage, merkleRoot);
+                self.emit(StageUpdated { owner, stage, merkleRoot });
 
                 i += 1;
             }
@@ -205,8 +203,21 @@ pub mod Launchpad {
 
     #[abi(embed_v0)]
     impl LaunchpadProviderImpl of ILaunchpadProvider<ContractState> {
-        fn validateStage(self: @ContractState, stage: Stage) {}
+        fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
+            assert(
+                verify_payment_token(self.factory.read(), stage.payment),
+                Errors::INVALID_PAYMENT_TOKEN
+            );
 
+            assert(
+                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner),
+                Errors::NOT_COLLECTION_OWNER
+            );
+            assert(
+                access_has_role(stage.collection, MINTER_ROLE, get_contract_address()),
+                Errors::MISSING_MINTER_ROLE
+            );
+        }
 
         fn getStage(self: @ContractState, stageId: ID) -> Stage {
             assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
@@ -277,16 +288,20 @@ pub mod Launchpad {
             let owner = get_caller_address();
             let launchpad = get_contract_address();
             for token in tokens {
-                let mut balance = payment_balance_of(*token, launchpad);
+                let mut sales: Balance = payment_balance_of(*token, launchpad).try_into().unwrap();
 
                 if (*token == self.depositPaymentToken.read()) {
-                    balance -= self.depositAmount.read().into();
+                    sales -= self.depositAmount.read().into();
                 }
-                payment_transfer(*token, owner, balance);
+                let fee = self._calculate_commission(sales);
+                let payout = sales - fee.into();
+
+                payment_transfer(*token, owner, payout.into());
+                payment_transfer(*token, self.factory.read(), fee.into());
                 self
                     .emit(
                         SalesWithdrawn {
-                            owner, tokenPayment: *token, amount: balance.try_into().unwrap()
+                            owner, tokenPayment: *token, amount: payout
                         }
                     );
             };
@@ -304,6 +319,7 @@ pub mod Launchpad {
         pedersen(0, hash_state.update_with(address).update_with(1).finalize())
     }
 
+
     #[abi(embed_v0)]
     impl UpgradeableImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
@@ -313,5 +329,24 @@ pub mod Launchpad {
             // Replace the class hash upgrading the contract
             self.upgradeable.upgrade(new_class_hash);
         }
+    }
+
+    #[generate_trait]
+    pub impl InternalImpl of InternalImplTrait {
+        fn _set_stage(ref self: ContractState, stage: Stage, merkleRoot: Option<felt252>) {
+            self.isStageOn.write(stage.id, true);
+            self.launchpadStages.write(stage.id, stage);
+            self.stageWhitelist.write(stage.id, merkleRoot);
+        }
+
+    fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
+        let commission: Balance = get_commission(self.factory.read()).into();
+
+        if (commission > 0) {
+            return commission * price / PERMYRIAD.into();
+        }
+        return 0;
+    }
+
     }
 }

@@ -1,4 +1,5 @@
-pub const MINTER_ROLE: felt252 = 'MINTER_ROL';
+pub const MINTER_ROLE: felt252 = 'MINTER_ROLE';
+pub const PERMYRIAD: u32 = 1000;
 
 pub const STARKNET_DOMAIN_TYPE_HASH: felt252 =
     selector!("StarkNetDomain(name:felt,version:felt,chainId:felt)");

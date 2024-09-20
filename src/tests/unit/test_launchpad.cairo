@@ -23,6 +23,7 @@ use openmark::tests::unit::common::{
 };
 use openmark::primitives::types::{Stage};
 use openmark::primitives::constants::{MINTER_ROLE};
+use openmark::primitives::utils::{get_commission};
 use openmark::factory::interface::{
     ILaunchpadFactoryDispatcherTrait, ILaunchpadFactoryProviderDispatcher
 };
@@ -135,7 +136,7 @@ const PROOF: [
 #[test]
 fn update_stages_works() {
     let owner = toAddress(SELLER1);
-    let (contract_address, launchpad_contract, nft_address, payment_address) = create_launchpad(
+    let (launchpad_address, launchpad_contract, payment_address, nft_address) = create_launchpad(
         owner
     );
     let id = 10;
@@ -153,9 +154,14 @@ fn update_stages_works() {
     ];
 
     let whitelists = array![Option::Some(ROOT)];
-    start_cheat_caller_address(contract_address, owner);
+    start_cheat_caller_address(launchpad_address, owner);
+    start_cheat_caller_address(nft_address, owner);
+
+    let accesscontrol_dispatcher = IAccessControlDispatcher { contract_address: nft_address };
+    accesscontrol_dispatcher.grant_role(MINTER_ROLE, launchpad_address);
+
     launchpad_contract.updateStages(new_stages.span(), whitelists.span());
-    let provider = ILaunchpadProviderDispatcher { contract_address };
+    let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
     assert(provider.getStage(id).id == id, 'Get stage failed');
     assert(provider.getActiveStage(id).id == id, 'Get active stage failed');
     assert(provider.getWhitelist(id) == Option::Some(ROOT), 'Get whitelist failed');
@@ -295,12 +301,12 @@ fn buy_with_whitelist_works() {
 fn withdraw_sales_works() {
     let owner = toAddress(SELLER1);
     let buyer = toAddress(BUYER1);
-    let transfer_amount = 100;
+    let sales = 100;
     let (launchpad_address, _, payment_address, _) = create_launchpad(owner);
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
     start_cheat_caller_address(payment_address, buyer);
-    payment_dispatcher.transfer(launchpad_address, transfer_amount);
+    payment_dispatcher.transfer(launchpad_address, sales);
     stop_cheat_caller_address(payment_address);
 
     let owner_before_balance = payment_dispatcher.balance_of(owner);
@@ -312,9 +318,18 @@ fn withdraw_sales_works() {
 
     let helper_dispatcher = ILaunchpadHelperDispatcher { contract_address: launchpad_address };
     let (_, deposit_amount) = helper_dispatcher.launchpadDeposit();
+
+    let factory_address = helper_dispatcher.getFactory();
+    let fee = sales * get_commission(factory_address).into() / 1000;
+    let payout = sales - fee;
+
     assert(
-        payment_dispatcher.balance_of(owner) == owner_before_balance + transfer_amount,
+        payment_dispatcher.balance_of(owner) == owner_before_balance + payout,
         'Owner balance incorrect'
+    );
+    assert(
+        payment_dispatcher.balance_of(factory_address) == fee.into(),
+        'Launchpad balance incorrect'
     );
     assert(
         payment_dispatcher.balance_of(launchpad_address) == deposit_amount.into(),
