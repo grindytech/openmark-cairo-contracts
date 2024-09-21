@@ -1,8 +1,7 @@
-use super::super::super::factory::interface::ILaunchpadFactoryProviderDispatcherTrait;
 use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
 use openmark::launchpad::interface::{
-    ILaunchpadDispatcher, ILaunchpadProviderDispatcherTrait, ILaunchpadProviderDispatcher
-    ,IOpenLaunchpadProviderDispatcher, IOpenLaunchpadProviderDispatcherTrait,
+    ILaunchpadDispatcher, ILaunchpadProviderDispatcherTrait, ILaunchpadProviderDispatcher,
+    IOpenLaunchpadProviderDispatcher, IOpenLaunchpadProviderDispatcherTrait,
     IOpenLaunchpadManagerDispatcher, IOpenLaunchpadManagerDispatcherTrait
 };
 use openzeppelin::utils::serde::SerializedAppend;
@@ -12,18 +11,19 @@ use openzeppelin::access::accesscontrol::interface::{
     IAccessControlDispatcher, IAccessControlDispatcherTrait
 };
 
+use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
+
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
     start_cheat_block_timestamp, DeclareResultTrait
 };
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
-    SELLER1, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at, NFT_NAME,
+    SELLER1,SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at, NFT_NAME,
     NFT_SYMBOL, NFT_BASE_URI, setup_collection_at
 };
 use openmark::primitives::types::{Stage};
 use openmark::primitives::constants::{MINTER_ROLE};
-use openmark::primitives::utils::{get_commission};
 
 pub fn create_game_item(owner: ContractAddress) -> ContractAddress {
     let contract = declare("GameItem").unwrap().contract_class();
@@ -73,7 +73,7 @@ fn setup_stage(
                     id: i.into(),
                     collection: nft_address,
                     payment: payment_address,
-                    price: 1,
+                    price: 100,
                     maxAllocation: 10,
                     limit: 6,
                     startTime: 10,
@@ -286,45 +286,50 @@ fn buy_with_whitelist_works() {
     );
 }
 
-// #[test]
-// fn withdraw_sales_works() {
-//     let owner = toAddress(SELLER1);
-//     let buyer = toAddress(BUYER1);
-//     let sales = 100;
-//     let (launchpad_address, _, payment_address, _) = create_open_launchpad(owner);
+#[test]
+fn withdraw_sales_works() {
+    let seller = toAddress(SELLER1);
+    let owner = toAddress(SELLER2);
+    let buyer1 = toAddress(BUYER1);
 
-//     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
-//     start_cheat_caller_address(payment_address, buyer);
-//     payment_dispatcher.transfer(launchpad_address, sales);
-//     stop_cheat_caller_address(payment_address);
+    let (launchpad_address, launchpad_contract, payment_address, _, stages) = setup_stage(
+        1, seller, array![buyer1].span()
+    );
+    let provider_dispatcher = IOpenLaunchpadProviderDispatcher {
+        contract_address: launchpad_address
+    };
 
-//     let owner_before_balance = payment_dispatcher.balance_of(owner);
+    let stage = *stages.at(0);
+    let amount = 2;
+    let sales = stage.price * amount;
+    let fee = sales * provider_dispatcher.getCommission().into() / 1000;
+    let payout = sales - fee;
 
-//     start_cheat_caller_address(launchpad_address, owner);
-//     let manager_dispatcher = ILaunchpadManagerDispatcher { contract_address: launchpad_address };
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
 
-//     manager_dispatcher.withdrawSales(array![payment_address].span());
+    start_cheat_caller_address(launchpad_address, seller);
+    launchpad_contract.updateWhitelist(array![stage.id].span(), array![Option::Some(ROOT)].span());
 
-//     let helper_dispatcher = ILaunchpadHelperDispatcher { contract_address: launchpad_address };
-//     let (_, deposit_amount) = helper_dispatcher.launchpadDeposit();
+    start_cheat_caller_address(launchpad_address, buyer1);
+    launchpad_contract.buy(stage.id, amount, PROOF.span());
 
-//     let factory_address = helper_dispatcher.getFactory();
-//     let fee = sales * get_commission(factory_address).into() / 1000;
-//     let payout = sales - fee;
+    let manager_dispatcher = IOpenLaunchpadManagerDispatcher {
+        contract_address: launchpad_address
+    };
+    let ownable_dispatcher = IOwnableDispatcher { contract_address: launchpad_address };
+    start_cheat_caller_address(launchpad_address, seller);
+    ownable_dispatcher.transfer_ownership(owner);
 
-//     assert(
-//         payment_dispatcher.balance_of(owner) == owner_before_balance + payout,
-//         'Owner balance incorrect'
-//     );
-//     assert(
-//         payment_dispatcher.balance_of(factory_address) == fee.into(), 'Launchpad balance
-//         incorrect'
-//     );
-//     assert(
-//         payment_dispatcher.balance_of(launchpad_address) == deposit_amount.into(),
-//         'Launchpad balance incorrect'
-//     );
-// }
+    let seller_balance = payment_dispatcher.balance_of(seller);
+    let owner_balance = payment_dispatcher.balance_of(owner);
+    manager_dispatcher.withdrawSales(stage.id);
+
+    assert(
+        payment_dispatcher.balance_of(seller) == seller_balance + payout.into(),
+        'seller balance incorrect'
+    );
+    assert(payment_dispatcher.balance_of(owner) == owner_balance + fee.into(), 'Owner balance incorrect');
+}
 
 #[test]
 #[should_panic(expected: ('Launchpad: sold out',))]
@@ -436,7 +441,7 @@ fn update_stages_not_collection_owner_panics() {
     start_cheat_caller_address(launchpad_address, not_owner);
     let new_stages = array![
         Stage {
-            id: 0,
+            id: 12,
             collection: nft_address,
             payment: payment_address,
             price: 1,
@@ -531,10 +536,10 @@ fn withdraw_sales_not_owner_panics() {
     let buyer1 = toAddress(BUYER1);
     let not_owner = 0x1.try_into().unwrap();
 
-    let (launchpad_address, _, _, _, stages) = setup_stage(
-        1, seller, array![buyer1].span()
-    );
+    let (launchpad_address, _, _, _, stages) = setup_stage(1, seller, array![buyer1].span());
     start_cheat_caller_address(launchpad_address, not_owner);
-    let manager_dispatcher = IOpenLaunchpadManagerDispatcher { contract_address: launchpad_address };
+    let manager_dispatcher = IOpenLaunchpadManagerDispatcher {
+        contract_address: launchpad_address
+    };
     manager_dispatcher.withdrawSales(*stages.at(0).id);
 }

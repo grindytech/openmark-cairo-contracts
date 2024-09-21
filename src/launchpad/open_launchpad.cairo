@@ -30,8 +30,8 @@ pub mod OpenLaunchpad {
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of,
-        access_has_role, verify_payment_token, get_commission
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer,
+        access_has_role
     };
 
     /// Ownable
@@ -197,11 +197,14 @@ pub mod OpenLaunchpad {
             let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
 
             let price = mintAmount * stage.price;
-            payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+            if price > 0 {
+                payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+                let sales = self.stageSales.read(stageId);
+                self.stageSales.write(stageId, sales + price);
+            }
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
-
             self
                 .emit(
                     TokensBought {
@@ -227,7 +230,6 @@ pub mod OpenLaunchpad {
             if sales > 0 {
                 let fee = self._calculate_commission(sales);
                 let payout = sales - fee;
-
                 let stage = self.stages.read(stageId);
 
                 payment_transfer(stage.payment, owner, payout.into());
