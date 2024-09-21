@@ -17,7 +17,7 @@ use openmark::factory::nft_factory::NFTFactory::CollectionCreated;
 use openmark::factory::launchpad_factory::LaunchpadFactory::Event as LaunchpadEvents;
 use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
 use openmark::tests::unit::common::{
-    create_openmark_nft, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress, NFT_BASE_URI,
+    create_openmark_nft, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress,
     create_launchpad_factory
 };
 

@@ -114,10 +114,10 @@ pub fn setup_balance_at(addr: ContractAddress) -> ContractAddress {
 }
 
 pub fn create_openmark_nft() -> ContractAddress {
-    return create_openmark_nft_at(toAddress(TEST_NFT));
+    return setup_collection_at(toAddress(TEST_NFT));
 }
 
-pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
+pub fn setup_collection_at(addr: ContractAddress) -> ContractAddress {
     let contract = declare("GameItem").unwrap().contract_class();
     let mut constructor_calldata = array![];
     constructor_calldata.append_serde(SELLER1);
@@ -126,6 +126,9 @@ pub fn create_openmark_nft_at(addr: ContractAddress) -> ContractAddress {
     constructor_calldata.append_serde(NFT_BASE_URI());
     constructor_calldata.append_serde(1000000_u256);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
+
+    
+
     contract_address
 }
 
@@ -138,7 +141,7 @@ pub fn create_buy() -> (
     ContractAddress, // seller
     ContractAddress, // buyer
 ) {
-    let nft_token = create_openmark_nft_at(toAddress(TEST_NFT));
+    let nft_token = setup_collection_at(toAddress(TEST_NFT));
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark(payment_token);
     let seller: ContractAddress = toAddress(SELLER1);
@@ -184,7 +187,7 @@ pub fn create_offer() -> (
     ContractAddress, // seller
     ContractAddress, // buyer
 ) {
-    let nft_token: ContractAddress = create_openmark_nft_at(toAddress(TEST_NFT));
+    let nft_token: ContractAddress = setup_collection_at(toAddress(TEST_NFT));
     let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
 
     let openmark_address = deploy_openmark(payment_token);
@@ -239,7 +242,7 @@ pub fn create_bids() -> (
     Span<ContractAddress>, // buyers
     Span<u128>, // sell nft token ids
 ) {
-    let nft_token: ContractAddress = create_openmark_nft_at(toAddress(TEST_NFT));
+    let nft_token: ContractAddress = setup_collection_at(toAddress(TEST_NFT));
     let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
 
     let openmark_address = deploy_openmark(payment_token);

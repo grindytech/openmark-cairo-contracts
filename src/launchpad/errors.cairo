@@ -12,4 +12,9 @@ pub mod LPErrors {
     pub const NO_SALES: felt252 = 'Launchpad: no sales';
     pub const INVALID_PAY_VALUE: felt252 = 'Launchpad: invalid pay value';
     pub const WITHDRAW_FAILED: felt252 = 'Launchpad: withdraw failed';
+
+    pub const NOT_COLLECTION_OWNER: felt252 = 'Launchpad: not collection owner';
+    pub const MISSING_MINTER_ROLE: felt252 = 'Launchpad: missing minter role';
+    pub const NOT_STAGE_OWNER: felt252 = 'Launchpad: not stage owner';
+    pub const STAGE_ID_USED: felt252 = 'Launchpad: stage id used';
 }

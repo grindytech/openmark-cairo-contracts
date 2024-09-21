@@ -57,7 +57,7 @@ pub trait ILaunchpadFactoryManager<T> {
 pub trait ILaunchpadFactoryProvider<T> {
     fn getLaunchpad(self: @T, id: u256) -> ContractAddress;
 
-    fn getCommision(self: @T,) -> u32;
+    fn getCommission(self: @T,) -> u32;
 
     fn verifyPaymentToken(self: @T, paymentToken: ContractAddress) -> bool;
 

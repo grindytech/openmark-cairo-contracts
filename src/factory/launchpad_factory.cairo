@@ -79,6 +79,7 @@ pub mod LaunchpadFactory {
         };
 
         self.launchpad_classhash.write(launchpad_classhash);
+        self.commission.write(50); // default 5%
     }
 
     #[abi(embed_v0)]
@@ -131,7 +132,7 @@ pub mod LaunchpadFactory {
             return self.get_launchpad(id);
         }
 
-        fn getCommision(self: @ContractState,) -> u32 {
+        fn getCommission(self: @ContractState,) -> u32 {
             return self.commission.read();
         }
 

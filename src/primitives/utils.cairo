@@ -1,5 +1,5 @@
 use starknet::{ContractAddress};
-use openzeppelin::utils::{try_selector_with_fallback};
+use openzeppelin::utils::{try_selector_with_fallback,};
 use openzeppelin::utils::selectors;
 use openzeppelin::utils::UnwrapAndCast;
 use openzeppelin::utils::serde::SerializedAppend;
@@ -35,9 +35,7 @@ pub fn nft_transfer_from(
         .unwrap_syscall();
 }
 
-pub fn payment_transfer(
-    target: ContractAddress, recipient: ContractAddress, amount: u256
-) -> bool {
+pub fn payment_transfer(target: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
     let mut args = array![];
     args.append_serde(recipient);
     args.append_serde(amount);
@@ -61,6 +59,16 @@ pub fn payment_balance_of(target: ContractAddress, account: ContractAddress) -> 
         .unwrap_and_cast()
 }
 
+
+pub fn access_has_role(target: ContractAddress, role: felt252, account: ContractAddress) -> bool {
+    let mut args = array![];
+    args.append_serde(role);
+    args.append_serde(account);
+
+    try_selector_with_fallback(target, selectors::has_role, selectors::hasRole, args.span())
+        .unwrap_and_cast()
+}
+
 pub fn nft_safe_batch_mint(
     target: ContractAddress, to: ContractAddress, quantity: u256,
 ) -> Span<u256> {
@@ -74,3 +82,16 @@ pub fn nft_safe_batch_mint(
         .unwrap_and_cast()
 }
 
+pub fn verify_payment_token(target: ContractAddress, token: ContractAddress) -> bool {
+    let mut args = array![];
+    args.append_serde(token);
+
+    call_contract_syscall(target, openmark_selectors::verifyPaymentToken, args.span())
+        .unwrap_and_cast()
+}
+
+pub fn get_commission(target: ContractAddress) -> u32 {
+    let mut args = array![];
+    call_contract_syscall(target, openmark_selectors::getCommission, args.span())
+        .unwrap_and_cast()
+}

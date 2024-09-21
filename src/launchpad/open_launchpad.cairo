@@ -1,8 +1,11 @@
 #[starknet::contract]
-pub mod Launchpad {
+pub mod OpenLaunchpad {
+    use openzeppelin_access::ownable::interface::IOwnable;
+    use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
+
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin_merkle_tree::merkle_proof::{verify};
     use openzeppelin_access::accesscontrol::DEFAULT_ADMIN_ROLE;
@@ -17,7 +20,7 @@ pub mod Launchpad {
         StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
     };
     use openmark::launchpad::interface::{
-        ILaunchpad, ILaunchpadProvider, ILaunchpadManager, ILaunchpadHelper
+        ILaunchpad, ILaunchpadProvider, IOpenLaunchpadManager, IOpenLaunchpadProvider
     };
     use openmark::launchpad::events::{
         StageUpdated, StageRemoved, WhitelistUpdated, WhitelistRemoved, SalesWithdrawn,
@@ -27,20 +30,26 @@ pub mod Launchpad {
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        nft_safe_batch_mint, payment_transfer_from, payment_transfer, payment_balance_of,
-        access_has_role, verify_payment_token, get_commission
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer,
+        access_has_role
     };
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     /// Upgradeable
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
+    /// Reentrancy
+    component!(
+        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent
+    );
 
     /// Ownable
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
-
+    /// Reentrancy
+    impl ReentrancyInternalImpl = ReentrancyGuardComponent::InternalImpl<ContractState>;
+    /// Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
@@ -48,9 +57,15 @@ pub mod Launchpad {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
+        reentrancy_guard: ReentrancyGuardComponent::Storage,
+        #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         // Mapping of all stages by ID
-        launchpadStages: Map<ID, Stage>,
+        stages: Map<ID, Stage>,
+        // Mapping to indicate if a stage is in used
+        stageId: Map<ID, bool>,
+        // Mapping of owner of stage by ID
+        stageOwner: Map<ID, ContractAddress>,
         // Mapping to indicate if a stage is active
         isStageOn: Map<ID, bool>,
         // Mapping of Merkle roots for whitelist verification by stage ID
@@ -59,16 +74,14 @@ pub mod Launchpad {
         stageMintedCount: Map<ID, u128>,
         // Mapping of NFTs minted by a specific wallet in a stage
         userMintedCount: Map<ContractAddress, Map<ID, u128>>,
-        // Total deposit for create launchpad
-        depositAmount: Balance,
-        // Token address of depositAmount
-        depositPaymentToken: ContractAddress,
-        // Flag indicating if the launchpad is closed
-        isClosed: bool,
-        // URI for the launchpad metadata
-        uri: ByteArray,
-        // Address of the factory contract
-        factory: ContractAddress,
+        // Mapping of total sales of stage by ID
+        stageSales: Map<ID, Balance>,
+        // Store sales commission
+        commission: u32,
+        // Mapping of payment tokens
+        paymentTokens: Map<ContractAddress, bool>,
+        // Store maximum allowed sales duration
+        maxSalesDuration: u128,
     }
 
     #[event]
@@ -76,6 +89,8 @@ pub mod Launchpad {
     pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
         StageUpdated: StageUpdated,
@@ -89,20 +104,16 @@ pub mod Launchpad {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState,
-        owner: ContractAddress,
-        uri: ByteArray,
-        depositAmount: Balance,
-        depositPaymentToken: ContractAddress,
-        factory: ContractAddress,
+        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>
     ) {
-        self.isClosed.write(false);
-
         self.ownable.initializer(owner);
-        self.uri.write(uri);
-        self.depositAmount.write(depositAmount);
-        self.depositPaymentToken.write(depositPaymentToken);
-        self.factory.write(factory);
+
+        for token in paymentTokens {
+            self.paymentTokens.write(*token, true);
+        };
+
+        self.commission.write(50); // per mille (default 5%)
+        self.maxSalesDuration.write(7 * 24 * 60 * 60); // 7 days
     }
 
     #[abi(embed_v0)]
@@ -110,17 +121,17 @@ pub mod Launchpad {
         fn updateStages(
             ref self: ContractState, stages: Span<Stage>, merkleRoots: Span<Option<felt252>>
         ) {
-            self.ownable.assert_only_owner();
             assert(stages.len() == merkleRoots.len(), Errors::LENGTH_MISMATCH);
 
             let owner = get_caller_address();
             let mut i = 0;
             while (i < stages.len()) {
                 let stage = *stages.at(i);
+                assert(!self.stageId.read(stage.id), Errors::STAGE_ID_USED);
                 self.validateStage(stage, owner);
                 let merkleRoot = *merkleRoots.at(i);
 
-                self._set_stage(stage, merkleRoot);
+                self._set_stage(stage, merkleRoot, owner);
                 self.emit(StageUpdated { owner, stage, merkleRoot });
 
                 i += 1;
@@ -128,8 +139,10 @@ pub mod Launchpad {
         }
 
         fn removeStages(ref self: ContractState, stageIds: Span<ID>) {
-            self.ownable.assert_only_owner();
             for stageId in stageIds {
+                assert(
+                    self._is_stage_owner(*stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
+                );
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.isStageOn.write(*stageId, false);
                 self.emit(StageRemoved { stageId: *stageId, });
@@ -139,11 +152,13 @@ pub mod Launchpad {
         fn updateWhitelist(
             ref self: ContractState, stageIds: Span<u128>, merkleRoots: Span<Option<felt252>>
         ) {
-            self.ownable.assert_only_owner();
             assert(stageIds.len() == merkleRoots.len(), Errors::LENGTH_MISMATCH);
             let mut i = 0;
             while (i < stageIds.len()) {
                 let stageId = *stageIds.at(i);
+                assert(
+                    self._is_stage_owner(stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
+                );
                 assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(stageId, *merkleRoots.at(i));
                 self.emit(WhitelistUpdated { stageId, merkleRoot: *merkleRoots.at(i) });
@@ -152,8 +167,10 @@ pub mod Launchpad {
         }
 
         fn removeWhitelist(ref self: ContractState, stageIds: Span<u128>) {
-            self.ownable.assert_only_owner();
             for stageId in stageIds {
+                assert(
+                    self._is_stage_owner(*stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
+                );
                 assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(*stageId, Option::None);
                 self.emit(WhitelistRemoved { stageId: *stageId, });
@@ -161,8 +178,6 @@ pub mod Launchpad {
         }
 
         fn buy(ref self: ContractState, stageId: ID, amount: u128, merkleProof: Span<felt252>) {
-            assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
-
             let minter: ContractAddress = get_caller_address();
             let mintAmount: u128 = amount.into();
             let stage = self.getActiveStage(stageId);
@@ -182,11 +197,14 @@ pub mod Launchpad {
             let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
 
             let price = mintAmount * stage.price;
-            payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+            if price > 0 {
+                payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
+                let sales = self.stageSales.read(stageId);
+                self.stageSales.write(stageId, sales + price);
+            }
 
             self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
             self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
-
             self
                 .emit(
                     TokensBought {
@@ -202,17 +220,37 @@ pub mod Launchpad {
     }
 
     #[abi(embed_v0)]
+    impl OpenLaunchpadManagerImpl of IOpenLaunchpadManager<ContractState> {
+        fn withdrawSales(ref self: ContractState, stageId: ID) {
+            self.reentrancy_guard.start();
+            let owner = get_caller_address();
+            assert(self._is_stage_owner(stageId, owner), Errors::NOT_STAGE_OWNER);
+
+            let sales = self.stageSales.read(stageId);
+            if sales > 0 {
+                let fee = self._calculate_commission(sales);
+                let payout = sales - fee;
+                let stage = self.stages.read(stageId);
+
+                payment_transfer(stage.payment, owner, payout.into());
+                payment_transfer(stage.payment, self.ownable.owner(), fee.into());
+                self.stageSales.write(stageId, 0);
+                self.emit(SalesWithdrawn { owner, tokenPayment: stage.payment, amount: payout });
+            }
+
+            self.reentrancy_guard.end();
+        }
+    }
+
+    #[abi(embed_v0)]
     impl LaunchpadProviderImpl of ILaunchpadProvider<ContractState> {
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
             assert(
-                verify_payment_token(self.factory.read(), stage.payment),
-                Errors::INVALID_PAYMENT_TOKEN
-            );
-
-            assert(
-                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner),
+                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner)
+                    || access_has_role(stage.collection, MINTER_ROLE, owner),
                 Errors::NOT_COLLECTION_OWNER
             );
+
             assert(
                 access_has_role(stage.collection, MINTER_ROLE, get_contract_address()),
                 Errors::MISSING_MINTER_ROLE
@@ -220,12 +258,13 @@ pub mod Launchpad {
         }
 
         fn getStage(self: @ContractState, stageId: ID) -> Stage {
-            assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
-            return self.launchpadStages.read(stageId);
+            return self.stages.read(stageId);
         }
 
         fn getActiveStage(self: @ContractState, stageId: ID) -> Stage {
+            assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
             let stage = self.getStage(stageId);
+
             let currentTimestamp = get_block_timestamp().into();
 
             assert(currentTimestamp >= stage.startTime, Errors::STAGE_NOT_STARTED);
@@ -257,60 +296,25 @@ pub mod Launchpad {
     }
 
     #[abi(embed_v0)]
-    impl LaunchpadHelperImpl of ILaunchpadHelper<ContractState> {
-        fn setLaunchpadUri(ref self: ContractState, uri: ByteArray) {
-            self.ownable.assert_only_owner();
-            self.uri.write(uri);
+    impl OpenLaunchpadProviderImpl of IOpenLaunchpadProvider<ContractState> {
+        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
+            return self.paymentTokens.read(paymentToken);
         }
 
-        fn getLaunchpadUri(self: @ContractState) -> ByteArray {
-            self.uri.read()
+        fn getSales(self: @ContractState, stageId: ID) -> Balance {
+            return self.stageSales.read(stageId);
         }
 
-        fn getFactory(self: @ContractState) -> ContractAddress {
-            self.factory.read()
+        fn isClosed(self: @ContractState, stageId: ID) -> bool {
+            return self.isStageOn.read(stageId);
         }
 
-        fn isClosed(self: @ContractState) -> bool {
-            self.isClosed.read()
+        fn getMaxSalesDuration(self: @ContractState) -> u128 {
+            return self.maxSalesDuration.read();
         }
 
-        fn launchpadDeposit(self: @ContractState) -> (ContractAddress, Balance) {
-            (self.depositPaymentToken.read(), self.depositAmount.read())
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl LaunchpadManagerImpl of ILaunchpadManager<ContractState> {
-        fn withdrawSales(ref self: ContractState, tokens: Span<ContractAddress>) {
-            self.ownable.assert_only_owner();
-
-            let owner = get_caller_address();
-            let launchpad = get_contract_address();
-            for token in tokens {
-                let mut sales: Balance = payment_balance_of(*token, launchpad).try_into().unwrap();
-
-                if (*token == self.depositPaymentToken.read()) {
-                    sales -= self.depositAmount.read().into();
-                }
-                let fee = self._calculate_commission(sales);
-                let payout = sales - fee.into();
-
-                payment_transfer(*token, owner, payout.into());
-                payment_transfer(*token, self.factory.read(), fee.into());
-                self
-                    .emit(
-                        SalesWithdrawn {
-                            owner, tokenPayment: *token, amount: payout
-                        }
-                    );
-            };
-        }
-
-        fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
-            self.ownable.assert_only_owner();
-            self.isClosed.write(true);
-            self.withdrawSales(tokens);
+        fn getCommission(self: @ContractState) -> u32 {
+            return self.commission.read();
         }
     }
 
@@ -333,20 +337,30 @@ pub mod Launchpad {
 
     #[generate_trait]
     pub impl InternalImpl of InternalImplTrait {
-        fn _set_stage(ref self: ContractState, stage: Stage, merkleRoot: Option<felt252>) {
+        fn _is_stage_owner(self: @ContractState, stageId: ID, owner: ContractAddress) -> bool {
+            return self.stageOwner.read(stageId) == owner;
+        }
+
+        fn _set_stage(
+            ref self: ContractState,
+            stage: Stage,
+            merkleRoot: Option<felt252>,
+            owner: ContractAddress
+        ) {
+            self.stageId.write(stage.id, true);
             self.isStageOn.write(stage.id, true);
-            self.launchpadStages.write(stage.id, stage);
+            self.stageOwner.write(stage.id, owner);
+            self.stages.write(stage.id, stage);
             self.stageWhitelist.write(stage.id, merkleRoot);
         }
 
-    fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
-        let commission: Balance = get_commission(self.factory.read()).into();
+        fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
+            let commission: Balance = self.commission.read().into();
 
-        if (commission > 0) {
-            return commission * price / PERMYRIAD.into();
+            if (commission > 0) {
+                return commission * price / PERMYRIAD.into();
+            }
+            return 0;
         }
-        return 0;
-    }
-
     }
 }
