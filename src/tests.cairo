@@ -7,5 +7,6 @@ pub mod unit {
     // mod test_fill_bids;
     // mod test_factory;
     // mod test_token;
-    mod test_launchpad;
+    // mod test_launchpad;
+    mod test_open_launchpad;
 }

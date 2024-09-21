@@ -66,3 +66,8 @@ pub trait IOpenLaunchpadProvider<T> {
 
     fn getCommission(self: @T) -> u32;
 }
+
+#[starknet::interface]
+pub trait IOpenLaunchpadManager<T> {
+    fn withdrawSales(ref self: T, stageId: ID);
+}

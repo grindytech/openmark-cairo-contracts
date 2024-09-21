@@ -15,4 +15,6 @@ pub mod LPErrors {
 
     pub const NOT_COLLECTION_OWNER: felt252 = 'Launchpad: not collection owner';
     pub const MISSING_MINTER_ROLE: felt252 = 'Launchpad: missing minter role';
+    pub const NOT_STAGE_OWNER: felt252 = 'Launchpad: not stage owner';
+    pub const STAGE_ID_USED: felt252 = 'Launchpad: stage id used';
 }
