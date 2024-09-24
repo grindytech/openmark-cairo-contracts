@@ -181,7 +181,7 @@ fn remove_stages_works() {
     launchpad_contract.removeStages(array![stage.id].span());
 
     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
-    provider.getStage(0);
+    provider.getActiveStage(0);
 }
 
 #[test]
@@ -328,13 +328,50 @@ fn withdraw_sales_works() {
         'Owner balance incorrect'
     );
     assert(
-        payment_dispatcher.balance_of(factory_address) == fee.into(),
-        'Launchpad balance incorrect'
+        payment_dispatcher.balance_of(factory_address) == fee.into(), 'Launchpad balance incorrect'
     );
     assert(
         payment_dispatcher.balance_of(launchpad_address) == deposit_amount.into(),
         'Launchpad balance incorrect'
     );
+}
+
+#[test]
+fn close_launchpad_works() {
+    let owner = toAddress(SELLER1);
+    let buyer = toAddress(BUYER1);
+    let sales = 100;
+    let (launchpad_address, _, payment_address, _) = create_launchpad(owner);
+
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+    start_cheat_caller_address(payment_address, buyer);
+    payment_dispatcher.transfer(launchpad_address, sales);
+    stop_cheat_caller_address(payment_address);
+
+    let owner_before_balance = payment_dispatcher.balance_of(owner);
+
+    start_cheat_caller_address(launchpad_address, owner);
+    let manager_dispatcher = ILaunchpadManagerDispatcher { contract_address: launchpad_address };
+
+    manager_dispatcher.closeLaunchpad(array![payment_address].span());
+
+    let helper_dispatcher = ILaunchpadHelperDispatcher { contract_address: launchpad_address };
+    let (_, deposit_amount) = helper_dispatcher.launchpadDeposit();
+
+    let factory_address = helper_dispatcher.getFactory();
+    let fee = sales * get_commission(factory_address).into() / 1000;
+    let payout = sales - fee;
+
+    assert(
+        payment_dispatcher.balance_of(owner) == owner_before_balance
+            + deposit_amount.into()
+            + payout,
+        'Owner balance incorrect'
+    );
+    assert(
+        payment_dispatcher.balance_of(factory_address) == fee.into(), 'Launchpad balance incorrect'
+    );
+    assert(payment_dispatcher.balance_of(launchpad_address) == 0, 'Launchpad balance incorrect');
 }
 
 #[test]

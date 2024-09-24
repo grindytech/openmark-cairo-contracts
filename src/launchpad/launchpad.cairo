@@ -50,9 +50,9 @@ pub mod Launchpad {
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         // Mapping of all stages by ID
-        launchpadStages: Map<ID, Stage>,
+        stages: Map<ID, Stage>,
         // Mapping to indicate if a stage is active
-        isStageOn: Map<ID, bool>,
+        activeStage: Map<ID, bool>,
         // Mapping of Merkle roots for whitelist verification by stage ID
         stageWhitelist: Map<ID, Option<felt252>>,
         // Mapping of total NFTs minted in a stage by stage ID
@@ -130,8 +130,8 @@ pub mod Launchpad {
         fn removeStages(ref self: ContractState, stageIds: Span<ID>) {
             self.ownable.assert_only_owner();
             for stageId in stageIds {
-                assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
-                self.isStageOn.write(*stageId, false);
+                assert(self.activeStage.read(*stageId), Errors::STAGE_NOT_FOUND);
+                self.activeStage.write(*stageId, false);
                 self.emit(StageRemoved { stageId: *stageId, });
             };
         }
@@ -144,7 +144,7 @@ pub mod Launchpad {
             let mut i = 0;
             while (i < stageIds.len()) {
                 let stageId = *stageIds.at(i);
-                assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
+                assert(self.activeStage.read(stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(stageId, *merkleRoots.at(i));
                 self.emit(WhitelistUpdated { stageId, merkleRoot: *merkleRoots.at(i) });
                 i += 1;
@@ -154,38 +154,36 @@ pub mod Launchpad {
         fn removeWhitelist(ref self: ContractState, stageIds: Span<u128>) {
             self.ownable.assert_only_owner();
             for stageId in stageIds {
-                assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
+                assert(self.activeStage.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(*stageId, Option::None);
-                self.emit(WhitelistRemoved { stageId: *stageId, });
+                self.emit(WhitelistRemoved { stageId: *stageId });
             };
         }
 
         fn buy(ref self: ContractState, stageId: ID, amount: u128, merkleProof: Span<felt252>) {
             assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
+            assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
 
             let minter: ContractAddress = get_caller_address();
-            let mintAmount: u128 = amount.into();
             let stage = self.getActiveStage(stageId);
-
-            assert(amount > 0, Errors::INVALID_MINT_AMOUNT);
 
             let stageMintedAmount = self.stageMintedCount.read(stageId);
             let userMintedAmount = self.userMintedCount.entry(minter).read(stageId);
 
-            assert(stageMintedAmount + mintAmount <= stage.maxAllocation, Errors::SOLD_OUT);
-            assert(userMintedAmount + mintAmount <= stage.limit, Errors::EXCEED_LIMIT);
+            assert(stageMintedAmount + amount <= stage.maxAllocation, Errors::SOLD_OUT);
+            assert(userMintedAmount + amount <= stage.limit, Errors::EXCEED_LIMIT);
 
             if let Option::Some(root) = self.getWhitelist(stageId) {
                 assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
             }
 
-            let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
+            let mintedTokens = nft_safe_batch_mint(stage.collection, minter, amount.into());
 
-            let price = mintAmount * stage.price;
+            let price = amount * stage.price;
             payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
 
-            self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
-            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
+            self.stageMintedCount.write(stageId, stageMintedAmount + amount);
+            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + amount);
 
             self
                 .emit(
@@ -210,9 +208,11 @@ pub mod Launchpad {
             );
 
             assert(
-                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner),
-                Errors::NOT_COLLECTION_OWNER
+                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner)
+                    || access_has_role(stage.collection, MINTER_ROLE, owner),
+                Errors::UNAUTHORIZED_OWNER
             );
+
             assert(
                 access_has_role(stage.collection, MINTER_ROLE, get_contract_address()),
                 Errors::MISSING_MINTER_ROLE
@@ -220,14 +220,14 @@ pub mod Launchpad {
         }
 
         fn getStage(self: @ContractState, stageId: ID) -> Stage {
-            assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
-            return self.launchpadStages.read(stageId);
+            return self.stages.read(stageId);
         }
 
         fn getActiveStage(self: @ContractState, stageId: ID) -> Stage {
-            let stage = self.getStage(stageId);
-            let currentTimestamp = get_block_timestamp().into();
+            assert(self.activeStage.read(stageId), Errors::STAGE_NOT_FOUND);
+            let stage = self.stages.read(stageId);
 
+            let currentTimestamp = get_block_timestamp().into();
             assert(currentTimestamp >= stage.startTime, Errors::STAGE_NOT_STARTED);
             assert(currentTimestamp <= stage.endTime, Errors::STAGE_ENDED);
             return stage;
@@ -286,31 +286,23 @@ pub mod Launchpad {
             self.ownable.assert_only_owner();
 
             let owner = get_caller_address();
-            let launchpad = get_contract_address();
             for token in tokens {
-                let mut sales: Balance = payment_balance_of(*token, launchpad).try_into().unwrap();
-
-                if (*token == self.depositPaymentToken.read()) {
-                    sales -= self.depositAmount.read().into();
-                }
-                let fee = self._calculate_commission(sales);
-                let payout = sales - fee.into();
-
-                payment_transfer(*token, owner, payout.into());
-                payment_transfer(*token, self.factory.read(), fee.into());
-                self
-                    .emit(
-                        SalesWithdrawn {
-                            owner, tokenPayment: *token, amount: payout
-                        }
-                    );
+                let sales = self._withdraw(owner, *token, false);
+                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount: sales });
             };
         }
 
         fn closeLaunchpad(ref self: ContractState, tokens: Span<ContractAddress>) {
             self.ownable.assert_only_owner();
+
+            let owner = get_caller_address();
+            for token in tokens {
+                let sales = self._withdraw(owner, *token, true);
+                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount: sales });
+            };
+
             self.isClosed.write(true);
-            self.withdrawSales(tokens);
+            self.emit(LaunchpadClosed { launchpad: get_contract_address(), owner });
         }
     }
 
@@ -334,19 +326,39 @@ pub mod Launchpad {
     #[generate_trait]
     pub impl InternalImpl of InternalImplTrait {
         fn _set_stage(ref self: ContractState, stage: Stage, merkleRoot: Option<felt252>) {
-            self.isStageOn.write(stage.id, true);
-            self.launchpadStages.write(stage.id, stage);
+            self.activeStage.write(stage.id, true);
+            self.stages.write(stage.id, stage);
             self.stageWhitelist.write(stage.id, merkleRoot);
         }
 
-    fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
-        let commission: Balance = get_commission(self.factory.read()).into();
+        fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
+            let commission: Balance = get_commission(self.factory.read()).into();
 
-        if (commission > 0) {
-            return commission * price / PERMYRIAD.into();
+            if (commission > 0) {
+                return commission * price / PERMYRIAD.into();
+            }
+            return 0;
         }
-        return 0;
-    }
 
+        fn _withdraw(
+            self: @ContractState, owner: ContractAddress, token: ContractAddress, all: bool
+        ) -> Balance {
+            let mut sales: Balance = 0;
+
+            if (all && token == self.depositPaymentToken.read()) {
+                payment_transfer(token, get_caller_address(), self.depositAmount.read().into());
+                sales = payment_balance_of(token, get_contract_address()).try_into().unwrap();
+            } else {
+                sales = payment_balance_of(token, get_contract_address()).try_into().unwrap()
+                    - self.depositAmount.read().into();
+            }
+
+            let fee = self._calculate_commission(sales);
+            let payout = sales - fee.into();
+
+            payment_transfer(token, owner, payout.into());
+            payment_transfer(token, self.factory.read(), fee.into());
+            sales
+        }
     }
 }

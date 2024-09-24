@@ -428,7 +428,7 @@ fn buy_insufficient_balance_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('Launchpad: not collection owner',))]
+#[should_panic(expected: ('Launchpad: unauthorized owner',))]
 fn update_stages_not_collection_owner_panics() {
     let seller = toAddress(SELLER1);
     let buyer1 = toAddress(BUYER1);
@@ -448,7 +448,7 @@ fn update_stages_not_collection_owner_panics() {
             maxAllocation: 10,
             limit: 1,
             startTime: 0,
-            endTime: 0,
+            endTime: 1,
         }
     ];
     launchpad_contract.updateStages(new_stages.span(), array![Option::Some(ROOT)].span());
@@ -474,7 +474,7 @@ fn update_stages_id_used_panics() {
             maxAllocation: 10,
             limit: 1,
             startTime: 0,
-            endTime: 0,
+            endTime: 1,
         }
     ];
     launchpad_contract.updateStages(new_stages.span(), array![Option::Some(ROOT)].span());

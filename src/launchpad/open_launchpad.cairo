@@ -30,8 +30,7 @@ pub mod OpenLaunchpad {
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::primitives::utils::{
-        nft_safe_batch_mint, payment_transfer_from, payment_transfer,
-        access_has_role
+        nft_safe_batch_mint, payment_transfer_from, payment_transfer, access_has_role
     };
 
     /// Ownable
@@ -67,7 +66,7 @@ pub mod OpenLaunchpad {
         // Mapping of owner of stage by ID
         stageOwner: Map<ID, ContractAddress>,
         // Mapping to indicate if a stage is active
-        isStageOn: Map<ID, bool>,
+        activeStage: Map<ID, bool>,
         // Mapping of Merkle roots for whitelist verification by stage ID
         stageWhitelist: Map<ID, Option<felt252>>,
         // Mapping of total NFTs minted in a stage by stage ID
@@ -140,11 +139,11 @@ pub mod OpenLaunchpad {
 
         fn removeStages(ref self: ContractState, stageIds: Span<ID>) {
             for stageId in stageIds {
+                assert(self.activeStage.read(*stageId), Errors::STAGE_NOT_FOUND);
                 assert(
                     self._is_stage_owner(*stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
                 );
-                assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
-                self.isStageOn.write(*stageId, false);
+                self.activeStage.write(*stageId, false);
                 self.emit(StageRemoved { stageId: *stageId, });
             };
         }
@@ -156,10 +155,10 @@ pub mod OpenLaunchpad {
             let mut i = 0;
             while (i < stageIds.len()) {
                 let stageId = *stageIds.at(i);
+                assert(self.activeStage.read(stageId), Errors::STAGE_NOT_FOUND);
                 assert(
                     self._is_stage_owner(stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
                 );
-                assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(stageId, *merkleRoots.at(i));
                 self.emit(WhitelistUpdated { stageId, merkleRoot: *merkleRoots.at(i) });
                 i += 1;
@@ -171,7 +170,7 @@ pub mod OpenLaunchpad {
                 assert(
                     self._is_stage_owner(*stageId, get_caller_address()), Errors::NOT_STAGE_OWNER
                 );
-                assert(self.isStageOn.read(*stageId), Errors::STAGE_NOT_FOUND);
+                assert(self.activeStage.read(*stageId), Errors::STAGE_NOT_FOUND);
                 self.stageWhitelist.write(*stageId, Option::None);
                 self.emit(WhitelistRemoved { stageId: *stageId, });
             };
@@ -179,10 +178,10 @@ pub mod OpenLaunchpad {
 
         fn buy(ref self: ContractState, stageId: ID, amount: u128, merkleProof: Span<felt252>) {
             let minter: ContractAddress = get_caller_address();
-            let mintAmount: u128 = amount.into();
+            let mintAmount: u128 = amount;
             let stage = self.getActiveStage(stageId);
 
-            assert(amount > 0, Errors::INVALID_MINT_AMOUNT);
+            assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
 
             let stageMintedAmount = self.stageMintedCount.read(stageId);
             let userMintedAmount = self.userMintedCount.entry(minter).read(stageId);
@@ -245,10 +244,19 @@ pub mod OpenLaunchpad {
     #[abi(embed_v0)]
     impl LaunchpadProviderImpl of ILaunchpadProvider<ContractState> {
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
+            assert(stage.endTime > stage.startTime, Errors::INVALID_DURATION);
+
+            assert(
+                stage.endTime - stage.startTime <= self.maxSalesDuration.read(),
+                Errors::SALE_DURATION_EXCEEDED
+            );
+
+            assert(self.paymentTokens.read(stage.payment), Errors::INVALID_PAYMENT_TOKEN);
+
             assert(
                 access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner)
                     || access_has_role(stage.collection, MINTER_ROLE, owner),
-                Errors::NOT_COLLECTION_OWNER
+                Errors::UNAUTHORIZED_OWNER
             );
 
             assert(
@@ -262,8 +270,8 @@ pub mod OpenLaunchpad {
         }
 
         fn getActiveStage(self: @ContractState, stageId: ID) -> Stage {
-            assert(self.isStageOn.read(stageId), Errors::STAGE_NOT_FOUND);
-            let stage = self.getStage(stageId);
+            assert(self.activeStage.read(stageId), Errors::STAGE_NOT_FOUND);
+            let stage = self.stages.read(stageId);
 
             let currentTimestamp = get_block_timestamp().into();
 
@@ -306,7 +314,7 @@ pub mod OpenLaunchpad {
         }
 
         fn isClosed(self: @ContractState, stageId: ID) -> bool {
-            return self.isStageOn.read(stageId);
+            return self.activeStage.read(stageId);
         }
 
         fn getMaxSalesDuration(self: @ContractState) -> u128 {
@@ -348,7 +356,7 @@ pub mod OpenLaunchpad {
             owner: ContractAddress
         ) {
             self.stageId.write(stage.id, true);
-            self.isStageOn.write(stage.id, true);
+            self.activeStage.write(stage.id, true);
             self.stageOwner.write(stage.id, owner);
             self.stages.write(stage.id, stage);
             self.stageWhitelist.write(stage.id, merkleRoot);
