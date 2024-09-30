@@ -103,8 +103,8 @@ pub mod OMERC721Component {
 
             for uri in uris {
                 let token_index = self._next_mint_index();
-                erc721_component.mint(to, token_index);
                 self.token_uris.write(token_index, uri.clone());
+                erc721_component.mint(to, token_index);
                 minted_tokens.append(token_index);
                 self.emit(TokenMinted { to, token_id: token_index, uri: uri.clone() });
             };

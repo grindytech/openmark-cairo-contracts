@@ -100,6 +100,7 @@ pub mod LaunchpadFactory {
                 self.launchpad_classhash.read(), 0, constructor_calldata.span(), false
             )
                 .unwrap_syscall();
+            self.factory.write(id, address);
 
             payment_transfer_from(
                 self.lockTokenAddress.read(),
@@ -108,7 +109,6 @@ pub mod LaunchpadFactory {
                 self.lockAmount.read().into()
             );
 
-            self.factory.write(id, address);
             self.emit(LaunchpadCreated { id, address, owner, uri });
         }
 

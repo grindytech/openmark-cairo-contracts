@@ -192,6 +192,8 @@ pub mod OpenLaunchpad {
             if let Option::Some(root) = self.getWhitelist(stageId) {
                 assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
             }
+            self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
+            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
 
             let mintedTokens = nft_safe_batch_mint(stage.collection, minter, mintAmount.into());
 
@@ -202,8 +204,6 @@ pub mod OpenLaunchpad {
                 self.stageSales.write(stageId, sales + price);
             }
 
-            self.stageMintedCount.write(stageId, stageMintedAmount + mintAmount);
-            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + mintAmount);
             self
                 .emit(
                     TokensBought {

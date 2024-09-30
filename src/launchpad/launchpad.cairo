@@ -176,14 +176,13 @@ pub mod Launchpad {
             if let Option::Some(root) = self.getWhitelist(stageId) {
                 assert(self.verifyWhitelist(root, merkleProof, minter), Errors::WHITELIST_FAILED);
             }
+            self.stageMintedCount.write(stageId, stageMintedAmount + amount);
+            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + amount);
 
             let mintedTokens = nft_safe_batch_mint(stage.collection, minter, amount.into());
 
             let price = amount * stage.price;
             payment_transfer_from(stage.payment, minter, get_contract_address(), price.into());
-
-            self.stageMintedCount.write(stageId, stageMintedAmount + amount);
-            self.userMintedCount.entry(minter).entry(stageId).write(userMintedAmount + amount);
 
             self
                 .emit(
@@ -302,7 +301,7 @@ pub mod Launchpad {
             for token in tokens {
                 let sales = self._withdraw(owner, *token, true);
                 if let Option::Some(amount) = sales.try_into() {
-                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount});
+                    self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount });
                 }
             };
 

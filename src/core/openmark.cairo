@@ -121,19 +121,14 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let buyer = get_caller_address();
-
             self.verify_buy(order, signature, seller, buyer);
 
-            // 3. make trade
-            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
+            self.usedSignatures.write(self.hash_array(signature), true);
 
+            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
             let price: u256 = order.price.into();
             self._process_payment(buyer, seller, price, order.payment);
 
-            // 4. change storage
-            self.usedSignatures.write(self.hash_array(signature), true);
-
-            // 5. emit events
             self.emit(OrderFilled { seller, buyer, order });
             self.reentrancy_guard.end();
         }
@@ -143,18 +138,14 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let seller = get_caller_address();
-
             self.verify_accept_offer(order, signature, seller, buyer);
 
-            // 3. make trade
-            nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
+            self.usedSignatures.write(self.hash_array(signature), true);
 
+            nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
             let price: u256 = order.price.into();
             self._process_payment(buyer, get_caller_address(), price, order.payment);
 
-            // 4. change storage
-            self.usedSignatures.write(self.hash_array(signature), true);
-            // 5. emit events
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
         }
@@ -610,6 +601,13 @@ pub mod OpenMark {
                 }
             }
 
+            if remaining_amount > 0 {
+                self.partialBidSignatures.write(signature, remaining_amount);
+            } else {
+                self.usedSignatures.write(signature, true);
+                self.partialBidSignatures.write(signature, 0);
+            }
+
             let price: u256 = (signed_bid.bid.unitPrice * trade_amount).into();
             self
                 ._process_payment(
@@ -631,13 +629,6 @@ pub mod OpenMark {
                     panic!("OPENMARK: process bid failed");
                 }
             };
-
-            if remaining_amount > 0 {
-                self.partialBidSignatures.write(signature, remaining_amount);
-            } else {
-                self.usedSignatures.write(signature, true);
-                self.partialBidSignatures.write(signature, 0);
-            }
 
             self
                 .emit(
