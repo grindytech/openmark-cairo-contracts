@@ -288,7 +288,10 @@ pub mod Launchpad {
             let owner = get_caller_address();
             for token in tokens {
                 let sales = self._withdraw(owner, *token, false);
-                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount: sales });
+
+                if let Option::Some(amount) = sales.try_into() {
+                    self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount });
+                }
             };
         }
 
@@ -298,7 +301,9 @@ pub mod Launchpad {
             let owner = get_caller_address();
             for token in tokens {
                 let sales = self._withdraw(owner, *token, true);
-                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount: sales });
+                if let Option::Some(amount) = sales.try_into() {
+                self.emit(SalesWithdrawn { owner, tokenPayment: *token, amount});
+                }
             };
 
             self.isClosed.write(true);
@@ -331,8 +336,8 @@ pub mod Launchpad {
             self.stageWhitelist.write(stage.id, merkleRoot);
         }
 
-        fn _calculate_commission(self: @ContractState, price: Balance) -> Balance {
-            let commission: Balance = get_commission(self.factory.read()).into();
+        fn _calculate_commission(self: @ContractState, price: u256) -> u256 {
+            let commission = get_commission(self.factory.read()).into();
 
             if (commission > 0) {
                 return commission * price / PERMYRIAD.into();
@@ -342,14 +347,14 @@ pub mod Launchpad {
 
         fn _withdraw(
             self: @ContractState, owner: ContractAddress, token: ContractAddress, all: bool
-        ) -> Balance {
-            let mut sales: Balance = 0;
+        ) -> u256 {
+            let mut sales: u256 = 0;
 
             if (all && token == self.depositPaymentToken.read()) {
                 payment_transfer(token, get_caller_address(), self.depositAmount.read().into());
-                sales = payment_balance_of(token, get_contract_address()).try_into().unwrap();
+                sales = payment_balance_of(token, get_contract_address());
             } else {
-                sales = payment_balance_of(token, get_contract_address()).try_into().unwrap()
+                sales = payment_balance_of(token, get_contract_address())
                     - self.depositAmount.read().into();
             }
 
