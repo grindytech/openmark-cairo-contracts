@@ -13,7 +13,6 @@
 #[starknet::contract]
 pub mod OpenMark {
     use core::array::ArrayTrait;
-    use core::option::OptionTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -122,19 +121,14 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let buyer = get_caller_address();
-
             self.verify_buy(order, signature, seller, buyer);
 
-            // 3. make trade
-            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
+            self.usedSignatures.write(self.hash_array(signature), true);
 
+            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
             let price: u256 = order.price.into();
             self._process_payment(buyer, seller, price, order.payment);
 
-            // 4. change storage
-            self.usedSignatures.write(self.hash_array(signature), true);
-
-            // 5. emit events
             self.emit(OrderFilled { seller, buyer, order });
             self.reentrancy_guard.end();
         }
@@ -144,20 +138,14 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let seller = get_caller_address();
-
             self.verify_accept_offer(order, signature, seller, buyer);
 
-            // 3. make trade
-            nft_transfer_from(
-                order.nftContract, get_caller_address(), buyer, order.tokenId.into()
-            );
+            self.usedSignatures.write(self.hash_array(signature), true);
 
+            nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
             let price: u256 = order.price.into();
             self._process_payment(buyer, get_caller_address(), price, order.payment);
 
-            // 4. change storage
-            self.usedSignatures.write(self.hash_array(signature), true);
-            // 5. emit events
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
         }
@@ -461,9 +449,7 @@ pub mod OpenMark {
 
             let price: u256 = order.price.into();
 
-            assert(
-                payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE
-            );
+            assert(payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE);
 
             assert(price > 0, Errors::PRICE_IS_ZERO);
         }
@@ -615,6 +601,13 @@ pub mod OpenMark {
                 }
             }
 
+            if remaining_amount > 0 {
+                self.partialBidSignatures.write(signature, remaining_amount);
+            } else {
+                self.usedSignatures.write(signature, true);
+                self.partialBidSignatures.write(signature, 0);
+            }
+
             let price: u256 = (signed_bid.bid.unitPrice * trade_amount).into();
             self
                 ._process_payment(
@@ -625,22 +618,17 @@ pub mod OpenMark {
             let mut token_index: u128 = 0;
 
             while (token_index < trade_amount) {
-                let token_id: u128 = *trade_token_ids.pop_front().unwrap();
+                if let Option::Some(token_id) = trade_token_ids.pop_front() {
+                    nft_transfer_from(
+                        signed_bid.bid.nftContract, seller, signed_bid.bidder, (*token_id).into()
+                    );
 
-                nft_transfer_from(
-                    signed_bid.bid.nftContract, seller, signed_bid.bidder, token_id.into()
-                );
-
-                traded_ids.append(token_id);
-                token_index += 1;
+                    traded_ids.append(*token_id);
+                    token_index += 1;
+                } else {
+                    panic!("OPENMARK: process bid failed");
+                }
             };
-
-            if remaining_amount > 0 {
-                self.partialBidSignatures.write(signature, remaining_amount);
-            } else {
-                self.usedSignatures.write(signature, true);
-                self.partialBidSignatures.write(signature, 0);
-            }
 
             self
                 .emit(
