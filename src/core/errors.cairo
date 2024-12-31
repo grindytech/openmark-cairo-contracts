@@ -10,8 +10,6 @@ pub mod OMErrors {
 
     pub const ORDER_EXPIRED: felt252 = 'OPENMARK: order expired';
 
-    pub const BID_EXPIRED: felt252 = 'OPENMARK: bid expired';
-
     /// Seller is not the owner of nft.
     pub const NOT_NFT_OWNER: felt252 = 'OPENMARK: not nft owner';
 
@@ -25,19 +23,7 @@ pub mod OMErrors {
     /// Invalid order type.
     pub const INVALID_ORDER_TYPE: felt252 = 'OPENMARK: invalid order type';
 
-    /// Exceeds number of nfts allowd in 'fillBids'.
-    pub const TOO_MANY_NFTS: felt252 = 'OPENMARK: too many nfts';
-
     pub const ZERO_NFTS: felt252 = 'OPENMARK: zero nfts';
-
-    /// There is no valid bid in 'fill_bids'.
-    pub const NO_VALID_BIDS: felt252 = 'OPENMARK: no valid bids';
-
-    /// Bid with zero amount nft
-    pub const ZERO_BIDS_AMOUNT: felt252 = 'OPENMARK: zero bids amount';
-
-    // Asking price higher than bid price.
-    pub const ASKING_PRICE_TOO_HIGH: felt252 = 'OPENMARK: asking too high';
 
     /// NFT does not match the NFT in a trade
     pub const NFT_MISMATCH: felt252 = 'OPENMARK: nft mismatch';

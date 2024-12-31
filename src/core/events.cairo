@@ -1,5 +1,5 @@
 use starknet::{ContractAddress};
-use openmark::primitives::types::{Order, Bid};
+use openmark::primitives::types::{Order};
 
 /// Emitted when a trade is filled. This event is triggered when an order is made,
 /// which can be either a buy_nft or accept_offer.
@@ -20,35 +20,4 @@ pub struct OrderCancelled {
     pub who: ContractAddress,
     #[key]
     pub order: Order,
-}
-
-/// Event emitted when a bid is filled in OpenMark.
-/// 
-/// Variables:
-/// - `seller`: The address of the seller who accepted the bid.
-/// - `bidder`: The address of the bidder who placed the bid.
-/// - `bid`: The details of the bid, encapsulated in the `Bid` struct.
-/// - `tokenIds`: A list of token IDs were traded.
-///
-/// This event provides key information about the transaction, enabling listeners to
-/// track successful bids and their associated details.
-#[derive(Drop, PartialEq, starknet::Event)]
-pub struct BidFilled {
-    #[key]
-    pub seller: ContractAddress,
-    #[key]
-    pub bidder: ContractAddress,
-    #[key]
-    pub bid: Bid,
-    #[key]
-    pub tokenIds: Span<u128>,
-}
-
-/// Emitted when a bid is canceled.
-#[derive(Drop, PartialEq, starknet::Event)]
-pub struct BidCancelled {
-    #[key]
-    pub who: ContractAddress,
-    #[key]
-    pub bid: Bid,
 }

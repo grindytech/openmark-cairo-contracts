@@ -1,5 +1,5 @@
 use starknet::{ContractAddress};
-use openmark::primitives::types::{Order, Bid, SignedBid, Bag};
+use openmark::primitives::types::{Order, Bag};
 
 #[starknet::interface]
 pub trait IOpenMark<TState> {
@@ -9,18 +9,8 @@ pub trait IOpenMark<TState> {
         ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-    fn fill_bids(
-        ref self: TState,
-        bids: Span<SignedBid>,
-        nft_token: ContractAddress,
-        token_ids: Span<u128>,
-        payment_token: ContractAddress,
-        asking_price: u128,
-    );
 
     fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
-
-    fn cancel_bid(ref self: TState, bid: Bid, signature: Span<felt252>);
 
     fn batch_buy(ref self: TState, bags: Span<Bag>);
 }
@@ -31,18 +21,7 @@ pub trait IOpenMarkCamel<TState> {
         ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-    fn fillBids(
-        ref self: TState,
-        bids: Span<SignedBid>,
-        nftContract: ContractAddress,
-        tokenIds: Span<u128>,
-        paymentToken: ContractAddress,
-        askingPrice: u128,
-    );
-
     fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
-
-    fn cancelBid(ref self: TState, bid: Bid, signature: Span<felt252>);
 
     fn batchBuy(ref self: TState, bags: Span<Bag>);
 }
@@ -70,16 +49,6 @@ pub trait IOpenMarkProvider<TState> {
         buyer: ContractAddress
     );
 
-    fn verify_signed_bid(self: @TState, bid: SignedBid);
-
-    fn get_valid_bids(
-        self: @TState,
-        bids: Span<SignedBid>,
-        nft_token: ContractAddress,
-        payment_token: ContractAddress,
-        asking_price: u128
-    ) -> Span<SignedBid>;
-
     fn get_version(self: @TState) -> (u32, u32, u32);
 }
 
@@ -106,16 +75,6 @@ pub trait IOpenMarkProviderCamel<TState> {
         buyer: ContractAddress
     );
 
-    fn verifySignedBid(self: @TState, bid: SignedBid);
-
-    fn getValidBids(
-        self: @TState,
-        bids: Span<SignedBid>,
-        nftToken: ContractAddress,
-        paymentToken: ContractAddress,
-        askingPrice: u128
-    ) -> Span<SignedBid>;
-
     fn getVersion(self: @TState) -> (u32, u32, u32);
 }
 
@@ -124,5 +83,4 @@ pub trait IOpenMarkManager<TState> {
     fn set_commission(ref self: TState, new_commission: u32);
     fn add_payment_token(ref self: TState, payment_token: ContractAddress);
     fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
-    fn set_max_fill_nfts(ref self: TState, max_nfts: u32);
 }

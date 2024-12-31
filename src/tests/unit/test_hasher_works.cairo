@@ -5,7 +5,7 @@ use starknet::{ContractAddress};
 
 use snforge_std::{declare, ContractClassTrait, start_cheat_caller_address, DeclareResultTrait};
 use openmark::{
-    primitives::types::{Order, Bid, OrderType},
+    primitives::types::{Order, OrderType},
     hasher::interface::{IOffchainMessageHashDispatcher, IOffchainMessageHashDispatcherTrait},
 };
 use openmark::tests::unit::common::{SELLER1, TEST_PAYMENT, TEST_NFT, deploy_mock_account};
@@ -38,28 +38,6 @@ fn get_order_hash_works() {
     let result = dispatcher.get_order_hash(order, SELLER1);
     assert(result == message_hash, 'Order hash not correct');
 }
-
-#[test]
-fn get_bid_hash_works() {
-    let contract_address = deploy_mock_hasher();
-    let message_hash = 0x112fac68386d4127199c52ff7be1676fc729161a6113f00e989f3650b309549;
-    let bid = Bid {
-        nftContract: TEST_NFT.try_into().unwrap(),
-        amount: 1,
-        unitPrice: 3,
-        payment: TEST_PAYMENT.try_into().unwrap(),
-        salt: 4,
-        expiry: 5,
-    };
-
-    start_cheat_caller_address(contract_address, SELLER1.try_into().unwrap());
-    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
-
-    let result = dispatcher.get_bid_hash(bid, SELLER1);
-
-    assert(result== message_hash, 'Bid hash not correct');
-}
-
 
 #[test]
 fn verify_signature_works() {
@@ -121,29 +99,3 @@ fn verify_order_works() {
 
     assert(result, 'Verify order failed');
 }
-
-#[test]
-fn verify_bid_works() {
-    let contract_address = deploy_mock_hasher();
-
-    let bid = Bid {
-        nftContract: TEST_NFT.try_into().unwrap(),
-        amount: 1,
-        unitPrice: 3,
-        payment: TEST_PAYMENT.try_into().unwrap(),
-        salt: 4,
-        expiry: 5,
-    };
-
-    let mut signature = array![
-        0x395b8788705b19c9cf4f6cae65e7403918e324100aa4e52c5f05816a9cb08c1,
-        0x5d716e05d2b234bcb7ecc1ef2864840bcb10d86d031bf0de6f0ad088b2be417
-    ];
-
-    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
-
-    let result = dispatcher.verify_bid(bid, SELLER1, signature.span());
-
-    assert(result, 'Verify bid failed');
-}
-

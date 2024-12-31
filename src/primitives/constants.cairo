@@ -8,8 +8,3 @@ pub const ORDER_STRUCT_TYPE_HASH: felt252 =
     selector!(
         "Order(nftContract:ContractAddress,tokenId:u128,payment:ContractAddress,price:u128,salt:felt,expiry:u128,option:OrderType)"
     );
-
-pub const BID_STRUCT_TYPE_HASH: felt252 =
-    selector!(
-        "Bid(nftContract:ContractAddress,amount:u128,payment:ContractAddress,unitPrice:u128,salt:felt,expiry:u128)"
-    );
