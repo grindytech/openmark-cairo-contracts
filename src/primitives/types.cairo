@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 use openmark::primitives::constants::{
-    STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH, BID_STRUCT_TYPE_HASH
+    STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH
 };
 
 pub type ID = u128;
@@ -39,23 +39,6 @@ pub struct Bag {
     pub signature: Span<felt252>,
 }
 
-#[derive(Copy, Drop, Serde)]
-pub struct SignedBid {
-    pub bidder: ContractAddress,
-    pub bid: Bid,
-    pub signature: Span<felt252>,
-}
-
-#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug)]
-pub struct Bid {
-    pub nftContract: ContractAddress,
-    pub amount: u128,
-    pub payment: ContractAddress,
-    pub unitPrice: Balance,
-    pub salt: felt252,
-    pub expiry: u128,
-}
-
 #[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
 pub struct Stage {
     pub id: ID,
@@ -88,16 +71,6 @@ impl StructHashOrder of IStructHash<Order> {
         state = state.update_with(ORDER_STRUCT_TYPE_HASH);
         state = state.update_with(*self);
         state = state.update_with(8);
-        state.finalize()
-    }
-}
-
-impl StructHashBid of IStructHash<Bid> {
-    fn hash_struct(self: @Bid) -> felt252 {
-        let mut state = PedersenTrait::new(0);
-        state = state.update_with(BID_STRUCT_TYPE_HASH);
-        state = state.update_with(*self);
-        state = state.update_with(7);
         state.finalize()
     }
 }

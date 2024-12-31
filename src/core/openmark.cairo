@@ -6,9 +6,6 @@
 /// # This contract implements the OpenMark NFT marketplace on StarkNet, allowing users to:
 /// - Buy: Purchase listed NFTs directly from sellers.
 /// - Sell: List NFTs for sale with desired prices.
-/// - Bid: Place competitive bids on listed NFTs.
-/// - Auction: Conduct auctions where NFTs are sold to the highest bidder.
-/// - Random NFT Mining: Engage in random NFT mining for discovery.
 
 #[starknet::contract]
 pub mod OpenMark {
@@ -26,15 +23,14 @@ pub mod OpenMark {
     use starknet::ClassHash;
 
     use core::num::traits::Zero;
-    use core::panic_with_felt252;
 
-    use openmark::primitives::types::{Order, OrderType, Bid, SignedBid, Bag};
+    use openmark::primitives::types::{Order, OrderType, Bag};
     use openmark::hasher::interface::IOffchainMessageHash;
     use openmark::hasher::{HasherComponent};
     use openmark::core::interface::{
         IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkProviderCamel, IOpenMarkManager
     };
-    use openmark::core::events::{OrderFilled, OrderCancelled, BidCancelled, BidFilled};
+    use openmark::core::events::{OrderFilled, OrderCancelled};
     use openmark::core::errors::OMErrors as Errors;
     use openmark::primitives::utils::{
         nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of
@@ -78,8 +74,6 @@ pub mod OpenMark {
         HasherEvent: HasherComponent::Event,
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
-        BidFilled: BidFilled,
-        BidCancelled: BidCancelled,
     }
 
 
@@ -96,12 +90,8 @@ pub mod OpenMark {
         hasher: HasherComponent::Storage,
         /// OpenMark's commission (per mille)
         commission: u32,
-        /// Maximum number of tokens that can be handled in a single fillBids operation
-        maxBidNFTs: u32,
         /// store used order signatures
         usedSignatures: starknet::storage::Map<felt252, bool>,
-        /// store partial bid signatures
-        partialBidSignatures: starknet::storage::Map<felt252, u128>,
         /// store allowed payment tokens
         paymentTokens: starknet::storage::Map<ContractAddress, bool>,
     }
@@ -111,7 +101,6 @@ pub mod OpenMark {
         self.ownable.initializer(owner);
         self.paymentTokens.write(paymentToken, true);
         self.commission.write(0);
-        self.maxBidNFTs.write(10);
     }
 
     #[abi(embed_v0)]
@@ -150,36 +139,6 @@ pub mod OpenMark {
             self.reentrancy_guard.end();
         }
 
-        fn fill_bids(
-            ref self: ContractState,
-            bids: Span<SignedBid>,
-            nft_token: ContractAddress,
-            token_ids: Span<u128>,
-            payment_token: ContractAddress,
-            asking_price: u128,
-        ) {
-            self.reentrancy_guard.start();
-
-            let seller = get_caller_address();
-
-            if let Result::Err(err) = self._verify_bid_seller(seller, nft_token, token_ids) {
-                panic_with_felt252(err);
-            }
-
-            let valid_bids = self.get_valid_bids(bids, nft_token, payment_token, asking_price);
-
-            assert(valid_bids.len() > 0, Errors::NO_VALID_BIDS);
-
-            let mut trade_token_ids = token_ids;
-            let mut i = 0;
-            while (i < valid_bids.len() && trade_token_ids.len() > 0) {
-                self._process_bid(seller, *valid_bids.at(i), ref trade_token_ids);
-                i += 1;
-            };
-
-            self.reentrancy_guard.end();
-        }
-
         fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
 
@@ -192,19 +151,6 @@ pub mod OpenMark {
             self.usedSignatures.write(self.hash_array(signature), true);
 
             self.emit(OrderCancelled { who: get_caller_address(), order, });
-        }
-
-        fn cancel_bid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
-            assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
-
-            assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
-
-            assert(
-                self.hasher.verify_bid(bid, get_caller_address().into(), signature),
-                Errors::INVALID_SIGNATURE
-            );
-            self.usedSignatures.write(self.hash_array(signature), true);
-            self.emit(BidCancelled { who: get_caller_address(), bid, });
         }
 
         fn batch_buy(ref self: ContractState, bags: Span<Bag>) {
@@ -222,23 +168,8 @@ pub mod OpenMark {
             self.accept_offer(buyer, order, signature);
         }
 
-        fn fillBids(
-            ref self: ContractState,
-            bids: Span<SignedBid>,
-            nftContract: ContractAddress,
-            tokenIds: Span<u128>,
-            paymentToken: ContractAddress,
-            askingPrice: u128,
-        ) {
-            self.fill_bids(bids, nftContract, tokenIds, paymentToken, askingPrice);
-        }
-
         fn cancelOrder(ref self: ContractState, order: Order, signature: Span<felt252>) {
             self.cancel_order(order, signature);
-        }
-
-        fn cancelBid(ref self: ContractState, bid: Bid, signature: Span<felt252>) {
-            self.cancel_bid(bid, signature);
         }
 
         fn batchBuy(ref self: ContractState, bags: Span<Bag>) {
@@ -292,36 +223,6 @@ pub mod OpenMark {
             self._validate_order_signature(order, buyer, signature);
         }
 
-        fn verify_signed_bid(self: @ContractState, bid: SignedBid) {
-            if let Result::Err(err) = self._verify_signed_bid(bid) {
-                panic_with_felt252(err);
-            }
-        }
-
-        fn get_valid_bids(
-            self: @ContractState,
-            bids: Span<SignedBid>,
-            nft_token: ContractAddress,
-            payment_token: ContractAddress,
-            asking_price: u128
-        ) -> Span<SignedBid> {
-            let mut valid_bids = ArrayTrait::new();
-
-            for bid in bids {
-                if let Result::Err(_) = self._verify_signed_bid(*bid) {
-                    continue;
-                };
-
-                if let Result::Err(_) = self
-                    ._verify_matching_bid(*bid.bid, nft_token, payment_token, asking_price) {
-                    continue;
-                }
-                valid_bids.append(*bid);
-            };
-
-            valid_bids.span()
-        }
-
         fn get_version(self: @ContractState) -> (u32, u32, u32) {
             // version 0.2.2
             (0, 2, 2)
@@ -363,20 +264,6 @@ pub mod OpenMark {
             self.verify_accept_offer(order, signature, seller, buyer)
         }
 
-        fn verifySignedBid(self: @ContractState, bid: SignedBid) {
-            self.verify_signed_bid(bid);
-        }
-
-        fn getValidBids(
-            self: @ContractState,
-            bids: Span<SignedBid>,
-            nftToken: ContractAddress,
-            paymentToken: ContractAddress,
-            askingPrice: u128
-        ) -> Span<SignedBid> {
-            self.get_valid_bids(bids, nftToken, paymentToken, askingPrice)
-        }
-
         fn getVersion(self: @ContractState) -> (u32, u32, u32) {
             self.get_version()
         }
@@ -397,11 +284,6 @@ pub mod OpenMark {
         fn remove_payment_token(ref self: ContractState, payment_token: ContractAddress) {
             self.ownable.assert_only_owner();
             self.paymentTokens.write(payment_token, false);
-        }
-
-        fn set_max_fill_nfts(ref self: ContractState, max_nfts: u32) {
-            self.ownable.assert_only_owner();
-            self.maxBidNFTs.write(max_nfts);
         }
     }
 
@@ -456,189 +338,6 @@ pub mod OpenMark {
 
         fn _calculate_commission(self: @ContractState, price: u256) -> u256 {
             price * self.commission.read().into() / PERMYRIAD.into()
-        }
-
-        fn _verify_bid(
-            self: @ContractState, bid: Bid, bidder: ContractAddress
-        ) -> Result<(), felt252> {
-            if bidder.is_zero() {
-                return Result::Err(Errors::ZERO_ADDRESS);
-            }
-
-            if !self.verify_payment_token(bid.payment) {
-                return Result::Err(Errors::INVALID_PAYMENT_TOKEN);
-            }
-
-            if bid.amount.is_zero() {
-                return Result::Err(Errors::ZERO_BIDS_AMOUNT);
-            }
-
-            let price: u256 = (bid.unitPrice * bid.amount).into();
-
-            if price.is_zero() {
-                return Result::Err(Errors::PRICE_IS_ZERO);
-            }
-
-            if payment_balance_of(bid.payment, bidder) < price {
-                return Result::Err(Errors::INSUFFICIENT_BALANCE);
-            }
-
-            if bid.expiry <= get_block_timestamp().into() {
-                return Result::Err(Errors::BID_EXPIRED);
-            }
-
-            Result::Ok(())
-        }
-
-        fn _verify_signed_bid(self: @ContractState, bid: SignedBid) -> Result<(), felt252> {
-            if let Result::Err(err) = self._verify_bid(bid.bid, bid.bidder) {
-                return Result::Err(err);
-            }
-
-            if let Result::Err(err) = self
-                ._verify_bid_signature(bid.bid, bid.bidder, bid.signature) {
-                return Result::Err(err);
-            }
-            Result::Ok(())
-        }
-
-        fn _verify_matching_bid(
-            self: @ContractState,
-            bid: Bid,
-            nft_token: ContractAddress,
-            payment_token: ContractAddress,
-            asking_price: u128
-        ) -> Result<(), felt252> {
-            if bid.nftContract != nft_token {
-                return Result::Err(Errors::NFT_MISMATCH);
-            }
-
-            if bid.payment != payment_token {
-                return Result::Err(Errors::PAYMENT_MISMATCH);
-            }
-
-            if asking_price > bid.unitPrice {
-                return Result::Err(Errors::ASKING_PRICE_TOO_HIGH);
-            }
-
-            Result::Ok(())
-        }
-
-        fn _verify_bid_seller(
-            self: @ContractState,
-            seller: ContractAddress,
-            nft_token: ContractAddress,
-            token_ids: Span<u128>,
-        ) -> Result<(), felt252> {
-            if token_ids.is_empty() {
-                return Result::Err(Errors::ZERO_NFTS);
-            }
-
-            if seller.is_zero() {
-                return Result::Err(Errors::ZERO_ADDRESS);
-            }
-
-            if token_ids.len() >= self.maxBidNFTs.read() {
-                return Result::Err(Errors::TOO_MANY_NFTS);
-            }
-
-            let mut is_owner = true;
-            for token_id in token_ids {
-                if nft_owner_of(nft_token, (*token_id).into()) != seller {
-                    is_owner = false;
-                    break;
-                }
-            };
-
-            if !is_owner {
-                return Result::Err(Errors::NOT_NFT_OWNER);
-            }
-
-            Result::Ok(())
-        }
-
-
-        fn _verify_bid_signature(
-            self: @ContractState, bid: Bid, signer: ContractAddress, signature: Span<felt252>,
-        ) -> Result<(), felt252> {
-            if signature.len() != 2 {
-                return Result::Err(Errors::INVALID_SIGNATURE_LEN);
-            }
-
-            let is_used = self.usedSignatures.read(self.hasher.hash_array(signature));
-            if is_used {
-                return Result::Err(Errors::SIGNATURE_USED);
-            }
-
-            if !self.hasher.verify_bid(bid, signer.into(), signature) {
-                return Result::Err(Errors::INVALID_SIGNATURE);
-            }
-
-            Result::Ok(())
-        }
-
-
-        fn _process_bid(
-            ref self: ContractState,
-            seller: ContractAddress,
-            signed_bid: SignedBid,
-            ref trade_token_ids: Span<u128>
-        ) {
-            let signature = self.hash_array(signed_bid.signature);
-            let mut bid_amount = signed_bid.bid.amount;
-            let mut trade_amount: u128 = trade_token_ids.len().into();
-            let mut remaining_amount: u128 = 0;
-            {
-                let partial_amount = self.partialBidSignatures.read(signature);
-                if partial_amount > 0 {
-                    bid_amount = partial_amount;
-                }
-
-                if (trade_amount > bid_amount) {
-                    trade_amount = bid_amount;
-                } else {
-                    remaining_amount = bid_amount - trade_amount;
-                }
-            }
-
-            if remaining_amount > 0 {
-                self.partialBidSignatures.write(signature, remaining_amount);
-            } else {
-                self.usedSignatures.write(signature, true);
-                self.partialBidSignatures.write(signature, 0);
-            }
-
-            let price: u256 = (signed_bid.bid.unitPrice * trade_amount).into();
-            self
-                ._process_payment(
-                    signed_bid.bidder, get_caller_address(), price, signed_bid.bid.payment
-                );
-
-            let mut traded_ids = ArrayTrait::new();
-            let mut token_index: u128 = 0;
-
-            while (token_index < trade_amount) {
-                if let Option::Some(token_id) = trade_token_ids.pop_front() {
-                    nft_transfer_from(
-                        signed_bid.bid.nftContract, seller, signed_bid.bidder, (*token_id).into()
-                    );
-
-                    traded_ids.append(*token_id);
-                    token_index += 1;
-                } else {
-                    panic!("OPENMARK: process bid failed");
-                }
-            };
-
-            self
-                .emit(
-                    BidFilled {
-                        seller,
-                        bidder: signed_bid.bidder,
-                        bid: signed_bid.bid,
-                        tokenIds: traded_ids.span(),
-                    }
-                );
         }
 
         /// Processes a payment from sender to a receiver.

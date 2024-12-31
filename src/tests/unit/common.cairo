@@ -11,7 +11,7 @@ use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_c
 use starknet::{ContractAddress, contract_address_const};
 
 use openmark::{
-    primitives::types::{Order, Bid, OrderType, SignedBid},
+    primitives::types::{Order, OrderType},
     hasher::interface::{IOffchainMessageHashDispatcher}, core::OpenMark::{ContractState},
     token::interface::{IOpenMarkNFTDispatcher}
 };
@@ -233,110 +233,6 @@ pub fn create_offer() -> (
     (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer,)
 }
 
-pub fn create_bids() -> (
-    Span<SignedBid>, // signed bids
-    ContractAddress, // openmark address
-    ContractAddress, // nft address
-    ContractAddress, // token payment address
-    ContractAddress, // seller
-    Span<ContractAddress>, // buyers
-    Span<u128>, // sell nft token ids
-) {
-    let nft_token: ContractAddress = setup_collection_at(toAddress(TEST_NFT));
-    let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
-
-    let openmark_address = deploy_openmark(payment_token);
-    let seller: ContractAddress = toAddress(SELLER1);
-
-    let buyer1: ContractAddress = toAddress(BUYER1);
-    let buyer2: ContractAddress = toAddress(BUYER2);
-    let buyer3: ContractAddress = toAddress(BUYER3);
-
-    let ERC721Dispatcher = IERC721Dispatcher { contract_address: nft_token };
-    let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
-
-    let unitPrice = 3_u128;
-    let total_amount = 10;
-    let bid1 = Bid {
-        nftContract: nft_token, amount: 1, payment: payment_token, unitPrice, salt: 4, expiry: 5,
-    };
-    let bid2 = Bid {
-        nftContract: nft_token, amount: 2, payment: payment_token, unitPrice, salt: 4, expiry: 5,
-    };
-    let bid3 = Bid {
-        nftContract: nft_token, amount: 3, payment: payment_token, unitPrice, salt: 4, expiry: 5,
-    };
-
-    // create and approve nfts
-    {
-        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: nft_token };
-        start_cheat_caller_address(nft_token, seller);
-        IOM721Dispatcher.safe_batch_mint(seller, total_amount);
-
-        let mut token_id = 0_u256;
-        while token_id < total_amount {
-            ERC721Dispatcher.approve(openmark_address, token_id);
-            token_id += 1;
-        }
-    }
-
-    // faucet and approve eth token
-    {
-        let approve_amount = 1000000_u256;
-        start_cheat_caller_address(payment_token, buyer1);
-        ERC20Dispatcher.transfer(buyer2, approve_amount);
-        ERC20Dispatcher.transfer(buyer3, approve_amount);
-
-        start_cheat_caller_address(payment_token, buyer1);
-        ERC20Dispatcher.approve(openmark_address, approve_amount);
-
-        start_cheat_caller_address(payment_token, buyer2);
-        ERC20Dispatcher.approve(openmark_address, approve_amount);
-
-        start_cheat_caller_address(payment_token, buyer3);
-        ERC20Dispatcher.approve(openmark_address, approve_amount);
-    }
-
-    let signed_bids = array![
-        SignedBid {
-            bidder: buyer1, bid: bid1, signature: [
-                0x603d39c370bedfe3f08c2f9f86f23616ebe0d6294ed1edbef92096ff378a7e9,
-                0x5d7625a6d3ac77231dd153c17c4439cf64ba217efabec9263e978872dfc29c8
-            ].span()
-        },
-        SignedBid {
-            bidder: buyer2,
-            bid: bid2,
-            signature: array![
-                0x3180b2cb0aeed1643ac7efa5d56e29e793b7a396f4ff6b3f4fe588208211c64,
-                0x5615fce3720669df0e3acdf91d7c93122074bdfa535bde0b383ede0d546f8e9
-            ]
-                .span()
-        },
-        SignedBid {
-            bidder: buyer3,
-            bid: bid3,
-            signature: array![
-                0x3a57b5f8f5d87b5326a078593c3414bb4d7b7282b0d4550cb09a2714d4774f7,
-                0x1e2f9728548d1203e0d0fc07dcb9092230729aabc3fed319f5452b7818736bb
-            ]
-                .span()
-        },
-    ];
-
-    let tokenIds = array![0, 1, 2, 3, 4, 5].span();
-    (
-        signed_bids.span(),
-        openmark_address,
-        nft_token,
-        payment_token,
-        seller,
-        array![buyer1, buyer2, buyer3].span(),
-        tokenIds
-    )
-}
-
-
 fn create_launchpad_template() -> ContractAddress {
     let contract = declare("Launchpad").unwrap().contract_class();
     let mut constructor_calldata = array![];
@@ -376,7 +272,5 @@ pub fn create_launchpad_factory(
 
 pub fn get_contract_state_for_testing() -> ContractState {
     let mut state = openmark::core::OpenMark::contract_state_for_testing();
-    state.maxBidNFTs.write(10);
-
     state
 }
