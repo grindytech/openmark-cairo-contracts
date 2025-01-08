@@ -4,6 +4,7 @@ pub mod core;
 pub mod token;
 pub mod factory;
 pub mod launchpad;
+pub mod assets;
 
 pub mod mocks {
     mod hasher_mock;
