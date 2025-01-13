@@ -17,3 +17,8 @@ pub trait IERC1155Minter<T> {
     fn mint(ref self: T, to: ContractAddress, tokenId: u256, value: u256,data: Span<felt252>);
     fn mintBatch(ref self: T, to: ContractAddress, tokenIds: Span<u256>, values: Span<u256>, data: Span<felt252>);
 }
+
+#[starknet::interface]
+pub trait IOpenCollection<T> {
+    fn mintURIs(ref self: T, to: ContractAddress,uris: Span<ByteArray> );
+}
