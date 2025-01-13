@@ -38,6 +38,7 @@ mod OERC721 {
         src5: SRC5Component::Storage,
         // self storage
         totalSupply: u256,
+        royaltyPercentage: u256,
     }
 
     #[event]
@@ -64,6 +65,8 @@ mod OERC721 {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
         self.erc721.initializer(name, symbol, baseURI);
+        self.totalSupply.write(totalSupply);
+        self.royaltyPercentage.write(royaltyPercentage);
     }
 
 
