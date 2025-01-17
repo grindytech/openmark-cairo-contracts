@@ -92,7 +92,9 @@ pub mod OERC1155Factory {
             self.factory.write(id, address);
             self
                 .emit(
-                    CollectionCreated { id, address, owner, name, symbol, uri, total_supply,royalty_percentage }
+                    CollectionCreated {
+                        id, address, owner, name, symbol, uri, total_supply, royalty_percentage
+                    }
                 );
         }
 
@@ -113,10 +115,7 @@ pub mod OERC1155Factory {
             totalSupply: u256,
             royaltyPercentage: u256,
         ) {
-            self
-                .create_collection(
-                    id, owner, name, symbol, URI, totalSupply, royaltyPercentage
-                );
+            self.create_collection(id, owner, name, symbol, URI, totalSupply, royaltyPercentage);
         }
 
         fn getCollection(self: @ContractState, id: u256) -> ContractAddress {
