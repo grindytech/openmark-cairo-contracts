@@ -11,7 +11,7 @@ pub trait IOERC721Factory<T> {
         symbol: ByteArray,
         base_uri: ByteArray,
         total_supply: u256,
-            royalty_percentage: u256,
+        royalty_percentage: u256,
     );
 
     fn get_collection(self: @T, id: u256) -> ContractAddress;

@@ -57,6 +57,7 @@ fn create_collection_works() {
             symbol: "Stark NFT",
             base_uri: "https://starknet.io",
             total_supply: 1000_u256,
+            royalty_percentage: 0_u256,
         }
     );
 }

@@ -41,6 +41,7 @@ pub mod OERC1155Factory {
         pub symbol: ByteArray,
         pub uri: ByteArray,
         pub total_supply: u256,
+        pub royalty_percentage: u256,
     }
 
     #[event]
@@ -91,7 +92,7 @@ pub mod OERC1155Factory {
             self.factory.write(id, address);
             self
                 .emit(
-                    CollectionCreated { id, address, owner, name, symbol, uri, total_supply }
+                    CollectionCreated { id, address, owner, name, symbol, uri, total_supply,royalty_percentage }
                 );
         }
 
