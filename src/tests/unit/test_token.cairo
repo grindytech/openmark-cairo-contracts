@@ -1,13 +1,19 @@
-use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
+use openzeppelin::token::erc721::interface::{
+    IERC721DispatcherTrait, IERC721Dispatcher, IERC721MetadataDispatcher,
+    IERC721MetadataDispatcherTrait
+};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address};
 
 use starknet::{ContractAddress};
 
-use openmark::{assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait},// assets::interface::{IOMERC721Dispatcher, IOMERC721DispatcherTrait},
+use openmark::{
+    assets::interface::{
+        IERC721MinterDispatcher, IERC721MinterDispatcherTrait
+    }, // assets::interface::{IOMERC721Dispatcher, IOMERC721DispatcherTrait},
 };
-use openmark::tests::unit::common::{toAddress, BUYER1, SELLER1};
+use openmark::tests::unit::common::{toAddress, setup_account, BUYER1, SELLER1};
 
 pub fn NFT_NAME() -> ByteArray {
     "OpenMark"
@@ -63,13 +69,13 @@ fn mint_works() {
 
 #[test]
 fn safe_mint_works() {
-    let owner: ContractAddress = toAddress(SELLER1);
+    let owner: ContractAddress = setup_account(SELLER1);
     let contract_address = create_gameitem(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let to: ContractAddress = toAddress(BUYER1);
+    let to: ContractAddress = setup_account(BUYER1);
     start_cheat_caller_address(contract_address, owner);
     OERC721.safe_mint(to, 10, [].span());
 
@@ -78,13 +84,13 @@ fn safe_mint_works() {
 
 #[test]
 fn safeMint_works() {
-    let owner: ContractAddress = toAddress(SELLER1);
+    let owner: ContractAddress = setup_account(SELLER1);
     let contract_address = create_gameitem(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let to: ContractAddress = toAddress(BUYER1);
+    let to: ContractAddress = setup_account(BUYER1);
     start_cheat_caller_address(contract_address, owner);
     OERC721.safeMint(to, 10, [].span());
 
@@ -109,121 +115,160 @@ fn mintBatch_works() {
 
 #[test]
 fn safeMintBatch_works() {
-    let owner: ContractAddress = toAddress(SELLER1);
+    let owner: ContractAddress = setup_account(SELLER1);
     let contract_address = create_gameitem(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
 
-    let to: ContractAddress = toAddress(BUYER1);
+    let to: ContractAddress = setup_account(BUYER1);
     start_cheat_caller_address(contract_address, owner);
     OERC721.safeMintBatch(to, [10].span(), [].span());
 
     assert(ERC721.owner_of(10) == to, 'NFT owner not correct');
 }
-// #[test]
-// fn get_token_uri_only_baseURI_works() {
-//     // Set the base URI and mint a token without a specific URI
-//     // If only base URI is set, the token URI should concatenate the base URI and token ID
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let to: ContractAddress = toAddress(BUYER1);
 
-//     let baseURI = "https://api.openmark.io/";
-//     let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100);
+#[test]
+fn get_token_uri_only_baseURI_works() {
+    // Set the base URI and mint a token without a specific URI
+    // If only base URI is set, the token URI should concatenate the base URI and token ID
+    let owner: ContractAddress = setup_account(SELLER1);
+    let to: ContractAddress = setup_account(BUYER1);
 
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
-//     let NFTMetadata = IOMERC721Dispatcher { contract_address };
+    let baseURI = "https://api.openmark.io/";
+    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100, 0);
 
-//     start_cheat_caller_address(contract_address, owner);
-//     OpenNFT.safe_batch_mint(to, 1);
+    let OERC721 = IERC721MinterDispatcher { contract_address };
+    let NFTMetadata = IERC721MetadataDispatcher { contract_address };
 
-//     assert(NFTMetadata.token_uri(0) == "https://api.openmark.io/0", 'Token uri not correct');
-// }
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.mint(to, 0);
 
-// #[test]
-// fn get_token_uri_without_baseURI_works() {
-//     // Set an empty base URI and mint a token with a specific URI
-//     // If there is no base URI, the token URI should be the specific URI set during minting
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let to: ContractAddress = toAddress(BUYER1);
+    assert(NFTMetadata.token_uri(0) == "https://api.openmark.io/0", 'Token uri not correct');
+}
 
-//     let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", 100);
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
-//     let NFTMetadata = IOMERC721Dispatcher { contract_address };
-//     start_cheat_caller_address(contract_address, owner);
+#[test]
+#[should_panic(expected: ('Caller is missing role',))]
+fn mint_unauthorized_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-//     OpenNFT.safe_batch_mint_with_uris(to, array!["TOKEN1"].span());
-//     assert(NFTMetadata.token_uri(0) == "TOKEN1", 'Token uri not correct');
-// }
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-// #[test]
-// fn get_token_uri_with_baseURI_and_tokenURI_works() {
-//     // Set the base URI again and mint a token with a specific URI
-//     // If both base URI and specific token URI are set, the token URI
-//     // should concatenate the base URI and specific token URI
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, to);
+    OERC721.mint(to, 10);
+}
+#[test]
+#[should_panic(expected: ('Caller is missing role',))]
+fn safe_mint_unauthorized_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-//     let baseURI = "https://api.openmark.io/";
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let to: ContractAddress = toAddress(BUYER1);
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-//     let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100);
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
-//     let NFTMetadata = IOMERC721Dispatcher { contract_address };
-//     start_cheat_caller_address(contract_address, owner);
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, to);
+    OERC721.safe_mint(to, 10, [].span());
+}
 
-//     OpenNFT.safe_batch_mint_with_uris(to, array!["TOKEN2"].span());
-//     assert(NFTMetadata.token_uri(0) == "https://api.openmark.io/TOKEN2", 'Token uri not
-//     correct');
-// }
+#[test]
+#[should_panic(expected: ('Caller is missing role',))]
+fn safeMint_unauthorized_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-// #[test]
-// #[should_panic(expected: ('Caller is missing role',))]
-// fn safe_batch_mint_unauthorized_panics() {
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let contract_address = create_gameitem(owner);
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, to);
+    OERC721.safeMint(to, 10, [].span());
+}
+#[test]
+#[should_panic(expected: ('Caller is missing role',))]
+fn mintBatch_unauthorized_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-//     let to: ContractAddress = toAddress(BUYER1);
-//     start_cheat_caller_address(contract_address, to);
-//     OpenNFT.safe_batch_mint(to, 10);
-// }
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-// #[test]
-// #[should_panic(expected: ('Caller is missing role',))]
-// fn safe_batch_mint_with_uris_unauthorized_panics() {
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let contract_address = create_gameitem(owner);
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, to);
+    OERC721.mintBatch(to, [1, 10].span());
+}
 
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
+#[test]
+#[should_panic(expected: ('Caller is missing role',))]
+fn safeMintBatch_unauthorized_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-//     let to: ContractAddress = toAddress(BUYER1);
-//     start_cheat_caller_address(contract_address, to);
-//     OpenNFT.safe_batch_mint_with_uris(to, array!["a", "b"].span());
-// }
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-// #[test]
-// #[should_panic(expected: ('OMNFT: exceed total supply',))]
-// fn safe_batch_mint_exceed_total_supply_panics() {
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let totalSupply = 5_u256;
-//     let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", totalSupply);
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
-//     start_cheat_caller_address(contract_address, owner);
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, to);
+    OERC721.safeMintBatch(to, [10].span(), [].span());
+}
 
-//     OpenNFT.safe_batch_mint(owner, totalSupply + 1);
-// }
+#[test]
+#[should_panic(expected: ('OM: invalid tokenId',))]
+fn mint_invalid_token_id_panics() {
+    let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
 
-// #[test]
-// #[should_panic(expected: ('OMNFT: exceed total supply',))]
-// fn safe_batch_mint_with_uris_exceed_total_supply_panics() {
-//     let owner: ContractAddress = toAddress(SELLER1);
-//     let totalSupply = 5_u256;
-//     let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", "", totalSupply);
-//     let OpenNFT = IERC721MinterDispatcher { contract_address };
-//     start_cheat_caller_address(contract_address, owner);
+    let OERC721 = IERC721MinterDispatcher { contract_address };
 
-//     OpenNFT.safe_batch_mint_with_uris(owner, array!["1", "2", "3", "4", "5", "6"].span());
-// }
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.mint(to, 1000);
+}
+#[test]
+#[should_panic(expected: ('OM: invalid tokenId',))]
+fn safe_mint_token_id_panics() {
+  let owner: ContractAddress = setup_account(SELLER1);
+    let contract_address = create_gameitem(owner);
 
+    let OERC721 = IERC721MinterDispatcher { contract_address };
+
+    let to: ContractAddress = setup_account(BUYER1);
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.safe_mint(to, 1000, [].span());
+}
+#[test]
+#[should_panic(expected: ('OM: invalid tokenId',))]
+fn safeMint_invalid_token_id_panics() {
+     let owner: ContractAddress = setup_account(SELLER1);
+    let contract_address = create_gameitem(owner);
+
+    let OERC721 = IERC721MinterDispatcher { contract_address };
+
+    let to: ContractAddress = setup_account(BUYER1);
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.safeMint(to, 1000, [].span());
+}
+#[test]
+#[should_panic(expected: ('OM: invalid tokenId',))]
+fn mintBatch_invalid_token_id_panics() {
+     let owner: ContractAddress = toAddress(SELLER1);
+    let contract_address = create_gameitem(owner);
+
+    let OERC721 = IERC721MinterDispatcher { contract_address };
+
+    let to: ContractAddress = toAddress(BUYER1);
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.mintBatch(to, [1000, 10].span());
+}
+
+#[test]
+#[should_panic(expected: ('OM: invalid tokenId',))]
+fn safeMintBatch_invalid_token_id_panics() {
+     let owner: ContractAddress = setup_account(SELLER1);
+    let contract_address = create_gameitem(owner);
+
+    let OERC721 = IERC721MinterDispatcher { contract_address };
+
+    let to: ContractAddress = setup_account(BUYER1);
+    start_cheat_caller_address(contract_address, owner);
+    OERC721.safeMintBatch(to, [1000].span(), [].span());
+}
 

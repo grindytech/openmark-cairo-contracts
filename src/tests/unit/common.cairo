@@ -6,14 +6,15 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use openmark::token::interface::IOpenMarkNFTDispatcherTrait;
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash};
+use snforge_std::{
+    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash
+};
 
 use starknet::{ContractAddress, contract_address_const};
 
 use openmark::{
-    primitives::types::{Order, OrderType},
-    hasher::interface::{IOffchainMessageHashDispatcher}, core::OpenMark::{ContractState},
-    token::interface::{IOpenMarkNFTDispatcher}
+    primitives::types::{Order, OrderType}, hasher::interface::{IOffchainMessageHashDispatcher},
+    core::OpenMark::{ContractState}, token::interface::{IOpenMarkNFTDispatcher}
 };
 use openmark::factory::interface::{ILaunchpadFactoryDispatcher,};
 
@@ -40,6 +41,13 @@ pub fn toAddress(addr: felt252) -> ContractAddress {
     return addr.try_into().unwrap();
 }
 
+pub fn setup_account(publicKey: felt252) -> ContractAddress {
+    let contract = declare("DualCaseAccountMock").unwrap().contract_class();
+    let mut constructor_calldata = array![publicKey];
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    contract_address
+}
+
 pub fn NFT_NAME() -> ByteArray {
     "OpenMark NFT"
 }
@@ -58,9 +66,7 @@ pub fn deploy_openmark(payment_token: ContractAddress) -> ContractAddress {
 
     constructor_calldata.append_serde(SELLER1);
     constructor_calldata.append_serde(payment_token);
-
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-
     contract_address
 }
 
@@ -126,8 +132,6 @@ pub fn setup_collection_at(addr: ContractAddress) -> ContractAddress {
     constructor_calldata.append_serde(NFT_BASE_URI());
     constructor_calldata.append_serde(1000000_u256);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
-
-    
 
     contract_address
 }
