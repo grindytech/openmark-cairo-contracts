@@ -26,7 +26,7 @@ pub fn NFT_SYMBOL() -> ByteArray {
 pub fn NFT_BASE_URI() -> ByteArray {
     ""
 }
-pub fn do_create_gameitem(
+pub fn do_create_oerc721(
     owner: ContractAddress,
     name: ByteArray,
     symbol: ByteArray,
@@ -48,14 +48,14 @@ pub fn do_create_gameitem(
     contract_address
 }
 
-pub fn create_gameitem(owner: ContractAddress,) -> ContractAddress {
-    return do_create_gameitem(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
+pub fn create_oerc721(owner: ContractAddress,) -> ContractAddress {
+    return do_create_oerc721(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
 }
 
 #[test]
 fn mint_works() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
@@ -70,7 +70,7 @@ fn mint_works() {
 #[test]
 fn safe_mint_works() {
     let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
@@ -85,7 +85,7 @@ fn safe_mint_works() {
 #[test]
 fn safeMint_works() {
     let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
@@ -100,7 +100,7 @@ fn safeMint_works() {
 #[test]
 fn mintBatch_works() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
@@ -116,7 +116,7 @@ fn mintBatch_works() {
 #[test]
 fn safeMintBatch_works() {
     let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let ERC721 = IERC721Dispatcher { contract_address };
@@ -136,7 +136,7 @@ fn get_token_uri_only_baseURI_works() {
     let to: ContractAddress = setup_account(BUYER1);
 
     let baseURI = "https://api.openmark.io/";
-    let contract_address = do_create_gameitem(owner, "NAME", "SYMBOL", baseURI, 100, 0);
+    let contract_address = do_create_oerc721(owner, "NAME", "SYMBOL", baseURI, 100, 0);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
     let NFTMetadata = IERC721MetadataDispatcher { contract_address };
@@ -151,7 +151,7 @@ fn get_token_uri_only_baseURI_works() {
 #[should_panic(expected: ('Caller is missing role',))]
 fn mint_unauthorized_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -163,7 +163,7 @@ fn mint_unauthorized_panics() {
 #[should_panic(expected: ('Caller is missing role',))]
 fn safe_mint_unauthorized_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -176,7 +176,7 @@ fn safe_mint_unauthorized_panics() {
 #[should_panic(expected: ('Caller is missing role',))]
 fn safeMint_unauthorized_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -188,7 +188,7 @@ fn safeMint_unauthorized_panics() {
 #[should_panic(expected: ('Caller is missing role',))]
 fn mintBatch_unauthorized_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -201,7 +201,7 @@ fn mintBatch_unauthorized_panics() {
 #[should_panic(expected: ('Caller is missing role',))]
 fn safeMintBatch_unauthorized_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -214,7 +214,7 @@ fn safeMintBatch_unauthorized_panics() {
 #[should_panic(expected: ('OM: invalid tokenId',))]
 fn mint_invalid_token_id_panics() {
     let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -226,7 +226,7 @@ fn mint_invalid_token_id_panics() {
 #[should_panic(expected: ('OM: invalid tokenId',))]
 fn safe_mint_token_id_panics() {
   let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -238,7 +238,7 @@ fn safe_mint_token_id_panics() {
 #[should_panic(expected: ('OM: invalid tokenId',))]
 fn safeMint_invalid_token_id_panics() {
      let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -250,7 +250,7 @@ fn safeMint_invalid_token_id_panics() {
 #[should_panic(expected: ('OM: invalid tokenId',))]
 fn mintBatch_invalid_token_id_panics() {
      let owner: ContractAddress = toAddress(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 
@@ -263,7 +263,7 @@ fn mintBatch_invalid_token_id_panics() {
 #[should_panic(expected: ('OM: invalid tokenId',))]
 fn safeMintBatch_invalid_token_id_panics() {
      let owner: ContractAddress = setup_account(SELLER1);
-    let contract_address = create_gameitem(owner);
+    let contract_address = create_oerc721(owner);
 
     let OERC721 = IERC721MinterDispatcher { contract_address };
 

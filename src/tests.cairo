@@ -1,7 +1,9 @@
 pub mod unit {
     mod common;
 
-    mod test_token;
+    // mod test_oerc721;
+    mod test_oerc1155;
+
     // mod test_hasher_works;
     // mod test_buy;
     // mod test_accept_offer;
