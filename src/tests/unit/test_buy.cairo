@@ -117,7 +117,7 @@ fn buy_order_expired_panics() {
 fn buy_invalid_order_type_panics() {
     let (order, signature, openmark_address, _, _, seller, buyer) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
-    openmark.verify_buy(order, signature, seller, buyer);
+    openmark.verifyBuy(order, signature, seller, buyer);
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn buy_seller_is_zero_panics() {
     let (order, signature, openmark_address, _, _, _, buyer) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    openmark.verify_buy(order, signature, ZERO(), buyer);
+    openmark.verifyBuy(order, signature, ZERO(), buyer);
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn buy_seller_not_owner_panics() {
     let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
-    openmark.verify_buy(order, signature, seller, buyer);
+    openmark.verifyBuy(order, signature, seller, buyer);
 }
 
 #[test]
@@ -148,7 +148,7 @@ fn buy_price_is_zero_panics() {
     let (mut order, signature, openmark_address, _, _, seller, buyer) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
     order.price = 0;
-    openmark.verify_buy(order, signature, seller, buyer);
+    openmark.verifyBuy(order, signature, seller, buyer);
 }
 
 #[test]

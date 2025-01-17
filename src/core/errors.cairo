@@ -32,7 +32,7 @@ pub mod OMErrors {
     pub const PAYMENT_MISMATCH: felt252 = 'OPENMARK: payment mismatch';
 
     /// Commission exceeds maximum allowed.
-    pub const COMMISSION_TOO_HIGH: felt252 = 'OPENMARK: commission too high';
+    pub const INVALID_COMMISSION: felt252 = 'OPENMARK: invalid commission';
 
     /// Payment token not allowd
     pub const INVALID_PAYMENT_TOKEN: felt252 = 'OPENMARK: Invalid payment token';

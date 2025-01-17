@@ -28,32 +28,6 @@ pub trait IOpenMarkCamel<TState> {
 
 #[starknet::interface]
 pub trait IOpenMarkProvider<TState> {
-    fn get_chain_id(self: @TState) -> felt252;
-    fn get_commission(self: @TState) -> u32;
-    fn verify_payment_token(self: @TState, payment_token: ContractAddress) -> bool;
-    fn is_used_signature(self: @TState, signature: Span<felt252>) -> bool;
-
-    fn verify_buy(
-        self: @TState,
-        order: Order,
-        signature: Span<felt252>,
-        seller: ContractAddress,
-        buyer: ContractAddress
-    );
-
-    fn verify_accept_offer(
-        self: @TState,
-        order: Order,
-        signature: Span<felt252>,
-        seller: ContractAddress,
-        buyer: ContractAddress
-    );
-
-    fn get_version(self: @TState) -> (u32, u32, u32);
-}
-
-#[starknet::interface]
-pub trait IOpenMarkProviderCamel<TState> {
     fn getChainId(self: @TState) -> felt252;
     fn getCommission(self: @TState) -> u32;
     fn verifyPaymentToken(self: @TState, paymentToken: ContractAddress) -> bool;

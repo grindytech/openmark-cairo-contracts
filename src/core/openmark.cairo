@@ -28,12 +28,16 @@ pub mod OpenMark {
     use openmark::hasher::interface::IOffchainMessageHash;
     use openmark::hasher::{HasherComponent};
     use openmark::core::interface::{
-        IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkProviderCamel, IOpenMarkManager
+        IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager
     };
     use openmark::core::events::{OrderFilled, OrderCancelled};
     use openmark::core::errors::OMErrors as Errors;
     use openmark::primitives::utils::{
-        nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of
+        nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of,
+    };
+
+    use openmark::primitives::constants::{
+        PERMYRIAD
     };
 
     /// Ownable
@@ -58,9 +62,6 @@ pub mod OpenMark {
     /// Hasher
     impl HasherImpl = HasherComponent::HasherImpl<ContractState>;
 
-    const MAX_COMMISSION: u32 = 500; // per mille (fixed 50%)
-    const PERMYRIAD: u32 = 1000;
-
     #[event]
     #[derive(Drop, starknet::Event)]
     pub enum Event {
@@ -75,7 +76,6 @@ pub mod OpenMark {
         OrderFilled: OrderFilled,
         OrderCancelled: OrderCancelled,
     }
-
 
     #[storage]
     struct Storage {
@@ -110,7 +110,7 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let buyer = get_caller_address();
-            self.verify_buy(order, signature, seller, buyer);
+            self.verifyBuy(order, signature, seller, buyer);
 
             self.usedSignatures.write(self.hash_array(signature), true);
 
@@ -127,7 +127,7 @@ pub mod OpenMark {
         ) {
             self.reentrancy_guard.start();
             let seller = get_caller_address();
-            self.verify_accept_offer(order, signature, seller, buyer);
+            self.verifyAcceptOffer(order, signature, seller, buyer);
 
             self.usedSignatures.write(self.hash_array(signature), true);
 
@@ -179,23 +179,23 @@ pub mod OpenMark {
 
     #[abi(embed_v0)]
     impl OpenMarkProviderImpl of IOpenMarkProvider<ContractState> {
-        fn get_chain_id(self: @ContractState) -> felt252 {
+        fn getChainId(self: @ContractState) -> felt252 {
             get_tx_info().unbox().chain_id
         }
 
-        fn get_commission(self: @ContractState) -> u32 {
+        fn getCommission(self: @ContractState) -> u32 {
             self.commission.read()
         }
 
-        fn verify_payment_token(self: @ContractState, payment_token: ContractAddress) -> bool {
-            self.paymentTokens.read(payment_token)
+        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
+            self.paymentTokens.read(paymentToken)
         }
 
-        fn is_used_signature(self: @ContractState, signature: Span<felt252>) -> bool {
+        fn isUsedSignature(self: @ContractState, signature: Span<felt252>) -> bool {
             self.usedSignatures.read(self.hash_array(signature))
         }
 
-        fn verify_buy(
+        fn verifyBuy(
             self: @ContractState,
             order: Order,
             signature: Span<felt252>,
@@ -209,7 +209,7 @@ pub mod OpenMark {
             self._validate_order_signature(order, seller, signature);
         }
 
-        fn verify_accept_offer(
+        fn verifyAcceptOffer(
             self: @ContractState,
             order: Order,
             signature: Span<felt252>,
@@ -223,49 +223,9 @@ pub mod OpenMark {
             self._validate_order_signature(order, buyer, signature);
         }
 
-        fn get_version(self: @ContractState) -> (u32, u32, u32) {
+        fn getVersion(self: @ContractState) -> (u32, u32, u32) {
             // version 0.2.2
             (0, 2, 2)
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl OpenMarkProviderCamelImpl of IOpenMarkProviderCamel<ContractState> {
-        fn getChainId(self: @ContractState) -> felt252 {
-            self.get_chain_id()
-        }
-        fn getCommission(self: @ContractState) -> u32 {
-            self.get_commission()
-        }
-        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
-            self.verify_payment_token(paymentToken)
-        }
-        fn isUsedSignature(self: @ContractState, signature: Span<felt252>) -> bool {
-            self.is_used_signature(signature)
-        }
-
-        fn verifyBuy(
-            self: @ContractState,
-            order: Order,
-            signature: Span<felt252>,
-            seller: ContractAddress,
-            buyer: ContractAddress
-        ) {
-            self.verify_buy(order, signature, seller, buyer)
-        }
-
-        fn verifyAcceptOffer(
-            self: @ContractState,
-            order: Order,
-            signature: Span<felt252>,
-            seller: ContractAddress,
-            buyer: ContractAddress
-        ) {
-            self.verify_accept_offer(order, signature, seller, buyer)
-        }
-
-        fn getVersion(self: @ContractState) -> (u32, u32, u32) {
-            self.get_version()
         }
     }
 
@@ -273,7 +233,7 @@ pub mod OpenMark {
     impl OpenMarkManagerImpl of IOpenMarkManager<ContractState> {
         fn set_commission(ref self: ContractState, new_commission: u32) {
             self.ownable.assert_only_owner();
-            assert(new_commission < MAX_COMMISSION, Errors::COMMISSION_TOO_HIGH);
+            assert(new_commission < PERMYRIAD, Errors::INVALID_COMMISSION);
             self.commission.write(new_commission);
         }
 
@@ -319,7 +279,7 @@ pub mod OpenMark {
         ) {
             assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
-            assert(self.verify_payment_token(order.payment), Errors::INVALID_PAYMENT_TOKEN);
+            assert(self.verifyPaymentToken(order.payment), Errors::INVALID_PAYMENT_TOKEN);
 
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);

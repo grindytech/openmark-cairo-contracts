@@ -3,7 +3,7 @@ use core::traits::TryInto;
 
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-use openmark::token::interface::IOpenMarkNFTDispatcherTrait;
+use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{
@@ -14,7 +14,7 @@ use starknet::{ContractAddress, contract_address_const};
 
 use openmark::{
     primitives::types::{Order, OrderType}, hasher::interface::{IOffchainMessageHashDispatcher},
-    core::OpenMark::{ContractState}, token::interface::{IOpenMarkNFTDispatcher}
+    core::OpenMark::{ContractState}
 };
 use openmark::factory::interface::{ILaunchpadFactoryDispatcher,};
 
@@ -131,6 +131,7 @@ pub fn setup_collection_at(addr: ContractAddress) -> ContractAddress {
     constructor_calldata.append_serde(NFT_SYMBOL());
     constructor_calldata.append_serde(NFT_BASE_URI());
     constructor_calldata.append_serde(1000000_u256);
+    constructor_calldata.append_serde(1000_u256);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
 
     contract_address
@@ -166,8 +167,8 @@ pub fn create_buy() -> (
     // create and approve
     {
         start_cheat_caller_address(nft_token, seller);
-        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: nft_token };
-        IOM721Dispatcher.safe_batch_mint(seller, 5);
+        let IOM721Dispatcher = IERC721MinterDispatcher { contract_address: nft_token };
+        IOM721Dispatcher.mintBatch(seller, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].span());
         ERC721Dispatcher.approve(openmark_address, tokenId.into());
     }
     start_cheat_caller_address(openmark_address, buyer);
@@ -215,8 +216,8 @@ pub fn create_offer() -> (
     // create and approve nft
     {
         start_cheat_caller_address(nft_token, seller);
-        let IOM721Dispatcher = IOpenMarkNFTDispatcher { contract_address: nft_token };
-        IOM721Dispatcher.safe_batch_mint(seller, 5);
+        let IOM721Dispatcher = IERC721MinterDispatcher { contract_address: nft_token };
+        IOM721Dispatcher.mintBatch(seller, [0,1,2,3,4,5,6,7,8,9].span());
         ERC721Dispatcher.approve(openmark_address, token_id.into());
     }
 
