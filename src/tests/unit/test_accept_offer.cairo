@@ -111,7 +111,7 @@ fn order_invalid_order_type_panics() {
     let (order, signature, openmark_address, _, _, seller, buyer,) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    openmark.verify_accept_offer(order, signature, seller, buyer,);
+    openmark.verifyAcceptOffer(order, signature, seller, buyer,);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn order_seller_is_zero_panics() {
     let (order, signature, openmark_address, _, _, _, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
-    openmark.verify_accept_offer(order, signature, ZERO(), buyer,);
+    openmark.verifyAcceptOffer(order, signature, ZERO(), buyer,);
 }
 
 #[test]
@@ -133,7 +133,7 @@ fn order_seller_not_owner_panics() {
     start_cheat_caller_address(nft_token, seller);
     nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
-    openmark.verify_accept_offer(order, signature, seller, buyer,);
+    openmark.verifyAcceptOffer(order, signature, seller, buyer,);
 }
 
 #[test]
@@ -142,5 +142,5 @@ fn order_price_is_zero_panics() {
     let (mut order, signature, openmark_address, _, _, seller, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
     order.price = 0;
-    openmark.verify_accept_offer(order, signature, seller, buyer,);
+    openmark.verifyAcceptOffer(order, signature, seller, buyer,);
 }

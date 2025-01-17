@@ -2,7 +2,7 @@ use starknet::{ContractAddress, ClassHash};
 use openmark::primitives::types::{Balance};
 
 #[starknet::interface]
-pub trait INFTFactory<T> {
+pub trait IOERC721Factory<T> {
     fn create_collection(
         ref self: T,
         id: u256,
@@ -11,13 +11,14 @@ pub trait INFTFactory<T> {
         symbol: ByteArray,
         base_uri: ByteArray,
         total_supply: u256,
+            royalty_percentage: u256,
     );
 
     fn get_collection(self: @T, id: u256) -> ContractAddress;
 }
 
 #[starknet::interface]
-pub trait INFTFactoryCamel<T> {
+pub trait IOERC721FactoryCamel<T> {
     fn createCollection(
         ref self: T,
         id: u256,
@@ -26,6 +27,39 @@ pub trait INFTFactoryCamel<T> {
         symbol: ByteArray,
         baseURI: ByteArray,
         totalSupply: u256,
+        royaltyPercentage: u256,
+    );
+
+    fn getCollection(self: @T, id: u256) -> ContractAddress;
+}
+
+#[starknet::interface]
+pub trait IOERC1155Factory<T> {
+    fn create_collection(
+        ref self: T,
+        id: u256,
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        uri: ByteArray,
+        total_supply: u256,
+        royalty_percentage: u256,
+    );
+
+    fn get_collection(self: @T, id: u256) -> ContractAddress;
+}
+
+#[starknet::interface]
+pub trait IOERC1155FactoryCamel<T> {
+    fn createCollection(
+        ref self: T,
+        id: u256,
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        URI: ByteArray,
+        totalSupply: u256,
+        royaltyPercentage: u256,
     );
 
     fn getCollection(self: @T, id: u256) -> ContractAddress;
@@ -44,12 +78,7 @@ pub trait ILaunchpadFactoryCamel<T> {
 }
 
 #[starknet::interface]
-pub trait INFTFactoryManager<T> {
-    fn set_classhash(ref self: T, classhash: ClassHash);
-}
-
-#[starknet::interface]
-pub trait ILaunchpadFactoryManager<T> {
+pub trait IFactoryManager<T> {
     fn set_classhash(ref self: T, classhash: ClassHash);
 }
 

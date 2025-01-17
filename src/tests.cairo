@@ -6,10 +6,11 @@ pub mod unit {
 
     // mod test_hasher_works;
 
-    mod test_buy;
+    // mod test_buy;
     // mod test_accept_offer;
     
-    // mod test_factory;
+    // mod test_oerc721_factory;
+    mod test_oerc1155_factory;
     // mod test_launchpad;
     // mod test_open_launchpad;
 }

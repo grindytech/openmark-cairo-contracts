@@ -1,5 +1,5 @@
 #[starknet::contract]
-pub mod NFTFactory {
+pub mod OERC1155Factory {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
@@ -8,7 +8,7 @@ pub mod NFTFactory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use openmark::factory::interface::{INFTFactory, INFTFactoryCamel, INFTFactoryManager};
+    use openmark::factory::interface::{IOERC1155Factory, IOERC1155FactoryCamel, IFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -39,7 +39,7 @@ pub mod NFTFactory {
         pub owner: ContractAddress,
         pub name: ByteArray,
         pub symbol: ByteArray,
-        pub base_uri: ByteArray,
+        pub uri: ByteArray,
         pub total_supply: u256,
     }
 
@@ -54,30 +54,34 @@ pub mod NFTFactory {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash) {
+    fn constructor(
+        ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash
+    ) {
         self.ownable.initializer(owner);
         self.collection_classhash.write(collection_classhash);
     }
 
     #[abi(embed_v0)]
-    impl NFTFactoryImpl of INFTFactory<ContractState> {
+    impl NFTFactoryImpl of IOERC1155Factory<ContractState> {
         fn create_collection(
             ref self: ContractState,
             id: u256,
             owner: ContractAddress,
             name: ByteArray,
             symbol: ByteArray,
-            base_uri: ByteArray,
-            total_supply: u256
+            uri: ByteArray,
+            total_supply: u256,
+            royalty_percentage: u256,
         ) {
-            assert(self.get_collection(id).is_zero(), 'OMFactory: ID in use');
+            assert(self.get_collection(id).is_zero(), 'OM: ID in use');
 
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
             name.serialize(ref constructor_calldata);
             symbol.serialize(ref constructor_calldata);
-            base_uri.serialize(ref constructor_calldata);
+            uri.serialize(ref constructor_calldata);
             total_supply.serialize(ref constructor_calldata);
+            royalty_percentage.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
                 self.collection_classhash.read(), 0, constructor_calldata.span(), false
@@ -85,7 +89,10 @@ pub mod NFTFactory {
                 .unwrap_syscall();
 
             self.factory.write(id, address);
-            self.emit(CollectionCreated { id, address, owner, name, symbol, base_uri, total_supply });
+            self
+                .emit(
+                    CollectionCreated { id, address, owner, name, symbol, uri, total_supply }
+                );
         }
 
         fn get_collection(self: @ContractState, id: u256) -> ContractAddress {
@@ -94,17 +101,21 @@ pub mod NFTFactory {
     }
 
     #[abi(embed_v0)]
-    impl NFTFactoryCamelImpl of INFTFactoryCamel<ContractState> {
+    impl NFTFactoryCamelImpl of IOERC1155FactoryCamel<ContractState> {
         fn createCollection(
             ref self: ContractState,
             id: u256,
             owner: ContractAddress,
             name: ByteArray,
             symbol: ByteArray,
-            baseURI: ByteArray,
-            totalSupply: u256
+            URI: ByteArray,
+            totalSupply: u256,
+            royaltyPercentage: u256,
         ) {
-            self.create_collection(id, owner, name, symbol, baseURI, totalSupply);
+            self
+                .create_collection(
+                    id, owner, name, symbol, URI, totalSupply, royaltyPercentage
+                );
         }
 
         fn getCollection(self: @ContractState, id: u256) -> ContractAddress {
@@ -124,7 +135,7 @@ pub mod NFTFactory {
     }
 
     #[abi(embed_v0)]
-    impl FactoryManagerImpl of INFTFactoryManager<ContractState> {
+    impl FactoryManagerImpl of IFactoryManager<ContractState> {
         fn set_classhash(ref self: ContractState, classhash: ClassHash) {
             self.ownable.assert_only_owner();
             self.collection_classhash.write(classhash);
