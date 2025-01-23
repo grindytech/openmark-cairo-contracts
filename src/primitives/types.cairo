@@ -25,6 +25,7 @@ pub enum OrderType {
 pub struct Order {
     pub nftContract: ContractAddress,
     pub tokenId: u128,
+    pub value: u128,
     pub payment: ContractAddress,
     pub price: Balance,
     pub salt: felt252,
@@ -70,7 +71,7 @@ impl StructHashOrder of IStructHash<Order> {
         let mut state = PedersenTrait::new(0);
         state = state.update_with(ORDER_STRUCT_TYPE_HASH);
         state = state.update_with(*self);
-        state = state.update_with(8);
+        state = state.update_with(9);
         state.finalize()
     }
 }

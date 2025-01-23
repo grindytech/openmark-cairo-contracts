@@ -27,18 +27,15 @@ pub mod OpenMark {
     use openmark::primitives::types::{Order, OrderType, Bag};
     use openmark::hasher::interface::IOffchainMessageHash;
     use openmark::hasher::{HasherComponent};
-    use openmark::core::interface::{
-        IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager
-    };
+    use openmark::core::interface::{IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager};
     use openmark::core::events::{OrderFilled, OrderCancelled};
     use openmark::core::errors::OMErrors as Errors;
     use openmark::primitives::utils::{
         nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of,
+        nft_safe_transfer_from
     };
 
-    use openmark::primitives::constants::{
-        PERMYRIAD
-    };
+    use openmark::primitives::constants::{PERMYRIAD};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -92,6 +89,8 @@ pub mod OpenMark {
         commission: u32,
         /// store used order signatures
         usedSignatures: starknet::storage::Map<felt252, bool>,
+        /// store partial order
+        partialSignatures: starknet::storage::Map<felt252, u128>,
         /// store allowed payment tokens
         paymentTokens: starknet::storage::Map<ContractAddress, bool>,
     }
@@ -137,6 +136,61 @@ pub mod OpenMark {
 
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
+        }
+
+        fn buy_with_value(
+            ref self: ContractState,
+            seller: ContractAddress,
+            order: Order,
+            value: u128,
+            signature: Span<felt252>
+        ) {
+            self.reentrancy_guard.start();
+            let buyer = get_caller_address();
+            self.verifyBuy(order, signature, seller, buyer);
+
+            let mut available = self.partialSignatures.read(self.hash_array(signature));
+            if(available == 0) {
+                available = order.value;
+            }
+
+            if (value > available) {
+                // revert
+            } else if(value < available) {
+                self.partialSignatures.write(self.hash_array(signature), available - value);
+            } else {
+                self.usedSignatures.write(self.hash_array(signature), true);
+                self.partialSignatures.write(self.hash_array(signature), 0);
+            }
+
+
+            nft_safe_transfer_from(order.nftContract, seller, buyer, order.tokenId.into(), value.into(), [].span());
+            let price: u256 = (value * order.price).into();
+            self._process_payment(buyer, seller, price, order.payment);
+
+            self.emit(OrderFilled { seller, buyer, order });
+            self.reentrancy_guard.end();
+        }
+
+        fn accept_offer_with_value(
+            ref self: ContractState,
+            buyer: ContractAddress,
+            order: Order,
+            value: u128,
+            signature: Span<felt252>
+        ) {
+            // self.reentrancy_guard.start();
+            // let seller = get_caller_address();
+            // self.verifyAcceptOffer(order, signature, seller, buyer);
+
+            // self.usedSignatures.write(self.hash_array(signature), true);
+
+            // nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
+            // let price: u256 = order.price.into();
+            // self._process_payment(buyer, get_caller_address(), price, order.payment);
+
+            // self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
+            // self.reentrancy_guard.end();
         }
 
         fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
@@ -283,17 +337,6 @@ pub mod OpenMark {
 
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);
-
-            assert(
-                nft_owner_of(order.nftContract, order.tokenId.into()) == seller,
-                Errors::NOT_NFT_OWNER
-            );
-
-            let price: u256 = order.price.into();
-
-            assert(payment_balance_of(order.payment, buyer) >= price, Errors::INSUFFICIENT_BALANCE);
-
-            assert(price > 0, Errors::PRICE_IS_ZERO);
         }
 
         fn _calculate_commission(self: @ContractState, price: u256) -> u256 {

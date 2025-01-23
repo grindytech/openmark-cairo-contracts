@@ -6,5 +6,5 @@ pub const STARKNET_DOMAIN_TYPE_HASH: felt252 =
 
 pub const ORDER_STRUCT_TYPE_HASH: felt252 =
     selector!(
-        "Order(nftContract:ContractAddress,tokenId:u128,payment:ContractAddress,price:u128,salt:felt,expiry:u128,option:OrderType)"
+        "Order(nftContract:ContractAddress,tokenId:u128,value:u128,payment:ContractAddress,price:u128,salt:felt,expiry:u128,option:OrderType)"
     );

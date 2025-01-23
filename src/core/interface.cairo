@@ -9,6 +9,12 @@ pub trait IOpenMark<TState> {
         ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
+    fn buy_with_value(ref self: TState, seller: ContractAddress, order: Order, value:u128, signature: Span<felt252>);
+
+    fn accept_offer_with_value(
+        ref self: TState, buyer: ContractAddress, order: Order, value: u128, signature: Span<felt252>
+    );
+
 
     fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
 

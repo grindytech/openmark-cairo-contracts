@@ -17,12 +17,12 @@ use openmark::factory::oerc1155_factory::OERC1155Factory::CollectionCreated;
 use openmark::factory::launchpad_factory::LaunchpadFactory::Event as LaunchpadEvents;
 use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
 use openmark::tests::unit::common::{
-    create_openmark_nft, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress,
+    create_test_oerc721, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress,
     create_launchpad_factory
 };
 
 fn create_nft_factory() -> (ContractAddress, IOERC1155FactoryDispatcher) {
-    let nft_token = create_openmark_nft();
+    let nft_token = create_test_oerc721();
     let nft_classhash = get_class_hash(nft_token);
 
     let contract = declare("OERC1155Factory").unwrap().contract_class();

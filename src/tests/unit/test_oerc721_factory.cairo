@@ -12,11 +12,11 @@ use openmark::factory::oerc721_factory::OERC721Factory::Event as NFTEvents;
 use openmark::factory::oerc721_factory::OERC721Factory::CollectionCreated;
 
 use openmark::tests::unit::common::{
-    create_openmark_nft, SELLER1, toAddress,
+    create_test_oerc721, SELLER1, toAddress,
 };
 
 fn create_nft_factory() -> (ContractAddress, IOERC721FactoryDispatcher) {
-    let nft_token = create_openmark_nft();
+    let nft_token = create_test_oerc721();
     let nft_classhash = get_class_hash(nft_token);
 
     let contract = declare("OERC721Factory").unwrap().contract_class();
