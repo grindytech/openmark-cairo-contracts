@@ -35,6 +35,26 @@ pub fn nft_transfer_from(
         .unwrap_syscall();
 }
 
+pub fn nft_safe_transfer_from(
+    target: ContractAddress,   from: ContractAddress,
+    to: ContractAddress,
+    token_id: u256,
+    value: u256,
+    data: Span<felt252>,
+) {
+    let mut args = array![];
+    args.append_serde(from);
+    args.append_serde(to);
+    args.append_serde(token_id);
+    args.append_serde(value);
+    args.append_serde(data);
+
+    try_selector_with_fallback(
+        target, selectors::safe_transfer_from, selectors::safeTransferFrom, args.span()
+    )
+        .unwrap_syscall();
+}
+
 pub fn payment_transfer(target: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
     let mut args = array![];
     args.append_serde(recipient);

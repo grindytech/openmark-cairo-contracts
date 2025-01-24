@@ -9,6 +9,7 @@ const types = {
   Order: [
     { name: "nftContract", type: "ContractAddress" },
     { name: "tokenId", type: "u128" },
+    { name: "value", type: "u128" },
     { name: "payment", type: "ContractAddress" },
     { name: "price", type: "u128" },
     { name: "salt", type: "felt" },
@@ -25,6 +26,7 @@ export enum OrderType {
 export interface Order {
   nftContract: string,
   tokenId: string,
+  value: string,
   payment: string,
   price: string,
   salt: string,

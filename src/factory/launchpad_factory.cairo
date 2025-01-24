@@ -11,7 +11,7 @@ pub mod LaunchpadFactory {
     use starknet::{get_caller_address, get_contract_address};
     use starknet::storage::{Map};
     use openmark::factory::interface::{
-        ILaunchpadFactory, ILaunchpadFactoryCamel, ILaunchpadFactoryManager,
+        ILaunchpadFactory, ILaunchpadFactoryCamel, IFactoryManager,
         ILaunchpadFactoryProvider
     };
     use openmark::primitives::types::{Balance};
@@ -157,7 +157,7 @@ pub mod LaunchpadFactory {
     }
 
     #[abi(embed_v0)]
-    impl FactoryManagerImpl of ILaunchpadFactoryManager<ContractState> {
+    impl FactoryManagerImpl of IFactoryManager<ContractState> {
         fn set_classhash(ref self: ContractState, classhash: ClassHash) {
             self.ownable.assert_only_owner();
             self.launchpad_classhash.write(classhash);

@@ -20,7 +20,7 @@ use snforge_std::{
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
     SELLER1,SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at, NFT_NAME,
-    NFT_SYMBOL, NFT_BASE_URI, setup_collection_at
+    NFT_SYMBOL, NFT_BASE_URI, setup_oerc721_at
 };
 use openmark::primitives::types::{Stage};
 use openmark::primitives::constants::{MINTER_ROLE};
@@ -58,7 +58,7 @@ fn setup_stage(
     num_stage: u32, seller: ContractAddress, buyers: Span<ContractAddress>
 ) -> (ContractAddress, ILaunchpadDispatcher, ContractAddress, ContractAddress, Span<Stage>) {
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
-    let nft_address = setup_collection_at(toAddress(TEST_NFT));
+    let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
         seller, array![payment_address].span()
     );
@@ -115,7 +115,7 @@ const PROOF: [
 fn update_stages_works() {
     let owner = toAddress(SELLER1);
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
-    let nft_address = setup_collection_at(toAddress(TEST_NFT));
+    let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
         owner, array![payment_address].span()
     );
