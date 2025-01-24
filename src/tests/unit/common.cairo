@@ -255,6 +255,7 @@ pub fn create_buy_with_value() -> (
         ERC1155Dispatcher.set_approval_for_all(openmark_address, true);
     }
     start_cheat_caller_address(payment_token, buyer);
+
     ERC20Dispatcher.approve(openmark_address, 1000_000);
     let signature = array![
         0x483f9a732042df50d80d7dd1363894bc924a7c3181027a611fdd90085730dc3,
@@ -306,7 +307,7 @@ pub fn create_offer() -> (
     // approve eth token
     {
         start_cheat_caller_address(payment_token, buyer);
-        ERC20Dispatcher.approve(seller, price.into() + 1);
+        // ERC20Dispatcher.approve(seller, price.into() + 1);
         ERC20Dispatcher.approve(openmark_address, price.into() + 1);
     }
 
@@ -329,30 +330,28 @@ pub fn create_offer_with_value() -> (
     ContractAddress, // seller
     ContractAddress, // buyer
 ) {
-    let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
-
+    let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark(payment_token);
-    let seller: ContractAddress = toAddress(SELLER1);
-    let nft_token = create_oerc1155(seller);
+    let seller: ContractAddress = setup_account(SELLER1);
 
-    let buyer: ContractAddress = toAddress(BUYER1);
+    let nft_token = create_oerc1155(seller);
+    let buyer: ContractAddress = setup_account(BUYER1);
     let ERC1155Dispatcher = IERC1155Dispatcher { contract_address: nft_token };
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
-
-    let price = 3_u128;
-    let token_id = 3_u128;
+  
     let order = Order {
-        nftContract: nft_token,
-        tokenId: token_id,
+        nftContract: TEST_NFT.try_into().unwrap(),
+        tokenId: 3,
         value: 10,
-        payment: payment_token,
-        price: price,
+        price: 3,
+        payment: TEST_PAYMENT.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Offer,
     };
 
-    // create and approve nft
+   
+    // create and approve
     {
         let OERC1155 = IERC1155MinterDispatcher { contract_address: nft_token };
         start_cheat_caller_address(nft_token, seller);
@@ -360,16 +359,9 @@ pub fn create_offer_with_value() -> (
             .mintBatch(seller, [0, 1, 2, 3, 4].span(), [100, 100, 100, 100, 100].span(), [].span());
         ERC1155Dispatcher.set_approval_for_all(openmark_address, true);
     }
+    start_cheat_caller_address(payment_token, buyer);
 
-    // approve eth token
-    {
-        start_cheat_caller_address(payment_token, buyer);
-        ERC20Dispatcher.approve(seller, price.into() + 1);
-        ERC20Dispatcher.approve(openmark_address, price.into() + 1);
-    }
-
-    start_cheat_caller_address(openmark_address, seller);
-    start_cheat_caller_address(payment_token, openmark_address);
+    ERC20Dispatcher.approve(openmark_address, 1000_000);
     let signature = array![
         0x4a0c93b2c8c9ac9ffc60c90ab88fcd6207ec568714c49cca4bc90c8e67b677e,
         0x5f2f25bae627735ca9628431938571a763804e233dc245b64144d5a37a9a5d0

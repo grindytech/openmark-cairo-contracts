@@ -179,18 +179,30 @@ pub mod OpenMark {
             value: u128,
             signature: Span<felt252>
         ) {
-            // self.reentrancy_guard.start();
-            // let seller = get_caller_address();
-            // self.verifyAcceptOffer(order, signature, seller, buyer);
+            self.reentrancy_guard.start();
+            let seller = get_caller_address();
+            self.verifyAcceptOffer(order, signature, seller, buyer);
 
-            // self.usedSignatures.write(self.hash_array(signature), true);
+            let mut available = self.partialSignatures.read(self.hash_array(signature));
+            if(available == 0) {
+                available = order.value;
+            }
+            assert(value <= available, Errors::EXCEEDS_AVAILABLE_AMOUNT);
 
-            // nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
-            // let price: u256 = order.price.into();
-            // self._process_payment(buyer, get_caller_address(), price, order.payment);
+            if(value < available) {
+                self.partialSignatures.write(self.hash_array(signature), available - value);
+            } else if (value == available) {
+                self.usedSignatures.write(self.hash_array(signature), true);
+                self.partialSignatures.write(self.hash_array(signature), 0);
+            }
 
-            // self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
-            // self.reentrancy_guard.end();
+            nft_safe_transfer_from(order.nftContract, seller, buyer, order.tokenId.into(), value.into(), [].span());
+
+            let price: u256 = (value * order.price).into();
+            self._process_payment(buyer, get_caller_address(), price, order.payment);
+
+            self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
+            self.reentrancy_guard.end();
         }
 
         fn cancel_order(ref self: ContractState, order: Order, signature: Span<felt252>) {
