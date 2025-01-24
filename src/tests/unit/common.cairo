@@ -43,10 +43,10 @@ pub fn toAddress(addr: felt252) -> ContractAddress {
     return addr.try_into().unwrap();
 }
 
-pub fn setup_account(publicKey: felt252) -> ContractAddress {
+pub fn setup_account(addr: felt252) -> ContractAddress {
     let contract = declare("DualCaseAccountMock").unwrap().contract_class();
-    let mut constructor_calldata = array![publicKey];
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    let mut constructor_calldata = array![addr];
+    let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr.try_into().unwrap()).unwrap();
     contract_address
 }
 
@@ -228,21 +228,24 @@ pub fn create_buy_with_value() -> (
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark(payment_token);
     let seller: ContractAddress = setup_account(SELLER1);
+
     let nft_token = create_oerc1155(seller);
-    let buyer: ContractAddress = toAddress(BUYER1);
+    let buyer: ContractAddress = setup_account(BUYER1);
     let ERC1155Dispatcher = IERC1155Dispatcher { contract_address: nft_token };
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
+  
     let order = Order {
-        nftContract: nft_token,
+        nftContract: TEST_NFT.try_into().unwrap(),
         tokenId: 2,
         value: 10,
-        payment: payment_token,
         price: 3,
+        payment: TEST_PAYMENT.try_into().unwrap(),
         salt: 4,
         expiry: 5,
         option: OrderType::Buy,
     };
 
+   
     // create and approve
     {
         let OERC1155 = IERC1155MinterDispatcher { contract_address: nft_token };
@@ -251,10 +254,8 @@ pub fn create_buy_with_value() -> (
             .mintBatch(seller, [0, 1, 2, 3, 4].span(), [100, 100, 100, 100, 100].span(), [].span());
         ERC1155Dispatcher.set_approval_for_all(openmark_address, true);
     }
-    start_cheat_caller_address(openmark_address, buyer);
     start_cheat_caller_address(payment_token, buyer);
-
-    ERC20Dispatcher.approve(openmark_address, 100000);
+    ERC20Dispatcher.approve(openmark_address, 1000_000);
     let signature = array![
         0x483f9a732042df50d80d7dd1363894bc924a7c3181027a611fdd90085730dc3,
         0x25fa6058f6c6859bcf604a37b3515485ad0937cab485715c81f36f4fd5e3f6a

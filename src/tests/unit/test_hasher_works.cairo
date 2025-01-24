@@ -101,3 +101,33 @@ fn verify_order_works() {
 
     assert(result, 'Verify order failed');
 }
+
+
+#[test]
+fn verify_order_value_works() {
+    let contract_address = deploy_mock_hasher();
+
+    let order = Order {
+        nftContract: TEST_NFT.try_into().unwrap(),
+        tokenId: 2,
+        value: 10,
+        price: 3,
+        payment: TEST_PAYMENT.try_into().unwrap(),
+        salt: 4,
+        expiry: 5,
+        option: OrderType::Buy,
+    };
+
+    let signature = array![
+        0x483f9a732042df50d80d7dd1363894bc924a7c3181027a611fdd90085730dc3,
+        0x25fa6058f6c6859bcf604a37b3515485ad0937cab485715c81f36f4fd5e3f6a
+    ];
+
+    start_cheat_caller_address(contract_address, SELLER1.try_into().unwrap());
+
+    let dispatcher = IOffchainMessageHashDispatcher { contract_address };
+
+    let result = dispatcher.verify_order(order, SELLER1, signature.span());
+
+    assert(result, 'Verify order failed');
+}

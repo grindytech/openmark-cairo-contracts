@@ -154,17 +154,17 @@ pub mod OpenMark {
                 available = order.value;
             }
 
-            if (value > available) {
-                // revert
-            } else if(value < available) {
+            assert(value <= available, Errors::EXCEEDS_AVAILABLE_AMOUNT);
+
+            if(value < available) {
                 self.partialSignatures.write(self.hash_array(signature), available - value);
-            } else {
+            } else if (value == available) {
                 self.usedSignatures.write(self.hash_array(signature), true);
                 self.partialSignatures.write(self.hash_array(signature), 0);
             }
 
-
             nft_safe_transfer_from(order.nftContract, seller, buyer, order.tokenId.into(), value.into(), [].span());
+
             let price: u256 = (value * order.price).into();
             self._process_payment(buyer, seller, price, order.payment);
 

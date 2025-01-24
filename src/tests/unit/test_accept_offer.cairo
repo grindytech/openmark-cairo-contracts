@@ -68,7 +68,7 @@ fn cancel_offer_works() {
 
 
 #[test]
-#[should_panic(expected: ('OPENMARK: invalid sig len',))]
+#[should_panic(expected: ('OM: invalid sig len',))]
 fn order_invalid_signature_len_panics() {
     let (order, _, openmark_address, _, payment_token, seller, buyer,) = create_offer();
 
@@ -80,7 +80,7 @@ fn order_invalid_signature_len_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: sig used',))]
+#[should_panic(expected: ('OM: sig used',))]
 fn order_signature_used_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_offer();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
@@ -94,7 +94,7 @@ fn order_signature_used_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: order expired',))]
+#[should_panic(expected: ('OM: order expired',))]
 fn order_order_expired_panics() {
     let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_offer();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
@@ -106,7 +106,7 @@ fn order_order_expired_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: invalid order type',))]
+#[should_panic(expected: ('OM: invalid order type',))]
 fn order_invalid_order_type_panics() {
     let (order, signature, openmark_address, _, _, seller, buyer,) = create_buy();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
@@ -115,7 +115,7 @@ fn order_invalid_order_type_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: address is zero',))]
+#[should_panic(expected: ('OM: address is zero',))]
 fn order_seller_is_zero_panics() {
     let (order, signature, openmark_address, _, _, _, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
@@ -124,7 +124,7 @@ fn order_seller_is_zero_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: not nft owner',))]
+#[should_panic(expected: ('OM: not nft owner',))]
 fn order_seller_not_owner_panics() {
     let (order, signature, openmark_address, nft_token, _, seller, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
@@ -137,7 +137,7 @@ fn order_seller_not_owner_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OPENMARK: price is zero',))]
+#[should_panic(expected: ('OM: price is zero',))]
 fn order_price_is_zero_panics() {
     let (mut order, signature, openmark_address, _, _, seller, buyer,) = create_offer();
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
