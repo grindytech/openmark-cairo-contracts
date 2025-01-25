@@ -34,6 +34,19 @@ pub trait ILaunchpadProvider<T> {
 }
 
 #[starknet::interface]
+pub trait IOStage<T> {
+    fn getStage(self: @T) -> Stage;
+
+    fn getMintedCount(self: @T) -> u128;
+
+    fn getUserMintedCount(self: @T, minter: ContractAddress) -> u128;
+
+    fn verifyWhitelist(
+        self: @T, merkleRoot: felt252, merkleProof: Span<felt252>, minter: ContractAddress
+    ) -> bool;
+}
+
+#[starknet::interface]
 pub trait ILaunchpadHelper<T> {
     fn setLaunchpadUri(ref self: T, uri: ByteArray);
 
