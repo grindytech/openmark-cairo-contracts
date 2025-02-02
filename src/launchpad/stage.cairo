@@ -5,28 +5,26 @@ pub mod StageComponent {
     use core::hash::{HashStateTrait, HashStateExTrait};
     use core::pedersen::{PedersenTrait, pedersen};
 
-    use starknet::{
-        ContractAddress, get_contract_address
-    };
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map
     };
-    use openmark::launchpad::interface::{ IOStage};
-    use openmark::launchpad::events::{
-         SalesWithdrawn, LaunchpadClosed
+    use starknet::{
+        ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address
     };
+    use openmark::launchpad::errors::LPErrors as Errors;
+
+    use openmark::launchpad::interface::{IOStage};
+    use openmark::launchpad::events::{SalesWithdrawn, LaunchpadClosed};
     use openmark::primitives::types::{Stage};
     use openmark::primitives::constants::{PERMYRIAD};
-    use openmark::primitives::utils::{
-        payment_transfer, payment_balance_of
-    };
+    use openmark::primitives::utils::{payment_transfer, payment_balance_of};
 
     #[storage]
     struct Storage {
         // Stored stage info
         stage: Stage,
         // Mapping of Merkle roots for whitelist verification by stage ID
-        stageWhitelist: Option<felt252>,
+        rootWhitelist: Option<felt252>,
         // Mapping of total NFTs minted in a stage by stage ID
         stageMintedCount: u128,
         // Mapping of NFTs minted by a specific wallet in a stage
@@ -81,7 +79,7 @@ pub mod StageComponent {
             }
         }
 
-        fn closeStage(ref self:ComponentState<TContractState>) {
+        fn closeStage(ref self: ComponentState<TContractState>) {
             self.isClosed.write(false);
         }
     }
@@ -104,19 +102,34 @@ pub mod StageComponent {
             return self.userMintedCount.entry(minter).read();
         }
 
-        fn verifyWhitelist(
+        fn validateStage(self: @ComponentState<TContractState>) -> bool {
+            assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
+
+            let currentTimestamp: u128 = get_block_timestamp().into();
+            assert(currentTimestamp >= self.stage.startTime.read(), Errors::STAGE_NOT_STARTED);
+            assert(currentTimestamp <= self.stage.endTime.read(), Errors::STAGE_ENDED);
+
+            return true;
+        }
+
+
+        fn validateWhitelist(
             self: @ComponentState<TContractState>,
-            merkleRoot: felt252,
-            merkleProof: Span<felt252>,
-            minter: ContractAddress
+            minter: ContractAddress,
+            merkleProof: Span<felt252>
         ) -> bool {
-            let leaf_hash = _leaf_hash(minter);
-            return verify::<PedersenCHasher>(merkleProof, merkleRoot, leaf_hash);
+            if let Option::Some(root) = self.rootWhitelist.read() {
+                assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
+            }
+            return true;
         }
     }
 
-    fn _leaf_hash(address: ContractAddress) -> felt252 {
+    fn verify_merkle_proof(
+        merkleRoot: felt252, merkleProof: Span<felt252>, minter: ContractAddress
+    ) -> bool {
         let hash_state = PedersenTrait::new(0);
-        pedersen(0, hash_state.update_with(address).update_with(1).finalize())
+        let leaf_hash = pedersen(0, hash_state.update_with(minter).update_with(1).finalize());
+        return verify::<PedersenCHasher>(merkleProof, merkleRoot, leaf_hash);
     }
 }

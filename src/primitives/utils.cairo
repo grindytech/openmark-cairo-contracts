@@ -89,15 +89,17 @@ pub fn access_has_role(target: ContractAddress, role: felt252, account: Contract
         .unwrap_and_cast()
 }
 
-pub fn nft_safe_batch_mint(
-    target: ContractAddress, to: ContractAddress, quantity: u256,
+
+
+pub fn nft_mint_batch(
+    target: ContractAddress, to: ContractAddress, token_ids: Span<u256>,
 ) -> Span<u256> {
     let mut args = array![];
     args.append_serde(to);
-    args.append_serde(quantity);
+    args.append_serde(token_ids);
 
     try_selector_with_fallback(
-        target, openmark_selectors::safeBatchMint, openmark_selectors::safe_batch_mint, args.span()
+        target, openmark_selectors::mintBatch, openmark_selectors::mint_batch, args.span()
     )
         .unwrap_and_cast()
 }
