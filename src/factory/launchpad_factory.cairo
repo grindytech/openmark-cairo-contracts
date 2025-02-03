@@ -15,7 +15,6 @@ pub mod LaunchpadFactory {
         ILaunchpadFactoryProvider
     };
     use openmark::primitives::types::{Balance};
-    use openmark::primitives::utils::{payment_transfer_from};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -101,13 +100,6 @@ pub mod LaunchpadFactory {
             )
                 .unwrap_syscall();
             self.factory.write(id, address);
-
-            payment_transfer_from(
-                self.lockTokenAddress.read(),
-                get_caller_address(),
-                address,
-                self.lockAmount.read().into()
-            );
 
             self.emit(LaunchpadCreated { id, address, owner, uri });
         }

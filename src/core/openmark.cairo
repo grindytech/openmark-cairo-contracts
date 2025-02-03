@@ -16,6 +16,9 @@ pub mod OpenMark {
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
+    use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
 
     use starknet::{
         get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
@@ -30,10 +33,10 @@ pub mod OpenMark {
     use openmark::core::interface::{IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager};
     use openmark::core::events::{OrderFilled, OrderCancelled};
     use openmark::core::errors::OMErrors as Errors;
-    use openmark::primitives::utils::{
-        nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of,
-        nft_safe_transfer_from
-    };
+    // use openmark::primitives::utils::{
+    //     nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of,
+    //     nft_safe_transfer_from
+    // };
 
     use openmark::primitives::constants::{PERMYRIAD};
 
@@ -41,7 +44,7 @@ pub mod OpenMark {
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     /// Reentrancy
     component!(
-        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent
+        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent,
     );
     /// Upgradeable
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -105,15 +108,19 @@ pub mod OpenMark {
     #[abi(embed_v0)]
     impl OpenMarkImpl of IOpenMark<ContractState> {
         fn buy(
-            ref self: ContractState, seller: ContractAddress, order: Order, signature: Span<felt252>
+            ref self: ContractState,
+            seller: ContractAddress,
+            order: Order,
+            signature: Span<felt252>,
         ) {
             self.reentrancy_guard.start();
             let buyer = get_caller_address();
             self.verifyBuy(order, signature, seller, buyer);
 
             self.usedSignatures.write(self.hash_array(signature), true);
+            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
+            nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
-            nft_transfer_from(order.nftContract, seller, buyer, order.tokenId.into());
             let price: u256 = order.price.into();
             self._process_payment(buyer, seller, price, order.payment);
 
@@ -122,7 +129,7 @@ pub mod OpenMark {
         }
 
         fn accept_offer(
-            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>,
         ) {
             self.reentrancy_guard.start();
             let seller = get_caller_address();
@@ -130,7 +137,9 @@ pub mod OpenMark {
 
             self.usedSignatures.write(self.hash_array(signature), true);
 
-            nft_transfer_from(order.nftContract, get_caller_address(), buyer, order.tokenId.into());
+            let nft_dispatcher = IERC721Dispatcher { contract_address: order.nftContract };
+            nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
+
             let price: u256 = order.price.into();
             self._process_payment(buyer, get_caller_address(), price, order.payment);
 
@@ -143,27 +152,29 @@ pub mod OpenMark {
             seller: ContractAddress,
             order: Order,
             value: u128,
-            signature: Span<felt252>
+            signature: Span<felt252>,
         ) {
             self.reentrancy_guard.start();
             let buyer = get_caller_address();
             self.verifyBuy(order, signature, seller, buyer);
 
             let mut available = self.partialSignatures.read(self.hash_array(signature));
-            if(available == 0) {
+            if (available == 0) {
                 available = order.value;
             }
 
             assert(value <= available, Errors::EXCEEDS_AVAILABLE_AMOUNT);
 
-            if(value < available) {
+            if (value < available) {
                 self.partialSignatures.write(self.hash_array(signature), available - value);
             } else if (value == available) {
                 self.usedSignatures.write(self.hash_array(signature), true);
                 self.partialSignatures.write(self.hash_array(signature), 0);
             }
 
-            nft_safe_transfer_from(order.nftContract, seller, buyer, order.tokenId.into(), value.into(), [].span());
+            let nft_dispatcher = IERC1155Dispatcher { contract_address: order.nftContract };
+            nft_dispatcher
+                .safe_transfer_from(seller, buyer, order.tokenId.into(), value.into(), [].span());
 
             let price: u256 = (value * order.price).into();
             self._process_payment(buyer, seller, price, order.payment);
@@ -177,26 +188,28 @@ pub mod OpenMark {
             buyer: ContractAddress,
             order: Order,
             value: u128,
-            signature: Span<felt252>
+            signature: Span<felt252>,
         ) {
             self.reentrancy_guard.start();
             let seller = get_caller_address();
             self.verifyAcceptOffer(order, signature, seller, buyer);
 
             let mut available = self.partialSignatures.read(self.hash_array(signature));
-            if(available == 0) {
+            if (available == 0) {
                 available = order.value;
             }
             assert(value <= available, Errors::EXCEEDS_AVAILABLE_AMOUNT);
 
-            if(value < available) {
+            if (value < available) {
                 self.partialSignatures.write(self.hash_array(signature), available - value);
             } else if (value == available) {
                 self.usedSignatures.write(self.hash_array(signature), true);
                 self.partialSignatures.write(self.hash_array(signature), 0);
             }
 
-            nft_safe_transfer_from(order.nftContract, seller, buyer, order.tokenId.into(), value.into(), [].span());
+            let nft_dispatcher = IERC1155Dispatcher { contract_address: order.nftContract };
+            nft_dispatcher
+                .safe_transfer_from(seller, buyer, order.tokenId.into(), value.into(), [].span());
 
             let price: u256 = (value * order.price).into();
             self._process_payment(buyer, get_caller_address(), price, order.payment);
@@ -212,11 +225,11 @@ pub mod OpenMark {
 
             assert(
                 self.hasher.verify_order(order, get_caller_address().into(), signature),
-                Errors::INVALID_SIGNATURE
+                Errors::INVALID_SIGNATURE,
             );
             self.usedSignatures.write(self.hash_array(signature), true);
 
-            self.emit(OrderCancelled { who: get_caller_address(), order, });
+            self.emit(OrderCancelled { who: get_caller_address(), order });
         }
 
         fn batch_buy(ref self: ContractState, bags: Span<Bag>) {
@@ -229,7 +242,7 @@ pub mod OpenMark {
     #[abi(embed_v0)]
     impl OpenMarkCamelImpl of IOpenMarkCamel<ContractState> {
         fn acceptOffer(
-            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+            ref self: ContractState, buyer: ContractAddress, order: Order, signature: Span<felt252>,
         ) {
             self.accept_offer(buyer, order, signature);
         }
@@ -266,7 +279,7 @@ pub mod OpenMark {
             order: Order,
             signature: Span<felt252>,
             seller: ContractAddress,
-            buyer: ContractAddress
+            buyer: ContractAddress,
         ) {
             // 1. verify order
             self._verify_order(order, seller, get_caller_address(), OrderType::Buy);
@@ -280,7 +293,7 @@ pub mod OpenMark {
             order: Order,
             signature: Span<felt252>,
             seller: ContractAddress,
-            buyer: ContractAddress
+            buyer: ContractAddress,
         ) {
             // 1. verify order
             self._verify_order(order, seller, buyer, OrderType::Offer);
@@ -332,7 +345,8 @@ pub mod OpenMark {
             assert(signature.len() == 2, Errors::INVALID_SIGNATURE_LEN);
             assert(!self.usedSignatures.read(self.hash_array(signature)), Errors::SIGNATURE_USED);
             assert(
-                self.hasher.verify_order(order, signer.into(), signature), Errors::INVALID_SIGNATURE
+                self.hasher.verify_order(order, signer.into(), signature),
+                Errors::INVALID_SIGNATURE,
             );
         }
 
@@ -341,7 +355,7 @@ pub mod OpenMark {
             order: Order,
             seller: ContractAddress,
             buyer: ContractAddress,
-            order_type: OrderType
+            order_type: OrderType,
         ) {
             assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
@@ -367,15 +381,16 @@ pub mod OpenMark {
             sender: ContractAddress,
             receiver: ContractAddress,
             amount: u256,
-            payment_token: ContractAddress
+            payment_token: ContractAddress,
         ) {
             let commission = self._calculate_commission(amount);
             let payout = amount - commission;
 
-            payment_transfer_from(payment_token, sender, receiver, payout);
+            let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+            token_dispatcher.transfer_from(sender, receiver, payout);
 
             if commission > 0 {
-                payment_transfer_from(payment_token, sender, get_contract_address(), commission);
+                token_dispatcher.transfer_from(sender, get_contract_address(), commission);
             }
         }
     }

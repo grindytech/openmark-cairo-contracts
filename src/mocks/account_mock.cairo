@@ -40,9 +40,9 @@ pub(crate) mod AccountMock {
 }
 
 #[starknet::contract(account)]
-pub(crate) mod DualCaseAccountMock {
-    use openzeppelin_account::AccountComponent;
-    use openzeppelin_introspection::src5::SRC5Component;
+pub mod DualCaseAccountMock {
+    use openzeppelin::account::AccountComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
 
     component!(path: AccountComponent, storage: account, event: AccountEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -63,11 +63,11 @@ pub(crate) mod DualCaseAccountMock {
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         #[substorage(v0)]
-        account: AccountComponent::Storage,
+        pub account: AccountComponent::Storage,
         #[substorage(v0)]
-        src5: SRC5Component::Storage
+        pub src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -76,7 +76,7 @@ pub(crate) mod DualCaseAccountMock {
         #[flat]
         AccountEvent: AccountComponent::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]
