@@ -1,9 +1,8 @@
 use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
-use openmark::primitives::constants::{
-    STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH
-};
+use openmark::primitives::constants::{STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH};
+use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
 
 pub type ID = u128;
 pub type Balance = u128;
@@ -41,8 +40,17 @@ pub struct Bag {
 }
 
 #[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
+pub enum StageType {
+    Selector, // Buying specific token IDs
+    BatchSelector, // Batch buying with specific IDs and quantities
+    TokenMint, // Minting fungible tokens
+    Random, // Buying random token(s)
+    BatchRandom // Batch buying with random allocation
+}
+
+#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
 pub struct Stage {
-    pub id: ID,
+    pub stageType: StageType,
     pub collection: ContractAddress,
     pub payment: ContractAddress,
     pub price: Balance,

@@ -23,8 +23,6 @@ pub mod StageComponent {
     struct Storage {
         // Stored stage info
         stage: Stage,
-        // Mapping of Merkle roots for whitelist verification by stage ID
-        rootWhitelist: Option<felt252>,
         // Mapping of total NFTs minted in a stage by stage ID
         stageMintedCount: u128,
         // Mapping of NFTs minted by a specific wallet in a stage
@@ -118,9 +116,9 @@ pub mod StageComponent {
             minter: ContractAddress,
             merkleProof: Span<felt252>
         ) -> bool {
-            if let Option::Some(root) = self.rootWhitelist.read() {
-                assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
-            }
+            // if let Option::Some(root) = self.rootWhitelist.read() {
+            //     assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
+            // }
             return true;
         }
     }

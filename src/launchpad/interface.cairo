@@ -22,6 +22,15 @@ pub trait ILaunchpadProvider<T> {
 }
 
 #[starknet::interface]
+pub trait ILaunchpad<T> {
+    fn createStage(
+        ref self: T, id: ID, stage: Stage
+    );
+
+    fn validateStage(self: @T, stage: Stage, owner: ContractAddress); 
+}
+
+#[starknet::interface]
 pub trait IStageSelector<T> {
     fn buy(
         ref self: T, tokenIds: Span<u256>, values: Option<Span<u256>>, merkleProof: Span<felt252>
