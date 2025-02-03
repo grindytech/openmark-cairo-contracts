@@ -1,18 +1,6 @@
 use starknet::{ContractAddress};
 use openmark::primitives::types::{Stage, ID, Balance};
 
-#[starknet::interface]
-pub trait ILaunchpad<T> {
-    fn updateStages(ref self: T, stages: Span<Stage>, merkleRoots: Span<Option<felt252>>);
-
-    fn removeStages(ref self: T, stageIds: Span<ID>);
-
-    fn updateWhitelist(ref self: T, stageIds: Span<ID>, merkleRoots: Span<Option<felt252>>);
-
-    fn removeWhitelist(ref self: T, stageIds: Span<ID>);
-
-    fn buy(ref self: T, stageId: ID, amount: u128, merkleProof: Span<felt252>);
-}
 
 #[starknet::interface]
 pub trait ILaunchpadProvider<T> {
@@ -31,6 +19,35 @@ pub trait ILaunchpadProvider<T> {
     fn verifyWhitelist(
         self: @T, merkleRoot: felt252, merkleProof: Span<felt252>, minter: ContractAddress
     ) -> bool;
+}
+
+#[starknet::interface]
+pub trait ILaunchpad<T> {
+    fn createStage(
+        ref self: T, id: ID, stage: Stage
+    );
+
+    fn validateStage(self: @T, stage: Stage, owner: ContractAddress); 
+}
+
+#[starknet::interface]
+pub trait IStageSelector<T> {
+    fn buy(
+        ref self: T, tokenIds: Span<u256>, values: Option<Span<u256>>, merkleProof: Span<felt252>
+    );
+}
+
+#[starknet::interface]
+pub trait IOStage<T> {
+    fn getStage(self: @T) -> Stage;
+
+    fn getMintedCount(self: @T) -> u128;
+
+    fn getUserMintedCount(self: @T, minter: ContractAddress) -> u128;
+
+    fn validateStage(self: @T)-> bool;
+
+    fn validateWhitelist(self: @T, minter: ContractAddress, merkleProof: Span<felt252>)-> bool;
 }
 
 #[starknet::interface]
@@ -62,7 +79,7 @@ pub trait IOpenLaunchpadProvider<T> {
 
     fn isClosed(self: @T, stageId: ID) -> bool;
 
-    fn getMaxSalesDuration(self: @T)-> u128;
+    fn getMaxSalesDuration(self: @T) -> u128;
 
     fn getCommission(self: @T) -> u32;
 }
