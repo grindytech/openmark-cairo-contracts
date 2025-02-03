@@ -3,7 +3,7 @@ use openmark::factory::interface::{
     ILaunchpadFactoryDispatcherTrait,
 };
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 use snforge_std::{
     declare, ContractClassTrait, get_class_hash, start_cheat_caller_address,

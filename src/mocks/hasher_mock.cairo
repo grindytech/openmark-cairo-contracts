@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod HasherMock {
     use openmark::hasher::interface::{IOffchainMessageHash};
-    use openmark::hasher::interface::{IAccountDispatcher, IAccountDispatcherTrait};
+    use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
     use openmark::primitives::types::{Order, StarknetDomain, IStructHash};
 
     use starknet::{VALIDATED, get_tx_info};
@@ -69,7 +69,7 @@ pub mod HasherMock {
                 return true;
             } else {
                 // check contract address
-                let account_contract = IAccountDispatcher {
+                let account_contract = ISRC6Dispatcher {
                     contract_address: signer.try_into().unwrap()
                 };
                 if account_contract

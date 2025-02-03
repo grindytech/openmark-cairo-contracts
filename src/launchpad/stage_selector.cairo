@@ -5,10 +5,12 @@ pub mod OpenCollection {
 
     use openmark::launchpad::stage::StageComponent;
     use openmark::launchpad::interface::IStageSelector;
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
+    use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
 
     use openmark::primitives::types::{Stage};
     use openmark::primitives::constants::{PERMYRIAD};
-    use openmark::primitives::utils::{payment_transfer_from, nft_mint_batch};
     use starknet::{
         ContractAddress, get_caller_address, get_contract_address
     };
@@ -102,10 +104,14 @@ pub mod OpenCollection {
             self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount);
             self.ostage.userMintedCount.write(minter, userMintedAmount + mintAmount);
 
-            nft_mint_batch(self.ostage.stage.collection.read(), minter, tokenIds);
+            // Implement Mint here
+            {
+
+            }
 
             let price = mintAmount * self.ostage.stage.price.read();
-            payment_transfer_from(self.ostage.stage.payment.read(), minter, get_contract_address(), price.into());
+            let token_dispatcher = IERC20Dispatcher { contract_address: self.ostage.stage.payment.read() };
+            token_dispatcher.transfer_from(minter, get_contract_address(), price.into());
 
             self
                 .emit(

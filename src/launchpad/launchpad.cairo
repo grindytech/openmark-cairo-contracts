@@ -1,20 +1,22 @@
 #[starknet::contract]
 pub mod Launchpad {
-    use openzeppelin_access::ownable::interface::IOwnable;
+    use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::access::accesscontrol::interface::{
+        IAccessControlDispatcher, IAccessControlDispatcherTrait,
+    };
 
-    use openzeppelin_access::accesscontrol::DEFAULT_ADMIN_ROLE;
-    use openzeppelin_merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
+    use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
+    use openzeppelin::merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
     use starknet::{ClassHash, ContractAddress, get_caller_address, SyscallResultTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use openmark::launchpad::interface::{ILaunchpad};
     use openmark::primitives::types::{Stage, ID, StageType};
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
     use openmark::launchpad::errors::LPErrors as Errors;
-    use openmark::primitives::utils::{access_has_role};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -22,7 +24,7 @@ pub mod Launchpad {
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
     /// Reentrancy
     component!(
-        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent
+        path: ReentrancyGuardComponent, storage: reentrancy_guard, event: ReentrancyGuardEvent,
     );
 
     /// Ownable
@@ -66,7 +68,7 @@ pub mod Launchpad {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>
+        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>,
     ) {
         self.ownable.initializer(owner);
 
@@ -92,7 +94,7 @@ pub mod Launchpad {
                 self.ownable.owner().serialize(ref constructor_calldata);
 
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.selector_classhash.read(), 0, constructor_calldata.span(), false
+                    self.selector_classhash.read(), 0, constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
@@ -105,15 +107,16 @@ pub mod Launchpad {
 
             assert(
                 stage.endTime - stage.startTime < self.maxSalesDuration.read(),
-                Errors::SALE_DURATION_EXCEEDED
+                Errors::SALE_DURATION_EXCEEDED,
             );
 
             assert(self.paymentTokens.read(stage.payment), Errors::INVALID_PAYMENT_TOKEN);
 
+            let access_dispatcher = IAccessControlDispatcher { contract_address: stage.collection };
             assert(
-                access_has_role(stage.collection, DEFAULT_ADMIN_ROLE, owner)
-                    || access_has_role(stage.collection, MINTER_ROLE, owner),
-                Errors::UNAUTHORIZED_OWNER
+                access_dispatcher.has_role(DEFAULT_ADMIN_ROLE, owner)
+                    || access_dispatcher.has_role(MINTER_ROLE, owner),
+                Errors::UNAUTHORIZED_OWNER,
             );
         }
     }
