@@ -52,6 +52,7 @@ pub mod OpenLaunchpad {
         // Stored maximum allowed sales duration
         maxSalesDuration: u128,
         selector_classhash: ClassHash,
+        batch_selector_classhash: ClassHash,
     }
 
     #[event]
@@ -67,7 +68,11 @@ pub mod OpenLaunchpad {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>,
+        ref self: ContractState,
+        owner: ContractAddress,
+        paymentTokens: Span<ContractAddress>,
+        selector_classhash: ClassHash,
+        batch_selector_classhash: ClassHash,
     ) {
         self.ownable.initializer(owner);
 
@@ -76,6 +81,9 @@ pub mod OpenLaunchpad {
         };
 
         self.commission.write(500); // per mille (default 5%)
+        self.maxSalesDuration.write(2592000); // 30 days
+        self.selector_classhash.write(selector_classhash);
+        self.batch_selector_classhash.write(batch_selector_classhash);
     }
 
     #[abi(embed_v0)]
@@ -90,15 +98,24 @@ pub mod OpenLaunchpad {
             let owner = get_caller_address();
             self.validateStage(stage, owner);
 
-            if (stage.stageType == StageType::Selector) {
-                let mut constructor_calldata = ArrayTrait::new();
-                owner.serialize(ref constructor_calldata);
-                stage.serialize(ref constructor_calldata);
-                self.commission.read().serialize(ref constructor_calldata);
-                self.ownable.owner().serialize(ref constructor_calldata);
+            let mut constructor_calldata = ArrayTrait::new();
+            owner.serialize(ref constructor_calldata);
+            stage.serialize(ref constructor_calldata);
+            rootWhitelist.serialize(ref constructor_calldata);
+            collectionWhitelists.serialize(ref constructor_calldata);
+            self.commission.read().serialize(ref constructor_calldata);
+            self.ownable.owner().serialize(ref constructor_calldata);
 
+            if (stage.stageType == StageType::Selector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
                     self.selector_classhash.read(), 0, constructor_calldata.span(), false,
+                )
+                    .unwrap_syscall();
+
+                self.stages.write(id, address);
+            } else if (stage.stageType == StageType::BatchSelector) {
+                let (address, _) = core::starknet::syscalls::deploy_syscall(
+                    self.batch_selector_classhash.read(), 0, constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
@@ -121,6 +138,10 @@ pub mod OpenLaunchpad {
                     || access_dispatcher.has_role(MINTER_ROLE, owner),
                 Errors::UNAUTHORIZED_OWNER,
             );
+        }
+
+        fn getStage(self: @ContractState, id: ID) -> ContractAddress {
+            return self.stages.read(id);
         }
     }
 }

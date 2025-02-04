@@ -8,7 +8,9 @@ pub trait ILaunchpad<T> {
         ref self: T, id: ID, stage: Stage, rootWhitelist: Option::<felt252>, collectionWhitelists: Span<ContractAddress>,
     );
 
-    fn validateStage(self: @T, stage: Stage, owner: ContractAddress); 
+    fn validateStage(self: @T, stage: Stage, owner: ContractAddress);
+
+    fn getStage(self: @T, id: ID) -> ContractAddress;
 }
 
 #[starknet::interface]

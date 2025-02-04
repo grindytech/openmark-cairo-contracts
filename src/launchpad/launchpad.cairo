@@ -121,5 +121,9 @@ pub mod Launchpad {
                 Errors::UNAUTHORIZED_OWNER,
             );
         }
+
+         fn getStage(self: @ContractState, id: ID) -> ContractAddress {
+            return self.stages.read(id);
+        }
     }
 }

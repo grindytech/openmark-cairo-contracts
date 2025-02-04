@@ -1,0 +1,561 @@
+use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
+use openmark::launchpad::interface::{ILaunchpadDispatcher};
+use openzeppelin::utils::serde::SerializedAppend;
+use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::access::accesscontrol::interface::{
+    IAccessControlDispatcher, IAccessControlDispatcherTrait,
+};
+
+use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
+
+use snforge_std::{
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
+    start_cheat_block_timestamp, DeclareResultTrait, get_class_hash,
+};
+use starknet::{ContractAddress};
+use openmark::tests::unit::common::{
+    SELLER1, SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at, NFT_NAME,
+    NFT_SYMBOL, NFT_BASE_URI, setup_oerc721_at, ZERO,
+};
+use openmark::primitives::types::{Stage, StageType};
+use openmark::primitives::constants::{MINTER_ROLE};
+use openmark::launchpad::interface::{
+    IOStageDispatcher, IOStageDispatcherTrait, IStageSelectorDispatcher,
+    IStageSelectorDispatcherTrait,
+};
+
+pub fn create_stage(
+    stageType: StageType,
+    owner: ContractAddress,
+    nft_address: ContractAddress,
+    payment_address: ContractAddress,
+    rootWhitelist: Option::<felt252>,
+    collectionWhitelists: Span<ContractAddress>,
+    commission: u128,
+    commissionReceiver: ContractAddress,
+) -> ContractAddress {
+    let stage = Stage {
+        stageType: stageType,
+        collection: nft_address,
+        payment: payment_address,
+        price: 10,
+        maxAllocation: 10,
+        limit: 6,
+        startTime: 10,
+        endTime: 100,
+    };
+
+    let contract = declare("StageSelector").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(stage);
+    constructor_calldata.append_serde(rootWhitelist);
+    constructor_calldata.append_serde(collectionWhitelists);
+    constructor_calldata.append_serde(commission);
+    constructor_calldata.append_serde(commissionReceiver);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    contract_address
+}
+
+fn create_open_launchpad(
+    owner: ContractAddress, payments: Span<ContractAddress>,
+) -> (ContractAddress, ILaunchpadDispatcher) {
+    let selector = create_stage(
+        StageType::Selector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
+    );
+    let batchSelector = create_stage(
+        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
+    );
+    let selector_classhash = get_class_hash(selector);
+    let batch_selector_classhash = get_class_hash(batchSelector);
+
+    let contract = declare("OpenLaunchpad").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(payments);
+    constructor_calldata.append_serde(selector_classhash);
+    constructor_calldata.append_serde(batch_selector_classhash);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    let launpad_dispatcher = ILaunchpadDispatcher { contract_address };
+
+    (contract_address, launpad_dispatcher)
+}
+
+// fn setup_launchpad(
+//     seller: ContractAddress, buyers: Span<ContractAddress>,
+// ) -> (ContractAddress, ILaunchpadDispatcher, ContractAddress, ContractAddress, Span<Stage>) {
+//     let (launchpad_address, launchpad_contract) = create_open_launchpad(
+//         seller, array![payment_address].span(),
+//     );
+
+//     let mut stages = array![];
+
+//     let mut i = 0;
+//     let stage = Stage {
+//         stageType: StageType::Selector,
+//         collection: nft_address,
+//         payment: payment_address,
+//         price: 100,
+//         maxAllocation: 10,
+//         limit: 6,
+//         startTime: 10,
+//         endTime: 100,
+//     };
+
+//     start_cheat_caller_address(payment_address, *buyers.at(i));
+//     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+//     payment_dispatcher.approve(launchpad_address, 100000000);
+//     stop_cheat_caller_address(payment_address);
+
+//     start_cheat_block_timestamp(launchpad_address, 10);
+
+//     start_cheat_caller_address(nft_address, seller);
+//     let accesscontrol_dispatcher = IAccessControlDispatcher { contract_address: nft_address };
+//     accesscontrol_dispatcher.grant_role(MINTER_ROLE, launchpad_address);
+//     stop_cheat_caller_address(nft_address);
+
+//     start_cheat_caller_address(launchpad_address, seller);
+//     launchpad_contract.updateStages(stages.span(), array![Option::None].span());
+//     stop_cheat_caller_address(launchpad_address);
+//     return (launchpad_address, launchpad_contract, payment_address, nft_address, stages.span());
+// }
+
+// Value generated by script `create_merkle_tree`
+const ROOT: felt252 = 0x055bd56277c7f6d8a43e368d693619129eabb968848688f93585911fee73154a;
+
+const PROOF: [felt252; 2] = [
+    0x03ab7a2f13b922344ed643f927acf82c486bab97a73fdbba9dbcddb735735cba,
+    0x077787c98250e3bffdb3069d2893e2d9c7805ae48dfa687b1471c8fcaa1901d6,
+];
+
+#[test]
+fn create_stages_works() {
+    let owner = toAddress(SELLER1);
+
+    let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
+    let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
+
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(
+        owner, [payment_address].span(),
+    );
+
+    let stage = Stage {
+        stageType: StageType::Selector,
+        collection: nft_address,
+        payment: payment_address,
+        price: 10,
+        maxAllocation: 10,
+        limit: 6,
+        startTime: 10,
+        endTime: 100,
+    };
+
+    let id = 10;
+    start_cheat_caller_address(launchpad_address, owner);
+    launchpad_contract.createStage(id, stage, Option::None, [].span());
+    let stage_selector = launchpad_contract.getStage(id);
+
+    let ostage_dispatcher = IOStageDispatcher { contract_address: stage_selector };
+    let stage_info = ostage_dispatcher.getStage();
+
+    assert(stage_info == stage, 'Get stage failed');
+}
+
+
+#[test]
+fn buy_works() {
+    let seller = toAddress(SELLER1);
+    let buyer1 = toAddress(BUYER1);
+
+    let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
+    let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
+
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(
+        seller, [payment_address].span(),
+    );
+
+    let stage = Stage {
+        stageType: StageType::Selector,
+        collection: nft_address,
+        payment: payment_address,
+        price: 10,
+        maxAllocation: 10,
+        limit: 6,
+        startTime: 10,
+        endTime: 100,
+    };
+
+    let id = 10;
+    start_cheat_caller_address(launchpad_address, seller);
+    launchpad_contract.createStage(id, stage, Option::None, [].span());
+    let stage_address = launchpad_contract.getStage(id);
+
+    start_cheat_block_timestamp(stage_address, 10);
+
+    start_cheat_caller_address(payment_address, buyer1);
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+    payment_dispatcher.approve(stage_address, 100000000);
+    stop_cheat_caller_address(payment_address);
+
+    start_cheat_caller_address(nft_address, seller);
+    let accesscontrol_dispatcher = IAccessControlDispatcher { contract_address: nft_address };
+    accesscontrol_dispatcher.grant_role(MINTER_ROLE, stage_address);
+    stop_cheat_caller_address(nft_address);
+
+    let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_address };
+
+    let buyer_before_balance = payment_dispatcher.balance_of(buyer1);
+    let seller_before_balance = payment_dispatcher.balance_of(launchpad_address);
+
+    start_cheat_caller_address(stage_address, buyer1);
+    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
+    let amount = 3;
+    let cost = amount * stage.price;
+    let buyer_after_balance = payment_dispatcher.balance_of(buyer1);
+
+    // Verify balance
+    assert(nft_dispatcher.owner_of(0) == buyer1, 'NFT owner incorrect');
+    assert(nft_dispatcher.owner_of(1) == buyer1, 'NFT owner incorrect');
+    assert(nft_dispatcher.owner_of(2) == buyer1, 'NFT owner incorrect');
+
+    assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incoorect');
+
+    // Verify states
+    let provider = IOStageDispatcher { contract_address: stage_address };
+    assert(provider.getMintedCount() == amount.into(), 'Minted count incorrect');
+    assert(provider.getUserMintedCount(buyer1) == amount.into(), 'User minted count incorrect');
+}
+
+// #[test]
+// fn buy_with_whitelist_works() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, payment_address, nft_address, stages) =
+//     setup_stage(
+//         1, seller, array![buyer1].span(),
+//     );
+//     let stage = *stages.at(0);
+//     let amount = 2;
+//     let cost = stage.price * amount;
+
+//     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+//     let nft_dispatcher = IERC721Dispatcher { contract_address: nft_address };
+
+//     let buyer_before_balance = payment_dispatcher.balance_of(buyer1);
+//     let seller_before_balance = payment_dispatcher.balance_of(launchpad_address);
+
+//     start_cheat_caller_address(launchpad_address, seller);
+//     launchpad_contract.updateWhitelist(array![stage.id].span(),
+//     array![Option::Some(ROOT)].span());
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, amount, PROOF.span());
+
+//     let buyer_after_balance = payment_dispatcher.balance_of(buyer1);
+//     let seller_after_balance = payment_dispatcher.balance_of(launchpad_address);
+
+//     // Verify balance
+//     assert(nft_dispatcher.owner_of(0) == buyer1, 'NFT owner incorrect');
+//     assert(nft_dispatcher.owner_of(1) == buyer1, 'NFT owner incorrect');
+
+//     assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incorrect');
+//     assert(
+//         seller_after_balance == seller_before_balance + cost.into(), 'Seller balance
+//     incorrect',
+//     );
+
+//     // Verify states
+//     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
+//     assert(provider.getMintedCount(stage.id) == amount.into(), 'Minted count incorrect');
+//     assert(
+//         provider.getUserMintedCount(buyer1, stage.id) == amount.into(),
+//         'User minted count incorrect',
+//     );
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: stage not found',))]
+// fn remove_stages_works() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span(),
+//     );
+//     let stage = *stages.at(0);
+//     start_cheat_caller_address(launchpad_address, seller);
+//     launchpad_contract.removeStages(array![stage.id].span());
+
+//     let provider = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
+//     provider.getActiveStage(stage.id);
+// }
+
+// #[test]
+// fn withdraw_sales_works() {
+//     let seller = toAddress(SELLER1);
+//     let owner = toAddress(SELLER2);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, payment_address, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let provider_dispatcher = IOpenLaunchpadProviderDispatcher {
+//         contract_address: launchpad_address
+//     };
+
+//     let stage = *stages.at(0);
+//     let amount = 2;
+//     let sales = stage.price * amount;
+//     let fee = sales * provider_dispatcher.getCommission().into() / 1000;
+//     let payout = sales - fee;
+
+//     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
+
+//     start_cheat_caller_address(launchpad_address, seller);
+//     launchpad_contract.updateWhitelist(array![stage.id].span(),
+//     array![Option::Some(ROOT)].span());
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, amount, PROOF.span());
+
+//     let manager_dispatcher = IOpenLaunchpadManagerDispatcher {
+//         contract_address: launchpad_address
+//     };
+//     let ownable_dispatcher = IOwnableDispatcher { contract_address: launchpad_address };
+//     start_cheat_caller_address(launchpad_address, seller);
+//     ownable_dispatcher.transfer_ownership(owner);
+
+//     let seller_balance = payment_dispatcher.balance_of(seller);
+//     let owner_balance = payment_dispatcher.balance_of(owner);
+//     manager_dispatcher.withdrawSales(stage.id);
+
+//     assert(
+//         payment_dispatcher.balance_of(seller) == seller_balance + payout.into(),
+//         'seller balance incorrect'
+//     );
+//     assert(payment_dispatcher.balance_of(owner) == owner_balance + fee.into(), 'Owner balance
+//     incorrect');
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: sold out',))]
+// fn buy_sold_out_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let buyer2 = toAddress(BUYER2);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, stage.limit, array![].span());
+//     start_cheat_caller_address(launchpad_address, buyer2);
+//     launchpad_contract.buy(stage.id, stage.limit, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: exceed limit',))]
+// fn buy_exceed_limit_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, stage.limit + 1, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: whitelist failed',))]
+// fn buy_whitelist_failed_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     start_cheat_caller_address(launchpad_address, seller);
+//     launchpad_contract.updateWhitelist(array![0].span(), array![Option::Some(ROOT)].span());
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, 1, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: stage not started',))]
+// fn buy_stage_not_started_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+//     start_cheat_block_timestamp(launchpad_address, (stage.startTime - 1).try_into().unwrap());
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, 1, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: stage has ended',))]
+// fn buy_stage_ended_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+//     start_cheat_block_timestamp(launchpad_address, (stage.endTime + 1).try_into().unwrap());
+
+//     start_cheat_caller_address(launchpad_address, buyer1);
+//     launchpad_contract.buy(stage.id, 1, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('ERC20: insufficient balance',))]
+// fn buy_insufficient_balance_panics() {
+//     let seller = toAddress(SELLER1);
+//     let no_money_buyer = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![no_money_buyer].span()
+//     );
+//     let stage = *stages.at(0);
+//     start_cheat_caller_address(launchpad_address, no_money_buyer);
+//     launchpad_contract.buy(stage.id, 1, array![].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: unauthorized owner',))]
+// fn update_stages_not_collection_owner_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let not_owner = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, launchpad_contract, payment_address, nft_address, _) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+
+//     start_cheat_caller_address(launchpad_address, not_owner);
+//     let new_stages = array![
+//         Stage {
+//             id: 12,
+//             collection: nft_address,
+//             payment: payment_address,
+//             price: 1,
+//             maxAllocation: 10,
+//             limit: 1,
+//             startTime: 0,
+//             endTime: 1,
+//         }
+//     ];
+//     launchpad_contract.updateStages(new_stages.span(), array![Option::Some(ROOT)].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: stage id used',))]
+// fn update_stages_id_used_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+
+//     let (launchpad_address, launchpad_contract, payment_address, nft_address, _) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+
+//     start_cheat_caller_address(launchpad_address, seller);
+//     let new_stages = array![
+//         Stage {
+//             id: 0,
+//             collection: nft_address,
+//             payment: payment_address,
+//             price: 1,
+//             maxAllocation: 10,
+//             limit: 1,
+//             startTime: 0,
+//             endTime: 1,
+//         }
+//     ];
+//     launchpad_contract.updateStages(new_stages.span(), array![Option::Some(ROOT)].span());
+//     launchpad_contract.updateStages(new_stages.span(), array![Option::Some(ROOT)].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: not stage owner',))]
+// fn remove_stages_not_owner_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let not_owner = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, not_owner);
+//     launchpad_contract.removeStages(array![stage.id].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: not stage owner',))]
+// fn update_whitelist_not_owner_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let not_owner = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, not_owner);
+//     launchpad_contract.updateWhitelist(array![stage.id].span(), array![Option::None].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: not stage owner',))]
+// fn remove_whitelist_not_owner_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let not_owner = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, launchpad_contract, _, _, stages) = setup_stage(
+//         1, seller, array![buyer1].span()
+//     );
+//     let stage = *stages.at(0);
+
+//     start_cheat_caller_address(launchpad_address, not_owner);
+//     launchpad_contract.removeWhitelist(array![stage.id].span());
+// }
+
+// #[test]
+// #[should_panic(expected: ('Launchpad: not stage owner',))]
+// fn withdraw_sales_not_owner_panics() {
+//     let seller = toAddress(SELLER1);
+//     let buyer1 = toAddress(BUYER1);
+//     let not_owner = 0x1.try_into().unwrap();
+
+//     let (launchpad_address, _, _, _, stages) = setup_stage(1, seller, array![buyer1].span());
+//     start_cheat_caller_address(launchpad_address, not_owner);
+//     let manager_dispatcher = IOpenLaunchpadManagerDispatcher {
+//         contract_address: launchpad_address
+//     };
+//     manager_dispatcher.withdrawSales(*stages.at(0).id);
+// }
+
+

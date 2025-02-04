@@ -12,6 +12,6 @@ pub mod unit {
     mod test_oerc721_factory;
     mod test_oerc1155_factory;
     
+    mod test_stage_selector;
     // mod test_launchpad;
-    // mod test_open_launchpad;
 }
