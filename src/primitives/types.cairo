@@ -3,6 +3,8 @@ use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 use openmark::primitives::constants::{STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH};
 use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
+use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+use starknet::storage_access::StorePacking;
 
 pub type ID = u128;
 pub type Balance = u128;
@@ -39,23 +41,28 @@ pub struct Bag {
     pub signature: Span<felt252>,
 }
 
-#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
+#[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
 pub enum StageType {
-    Selector, // Buying specific token IDs
-    BatchSelector, // Batch buying with specific IDs and quantities
-    TokenMint, // Minting fungible tokens
-    Random, // Buying random token(s)
-    BatchRandom // Batch buying with random allocation
+     // Buying specific token IDs
+    Selector,
+    // Batch buying with specific IDs and quantities
+    BatchSelector, 
+     // Minting fungible tokens
+    TokenMint,
+    // Buying random token(s)
+    Random, 
+    // Batch buying with random allocation
+    BatchRandom 
 }
 
-#[derive(Copy, PartialEq, Drop, Serde, Hash, Debug, starknet::Store)]
+#[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
 pub struct Stage {
     pub stageType: StageType,
     pub collection: ContractAddress,
     pub payment: ContractAddress,
-    pub price: Balance,
-    pub maxAllocation: u128,
-    pub limit: u128,
+    pub price: u256,
+    pub maxAllocation: u256,
+    pub limit: u256,
     pub startTime: u128,
     pub endTime: u128,
 }

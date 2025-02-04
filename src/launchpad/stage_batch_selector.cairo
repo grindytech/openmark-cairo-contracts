@@ -1,10 +1,10 @@
 #[starknet::contract]
-pub mod StageSelector {
+pub mod StageBatchSelector {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
 
     use openmark::launchpad::stage::StageComponent;
-    use openmark::launchpad::interface::IStageSelector;
+    use openmark::launchpad::interface::IStageBatchSelector;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     use openmark::primitives::types::{Stage};
@@ -12,7 +12,7 @@ pub mod StageSelector {
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::launchpad::events::{TokensBought};
-    use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
+    use openmark::assets::interface::{IERC1155MinterDispatcher, IERC1155MinterDispatcherTrait};
 
     component!(path: StageComponent, storage: ostage, event: OStageEvent);
 
@@ -73,12 +73,21 @@ pub mod StageSelector {
 
 
     #[abi(embed_v0)]
-    impl StageSelector of IStageSelector<ContractState> {
-        fn buy(ref self: ContractState, tokenIds: Span<u256>, merkleProof: Span<felt252>) {
+    impl StageSelector of IStageBatchSelector<ContractState> {
+        fn buy(
+            ref self: ContractState,
+            tokenIds: Span<u256>,
+            values: Span<u256>,
+            merkleProof: Span<felt252>,
+        ) {
             // Make sure stage is valid
             self.validateStage();
 
-            let mintAmount = tokenIds.len().into();
+            let mut mintAmount: u256 = 0;
+            for value in values {
+                mintAmount += *value;
+            };
+
             assert(mintAmount > 0, Errors::ZERO_MINT_AMOUNT);
 
             let minter: ContractAddress = get_caller_address();
@@ -90,6 +99,7 @@ pub mod StageSelector {
                 stageMintedAmount + mintAmount <= self.ostage.stage.maxAllocation.read(),
                 Errors::SOLD_OUT,
             );
+            
             assert(
                 userMintedAmount + mintAmount <= self.ostage.stage.limit.read(),
                 Errors::EXCEED_LIMIT,
@@ -97,13 +107,13 @@ pub mod StageSelector {
 
             self.validateWhitelist(minter, merkleProof);
 
-            self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount);
-            self.ostage.userMintedCount.write(minter, userMintedAmount + mintAmount);
+            self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount.try_into().unwrap());
+            self.ostage.userMintedCount.write(minter, userMintedAmount + mintAmount.try_into().unwrap());
 
-            let mint_dispatcher = IERC721MinterDispatcher {
+            let mint_dispatcher = IERC1155MinterDispatcher {
                 contract_address: self.ostage.stage.collection.read(),
             };
-            mint_dispatcher.mintBatch(minter, tokenIds);
+            mint_dispatcher.mintBatch(minter, tokenIds, values, [].span());
 
             let price = mintAmount * self.ostage.stage.price.read();
             let token_dispatcher = IERC20Dispatcher {
@@ -115,7 +125,7 @@ pub mod StageSelector {
                 .emit(
                     TokensBought {
                         buyer: minter,
-                        amount: mintAmount,
+                        amount: mintAmount.into(),
                         paymentToken: self.ostage.stage.payment.read(),
                         price: self.ostage.stage.price.read(),
                     },

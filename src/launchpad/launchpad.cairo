@@ -81,7 +81,7 @@ pub mod Launchpad {
 
     #[abi(embed_v0)]
     impl LaunchpadImpl of ILaunchpad<ContractState> {
-        fn createStage(ref self: ContractState, id: ID, stage: Stage) {
+        fn createStage(ref self: ContractState, id: ID, stage: Stage,rootWhitelist: Option::<felt252>, collectionWhitelists: Span<ContractAddress> ) {
             self.ownable.assert_only_owner();
             let owner = get_caller_address();
             self.validateStage(stage, owner);
@@ -90,6 +90,8 @@ pub mod Launchpad {
                 let mut constructor_calldata = ArrayTrait::new();
                 owner.serialize(ref constructor_calldata);
                 stage.serialize(ref constructor_calldata);
+                rootWhitelist.serialize(ref constructor_calldata);
+                collectionWhitelists.serialize(ref constructor_calldata);
                 self.commission.read().serialize(ref constructor_calldata);
                 self.ownable.owner().serialize(ref constructor_calldata);
 

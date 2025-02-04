@@ -6,8 +6,10 @@ pub mod StageComponent {
     use core::pedersen::{PedersenTrait, pedersen};
 
     use starknet::storage::{
-        StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map,
+        StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry, Map, Vec, VecTrait,
+        MutableVecTrait,
     };
+
     use starknet::{
         ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address,
     };
@@ -25,10 +27,14 @@ pub mod StageComponent {
     struct Storage {
         // Stored stage info
         stage: Stage,
+        // Stored merkle root whitelist
+        rootWhitelist: Option::<felt252>,
+        // Store collections being used for whitelist
+        collectionWhitelists: Vec<ContractAddress>,
         // Mapping of total NFTs minted in a stage by stage ID
-        stageMintedCount: u128,
+        stageMintedCount: u256,
         // Mapping of NFTs minted by a specific wallet in a stage
-        userMintedCount: Map<ContractAddress, u128>,
+        userMintedCount: Map<ContractAddress, u256>,
         // Flag indicating if the launchpad is closed
         isClosed: bool,
         // Stored commission
@@ -55,10 +61,19 @@ pub mod StageComponent {
         fn initializer(
             ref self: ComponentState<TContractState>,
             stage: Stage,
+            rootWhitelist: Option::<felt252>,
+            collectionWhitelists: Span<ContractAddress>,
             commission: u128,
             commissionReceiver: ContractAddress,
         ) {
             self.isClosed.write(false);
+            self.stage.write(stage);
+            self.rootWhitelist.write(rootWhitelist);
+
+            for collection in collectionWhitelists {
+                self.collectionWhitelists.append().write(*collection);
+            };
+
             self.commission.write(commission);
             self.commissionReceiver.write(commissionReceiver);
         }
@@ -94,13 +109,13 @@ pub mod StageComponent {
             return self.stage.read();
         }
 
-        fn getMintedCount(self: @ComponentState<TContractState>) -> u128 {
+        fn getMintedCount(self: @ComponentState<TContractState>) -> u256 {
             return self.stageMintedCount.read();
         }
 
         fn getUserMintedCount(
             self: @ComponentState<TContractState>, minter: ContractAddress,
-        ) -> u128 {
+        ) -> u256 {
             return self.userMintedCount.entry(minter).read();
         }
 
@@ -120,9 +135,18 @@ pub mod StageComponent {
             minter: ContractAddress,
             merkleProof: Span<felt252>,
         ) -> bool {
-            // if let Option::Some(root) = self.rootWhitelist.read() {
-            //     assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
-            // }
+            // Validate merkle tree
+            if let Option::Some(root) = self.rootWhitelist.read() {
+                assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
+            }
+
+            // Validate collection ownership
+            for i in 0..self.collectionWhitelists.len() {
+                let collection = self.collectionWhitelists.at(i).read();
+                let nft_dispatcher = IERC721Dispatcher { contract_address: collection };
+                assert(nft_dispatcher.balance_of(minter) > 0, Errors::COLLECTION_WHITELIST_FAILED);
+            };
+
             return true;
         }
     }

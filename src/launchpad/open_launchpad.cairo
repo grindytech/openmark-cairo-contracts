@@ -80,7 +80,13 @@ pub mod OpenLaunchpad {
 
     #[abi(embed_v0)]
     impl LaunchpadImpl of ILaunchpad<ContractState> {
-        fn createStage(ref self: ContractState, id: ID, stage: Stage) {
+        fn createStage(
+            ref self: ContractState,
+            id: ID,
+            stage: Stage,
+            rootWhitelist: Option::<felt252>,
+            collectionWhitelists: Span<ContractAddress>,
+        ) {
             let owner = get_caller_address();
             self.validateStage(stage, owner);
 

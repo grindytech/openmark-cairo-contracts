@@ -5,6 +5,8 @@ pub mod LPErrors {
     pub const EXCEED_LIMIT: felt252 = 'Launchpad: exceed limit';
     pub const SOLD_OUT: felt252 = 'Launchpad: sold out';
     pub const WHITELIST_FAILED: felt252 = 'Launchpad: whitelist failed';
+    pub const COLLECTION_WHITELIST_FAILED: felt252 = 'OM: collection whitelist failed';
+
     pub const INVALID_PAYMENT_TOKEN: felt252 = 'Launchpad: invalid payment';
     pub const LENGTH_MISMATCH: felt252 = 'Launchpad: length mismatch';
     pub const ZERO_MINT_AMOUNT: felt252 = 'Launchpad: zero mint amount';
