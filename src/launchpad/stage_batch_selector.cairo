@@ -99,7 +99,7 @@ pub mod StageBatchSelector {
                 stageMintedAmount + mintAmount <= self.ostage.stage.maxAllocation.read(),
                 Errors::SOLD_OUT,
             );
-            
+
             assert(
                 userMintedAmount + mintAmount <= self.ostage.stage.limit.read(),
                 Errors::EXCEED_LIMIT,
@@ -108,7 +108,10 @@ pub mod StageBatchSelector {
             self.validateWhitelist(minter, merkleProof);
 
             self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount.try_into().unwrap());
-            self.ostage.userMintedCount.write(minter, userMintedAmount + mintAmount.try_into().unwrap());
+            self
+                .ostage
+                .userMintedCount
+                .write(minter, userMintedAmount + mintAmount.try_into().unwrap());
 
             let mint_dispatcher = IERC1155MinterDispatcher {
                 contract_address: self.ostage.stage.collection.read(),
@@ -130,6 +133,16 @@ pub mod StageBatchSelector {
                         price: self.ostage.stage.price.read(),
                     },
                 );
+        }
+
+        fn withdrawSales(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.ostage.withdrawSales(self.owner());
+        }
+
+        fn closeStage(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.ostage.closeStage();
         }
     }
 }

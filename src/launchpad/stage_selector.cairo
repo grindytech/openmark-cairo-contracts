@@ -1,5 +1,7 @@
 #[starknet::contract]
 pub mod StageSelector {
+    use openzeppelin::access::ownable::interface::IOwnable;
+    use StageComponent::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
 
@@ -120,6 +122,16 @@ pub mod StageSelector {
                         price: self.ostage.stage.price.read(),
                     },
                 );
+        }
+
+        fn withdrawSales(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.ostage.withdrawSales(self.owner());
+        }
+
+        fn closeStage(ref self: ContractState) {
+            self.ownable.assert_only_owner();
+            self.ostage.closeStage();
         }
     }
 }

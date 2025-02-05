@@ -97,7 +97,7 @@ pub mod StageComponent {
         }
 
         fn closeStage(ref self: ComponentState<TContractState>) {
-            self.isClosed.write(false);
+            self.isClosed.write(true);
         }
     }
 
