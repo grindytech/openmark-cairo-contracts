@@ -9,16 +9,16 @@ use openmark::assets::interface::{IERC1155MinterDispatcher, IERC1155MinterDispat
 use openzeppelin::utils::serde::SerializedAppend;
 
 use snforge_std::{
-    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash
+    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash,
 };
 
 use starknet::{ContractAddress, contract_address_const};
 
 use openmark::{
     primitives::types::{Order, OrderType}, hasher::interface::{IOffchainMessageHashDispatcher},
-    core::OpenMark::{ContractState}
+    core::OpenMark::{ContractState},
 };
-use openmark::factory::interface::{ILaunchpadFactoryDispatcher,};
+use openmark::factory::interface::{ILaunchpadFactoryDispatcher};
 
 pub fn ZERO() -> ContractAddress {
     contract_address_const::<0>()
@@ -46,7 +46,9 @@ pub fn toAddress(addr: felt252) -> ContractAddress {
 pub fn setup_account(addr: felt252) -> ContractAddress {
     let contract = declare("DualCaseAccountMock").unwrap().contract_class();
     let mut constructor_calldata = array![addr];
-    let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr.try_into().unwrap()).unwrap();
+    let (contract_address, _) = contract
+        .deploy_at(@constructor_calldata, addr.try_into().unwrap())
+        .unwrap();
     contract_address
 }
 
@@ -138,7 +140,7 @@ pub fn setup_oerc721_at(addr: ContractAddress) -> ContractAddress {
     contract_address
 }
 
-pub fn do_create_oerc1155(
+pub fn do_create_oerc1155_at(
     addr: ContractAddress,
     owner: ContractAddress,
     name: ByteArray,
@@ -161,9 +163,35 @@ pub fn do_create_oerc1155(
     contract_address
 }
 
-pub fn create_oerc1155(owner: ContractAddress,) -> ContractAddress {
-    return do_create_oerc1155(
-        toAddress(TEST_NFT), owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0
+pub fn do_create_oerc1155(
+    owner: ContractAddress,
+    name: ByteArray,
+    symbol: ByteArray,
+    URI: ByteArray,
+    totalSupply: u256,
+    royaltyPercentage: u256,
+) -> ContractAddress {
+    let contract = declare("OERC1155").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(name);
+    constructor_calldata.append_serde(symbol);
+    constructor_calldata.append_serde(URI);
+    constructor_calldata.append_serde(totalSupply);
+    constructor_calldata.append_serde(royaltyPercentage);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    contract_address
+}
+
+pub fn create_oerc1155(owner: ContractAddress) -> ContractAddress {
+    return do_create_oerc1155(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
+}
+
+pub fn create_oerc1155_at(owner: ContractAddress, addr: ContractAddress) -> ContractAddress {
+    return do_create_oerc1155_at(
+        toAddress(TEST_NFT), owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0,
     );
 }
 
@@ -174,7 +202,7 @@ pub fn create_buy() -> (
     ContractAddress, // nft address
     ContractAddress, // payment token
     ContractAddress, // seller
-    ContractAddress, // buyer
+    ContractAddress // buyer
 ) {
     let nft_token = setup_oerc721_at(toAddress(TEST_NFT));
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
@@ -208,10 +236,10 @@ pub fn create_buy() -> (
     ERC20Dispatcher.approve(openmark_address, 100000);
     let signature = array![
         0x3358bee5f4f2357907a7e5f0f71df53813264ef62dc99f2954a661d8c60085e,
-        0x3c8c95d75ec7f9e13f70ef2b74ce9e45c2a66ff390b9732c002319b5eb19bfb
+        0x3c8c95d75ec7f9e13f70ef2b74ce9e45c2a66ff390b9732c002319b5eb19bfb,
     ];
 
-    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer,)
+    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
 }
 
 
@@ -222,17 +250,17 @@ pub fn create_buy_with_value() -> (
     ContractAddress, // nft address
     ContractAddress, // payment token
     ContractAddress, // seller
-    ContractAddress, // buyer
+    ContractAddress // buyer
 ) {
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark(payment_token);
     let seller: ContractAddress = setup_account(SELLER1);
 
-    let nft_token = create_oerc1155(seller);
+    let nft_token = create_oerc1155_at(seller, toAddress(TEST_NFT));
     let buyer: ContractAddress = setup_account(BUYER1);
     let ERC1155Dispatcher = IERC1155Dispatcher { contract_address: nft_token };
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
-  
+
     let order = Order {
         nftContract: TEST_NFT.try_into().unwrap(),
         tokenId: 2,
@@ -244,7 +272,6 @@ pub fn create_buy_with_value() -> (
         option: OrderType::Buy,
     };
 
-   
     // create and approve
     {
         let OERC1155 = IERC1155MinterDispatcher { contract_address: nft_token };
@@ -258,10 +285,10 @@ pub fn create_buy_with_value() -> (
     ERC20Dispatcher.approve(openmark_address, 1000_000);
     let signature = array![
         0x483f9a732042df50d80d7dd1363894bc924a7c3181027a611fdd90085730dc3,
-        0x25fa6058f6c6859bcf604a37b3515485ad0937cab485715c81f36f4fd5e3f6a
+        0x25fa6058f6c6859bcf604a37b3515485ad0937cab485715c81f36f4fd5e3f6a,
     ];
 
-    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer,)
+    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
 }
 
 pub fn create_offer() -> (
@@ -271,7 +298,7 @@ pub fn create_offer() -> (
     ContractAddress, // nft address
     ContractAddress, // payment token
     ContractAddress, // seller
-    ContractAddress, // buyer
+    ContractAddress // buyer
 ) {
     let nft_token: ContractAddress = setup_oerc721_at(toAddress(TEST_NFT));
     let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
@@ -314,10 +341,10 @@ pub fn create_offer() -> (
     start_cheat_caller_address(payment_token, openmark_address);
     let signature = array![
         0x6fafd2ac1e7f1f9aaa9036084b908d3dd43d81ce464ea15e283ba020694401e,
-        0x7b2e324f04765d33d3352b3281dcb3d37d1a6e7403dee12dd4d208de2aba95d
+        0x7b2e324f04765d33d3352b3281dcb3d37d1a6e7403dee12dd4d208de2aba95d,
     ];
 
-    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer,)
+    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
 }
 
 pub fn create_offer_with_value() -> (
@@ -327,17 +354,17 @@ pub fn create_offer_with_value() -> (
     ContractAddress, // nft address
     ContractAddress, // payment token
     ContractAddress, // seller
-    ContractAddress, // buyer
+    ContractAddress // buyer
 ) {
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark(payment_token);
     let seller: ContractAddress = setup_account(SELLER1);
 
-    let nft_token = create_oerc1155(seller);
+    let nft_token = create_oerc1155_at(seller, toAddress(TEST_NFT));
     let buyer: ContractAddress = setup_account(BUYER1);
     let ERC1155Dispatcher = IERC1155Dispatcher { contract_address: nft_token };
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
-  
+
     let order = Order {
         nftContract: TEST_NFT.try_into().unwrap(),
         tokenId: 3,
@@ -349,7 +376,6 @@ pub fn create_offer_with_value() -> (
         option: OrderType::Offer,
     };
 
-   
     // create and approve
     {
         let OERC1155 = IERC1155MinterDispatcher { contract_address: nft_token };
@@ -363,10 +389,10 @@ pub fn create_offer_with_value() -> (
     ERC20Dispatcher.approve(openmark_address, 1000_000);
     let signature = array![
         0x4a0c93b2c8c9ac9ffc60c90ab88fcd6207ec568714c49cca4bc90c8e67b677e,
-        0x5f2f25bae627735ca9628431938571a763804e233dc245b64144d5a37a9a5d0
+        0x5f2f25bae627735ca9628431938571a763804e233dc245b64144d5a37a9a5d0,
     ];
 
-    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer,)
+    (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
 }
 
 fn create_launchpad_template() -> ContractAddress {
@@ -386,7 +412,7 @@ pub fn create_launchpad_factory(
     owner: ContractAddress,
     lockAmount: u128,
     lockTokenAddress: ContractAddress,
-    paymentTokens: Span<ContractAddress>
+    paymentTokens: Span<ContractAddress>,
 ) -> (ContractAddress, ILaunchpadFactoryDispatcher) {
     let launchpad = create_launchpad_template();
     let launchpad_classhash = get_class_hash(launchpad);
@@ -433,6 +459,6 @@ pub fn do_create_oerc721(
     contract_address
 }
 
-pub fn create_oerc721(owner: ContractAddress,) -> ContractAddress {
+pub fn create_oerc721(owner: ContractAddress) -> ContractAddress {
     return do_create_oerc721(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
 }

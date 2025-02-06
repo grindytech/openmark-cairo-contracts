@@ -107,11 +107,11 @@ pub mod StageBatchSelector {
 
             self.validateWhitelist(minter, merkleProof);
 
-            self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount.try_into().unwrap());
+            self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount);
             self
                 .ostage
                 .userMintedCount
-                .write(minter, userMintedAmount + mintAmount.try_into().unwrap());
+                .write(minter, userMintedAmount + mintAmount);
 
             let mint_dispatcher = IERC1155MinterDispatcher {
                 contract_address: self.ostage.stage.collection.read(),

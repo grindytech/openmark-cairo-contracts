@@ -1,12 +1,12 @@
 use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
 use openmark::launchpad::interface::{ILaunchpadDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
 use openzeppelin::access::accesscontrol::interface::{
     IAccessControlDispatcher, IAccessControlDispatcherTrait,
 };
-use openzeppelin::access::ownable::interface::{IOwnableDispatcher,IOwnableDispatcherTrait};
+use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
@@ -15,15 +15,18 @@ use snforge_std::{
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
     SELLER1, SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at,
-    setup_oerc721_at, ZERO, create_oerc721, create_erc20,
+    setup_oerc721_at, ZERO, create_oerc1155, create_erc20, setup_account, create_oerc721,
 };
 use openmark::primitives::types::{Stage, StageType};
 use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
 use openmark::launchpad::interface::{
-    IOStageDispatcher, IOStageDispatcherTrait, IStageSelectorDispatcher,
-    IStageSelectorDispatcherTrait,
+    IOStageDispatcher, IOStageDispatcherTrait, IStageBatchSelectorDispatcher,
+    IStageBatchSelectorDispatcherTrait,
 };
-use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
+use openmark::assets::interface::{
+    IERC721MinterDispatcher,
+    IERC721MinterDispatcherTrait,
+};
 
 pub fn create_stage(
     stageType: StageType,
@@ -46,7 +49,7 @@ pub fn create_stage(
         endTime: 100,
     };
 
-    let contract = declare("StageSelector").unwrap().contract_class();
+    let contract = declare("StageBatchSelector").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
@@ -64,7 +67,7 @@ fn create_open_launchpad(
     owner: ContractAddress, payments: Span<ContractAddress>, commission: u128,
 ) -> (ContractAddress, ILaunchpadDispatcher) {
     let selector = create_stage(
-        StageType::Selector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
+        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
     );
     let batchSelector = create_stage(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
@@ -101,18 +104,18 @@ fn setup_stage(
     collectionWhitelists: Span<ContractAddress>,
     commission: u128,
 ) -> (ContractAddress, ContractAddress, Stage, ContractAddress, ContractAddress, ContractAddress) {
-    let owner = toAddress(SELLER1);
-    let buyer = toAddress(BUYER1);
+    let owner = setup_account(SELLER1);
+    let buyer = setup_account(BUYER1);
 
     let payment_address = create_erc20(buyer);
-    let nft_address = create_oerc721(owner);
+    let nft_address = create_oerc1155(owner);
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
         owner, [payment_address].span(), commission,
     );
 
     let stage = Stage {
-        stageType: StageType::Selector,
+        stageType: StageType::BatchSelector,
         collection: nft_address,
         payment: payment_address,
         price: 10,
@@ -144,7 +147,7 @@ fn setup_stage(
 
 #[test]
 fn create_stages_works() {
-    let owner = toAddress(SELLER1);
+    let owner = setup_account(SELLER1);
 
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
     let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
@@ -154,7 +157,7 @@ fn create_stages_works() {
     );
 
     let stage = Stage {
-        stageType: StageType::Selector,
+        stageType: StageType::BatchSelector,
         collection: nft_address,
         payment: payment_address,
         price: 10,
@@ -179,25 +182,27 @@ fn create_stages_works() {
 fn buy_works() {
     let id = 10;
     let (_, buyer, stage, stage_address, nft_address, payment_address) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_address };
+    let nft_dispatcher = IERC1155Dispatcher { contract_address: nft_address };
 
     let buyer_before_balance = payment_dispatcher.balance_of(buyer);
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
-    let amount = 3;
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), [].span());
+    let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
 
     // Verify balance
-    assert(nft_dispatcher.owner_of(0) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(1) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(2) == buyer, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 0) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 1) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 2) == 2, 'NFT owner incorrect');
 
     assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incoorect');
 
@@ -207,30 +212,31 @@ fn buy_works() {
     assert(provider.getUserMintedCount(buyer) == amount.into(), 'User minted count incorrect');
 }
 
-
 #[test]
 fn buy_with_root_whitelist_works() {
     let id = 10;
     let (_, buyer, stage, stage_address, nft_address, payment_address) = setup_stage(
-        id, StageType::Selector, Option::Some(ROOT), [].span(), 0,
+        id, StageType::BatchSelector, Option::Some(ROOT), [].span(), 0,
     );
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_address };
+    let nft_dispatcher = IERC1155Dispatcher { contract_address: nft_address };
 
     let buyer_before_balance = payment_dispatcher.balance_of(buyer);
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), PROOF.span());
-    let amount = 3;
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), PROOF.span());
+    let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
 
     // Verify balance
-    assert(nft_dispatcher.owner_of(0) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(1) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(2) == buyer, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 0) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 1) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 2) == 2, 'NFT owner incorrect');
 
     assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incoorect');
 
@@ -247,7 +253,7 @@ fn buy_with_collection_whitelist_works() {
     let collection_whitelist = create_oerc721(admin);
 
     let (_, buyer, stage, stage_address, nft_address, payment_address) = setup_stage(
-        id, StageType::Selector, Option::None, [collection_whitelist].span(), 0,
+        id, StageType::BatchSelector, Option::None, [collection_whitelist].span(), 0,
     );
 
     let OERC721 = IERC721MinterDispatcher { contract_address: collection_whitelist };
@@ -255,21 +261,23 @@ fn buy_with_collection_whitelist_works() {
     OERC721.mint(buyer, 10);
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
-    let nft_dispatcher = IERC721Dispatcher { contract_address: nft_address };
+    let nft_dispatcher = IERC1155Dispatcher { contract_address: nft_address };
 
     let buyer_before_balance = payment_dispatcher.balance_of(buyer);
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), PROOF.span());
-    let amount = 3;
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), [].span());
+    let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
 
     // Verify balance
-    assert(nft_dispatcher.owner_of(0) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(1) == buyer, 'NFT owner incorrect');
-    assert(nft_dispatcher.owner_of(2) == buyer, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 0) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 1) == 2, 'NFT owner incorrect');
+    assert(nft_dispatcher.balance_of(buyer, 2) == 2, 'NFT owner incorrect');
 
     assert(buyer_after_balance == buyer_before_balance - cost.into(), 'Buyer balance incoorect');
 
@@ -279,20 +287,21 @@ fn buy_with_collection_whitelist_works() {
     assert(provider.getUserMintedCount(buyer) == amount.into(), 'User minted count incorrect');
 }
 
-
 #[test]
 #[should_panic(expected: ('OM: closed',))]
 fn close_stages_works() {
     let id = 10;
     let (owner, buyer, _, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::Some(ROOT), [].span(), 0,
+        id, StageType::BatchSelector, Option::Some(ROOT), [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, owner);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
     stage_selector_dispatcher.closeStage();
     start_cheat_caller_address(stage_address, buyer);
-    stage_selector_dispatcher.buy([0, 1, 2].span(), PROOF.span());
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), PROOF.span());
 }
 
 #[test]
@@ -301,14 +310,16 @@ fn withdraw_sales_works() {
     let commission = 500; // 5%
     let admin = toAddress(0x1);
     let (owner, buyer, stage, stage_address, _, payment_address) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), commission,
+        id, StageType::BatchSelector, Option::None, [].span(), commission,
     );
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
-    let sales = 3 * stage.price;
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
+    let sales = 6 * stage.price;
     let payout = sales - (sales * commission.into() / PERMYRIAD.into());
     let fee = sales - payout;
     let owner_balance = payment_dispatcher.balance_of(owner);
@@ -339,7 +350,7 @@ fn buy_sold_out_panics() {
 
     let id = 10;
     let (_, _, _, stage_address, _, payment_address) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_address };
@@ -347,15 +358,19 @@ fn buy_sold_out_panics() {
     payment_dispatcher.approve(stage_address, 1000000);
     stop_cheat_caller_address(payment_address);
     start_cheat_caller_address(stage_address, buyer1);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2, 3, 4, 5].span(), array![].span());
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
 
     start_cheat_caller_address(payment_address, buyer2);
     payment_dispatcher.approve(stage_address, 1000000);
     stop_cheat_caller_address(payment_address);
     start_cheat_caller_address(stage_address, buyer2);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([6, 7, 8, 9, 10].span(), array![].span());
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([6, 7, 8].span(), [2, 2, 2].span(), array![].span());
 }
 
 #[test]
@@ -363,12 +378,14 @@ fn buy_sold_out_panics() {
 fn buy_exceed_limit_panics() {
     let id = 10;
     let (_, buyer, _, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2, 3, 4, 5, 6].span(), array![].span());
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2, 3].span(), [2, 2, 2, 2].span(), array![].span());
 }
 
 #[test]
@@ -376,27 +393,30 @@ fn buy_exceed_limit_panics() {
 fn root_whitelist_failed_panics() {
     let id = 10;
     let (_, buyer, _, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::Some(ROOT), [].span(), 0,
+        id, StageType::BatchSelector, Option::Some(ROOT), [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
 }
-
 
 #[test]
 #[should_panic(expected: ('OM: collection whitelist failed',))]
 fn collection_whitelist_failed_panics() {
     let id = 10;
-    let collection_whitelist = create_oerc721(toAddress(SELLER1));
+    let collection_whitelist = create_oerc721(toAddress(SELLER2));
     let (_, buyer, _, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [collection_whitelist].span(), 0,
+        id, StageType::BatchSelector, Option::None, [collection_whitelist].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
 }
 
 #[test]
@@ -404,30 +424,34 @@ fn collection_whitelist_failed_panics() {
 fn buy_stage_not_started_panics() {
     let id = 10;
     let (_, buyer, stage, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
     start_cheat_block_timestamp(stage_address, (stage.startTime - 1).try_into().unwrap());
 
     start_cheat_caller_address(stage_address, buyer);
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
 }
 #[test]
 #[should_panic(expected: ('OM: stage has ended',))]
 fn buy_stage_ended_panics() {
     let id = 10;
     let (_, buyer, stage, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_selector_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
+        contract_address: stage_address,
+    };
     start_cheat_block_timestamp(stage_address, (stage.endTime + 1).try_into().unwrap());
 
     start_cheat_caller_address(stage_address, buyer);
-    stage_selector_dispatcher.buy([0, 1, 2].span(), array![].span());
+    stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
 }
 
 #[test]
@@ -437,14 +461,14 @@ fn update_stages_id_used_panics() {
     let buyer = toAddress(BUYER1);
 
     let payment_address = create_erc20(buyer);
-    let nft_address = create_oerc721(owner);
+    let nft_address = create_oerc1155(owner);
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
         owner, [payment_address].span(), 0,
     );
 
     let stage = Stage {
-        stageType: StageType::Selector,
+        stageType: StageType::BatchSelector,
         collection: nft_address,
         payment: payment_address,
         price: 10,
@@ -466,11 +490,11 @@ fn clost_stage_not_owner_panics() {
     let not_owner = toAddress(0x1);
     let id = 10;
     let (_, buyer, stage, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    let stage_dispatcher = IStageBatchSelectorDispatcher { contract_address: stage_address };
     start_cheat_block_timestamp(stage_address, (stage.endTime + 1).try_into().unwrap());
 
     start_cheat_caller_address(stage_address, not_owner);
@@ -483,13 +507,14 @@ fn withdraw_sales_not_owner_panics() {
     let not_owner = toAddress(0x1);
     let id = 10;
     let (_, buyer, stage, stage_address, _, _) = setup_stage(
-        id, StageType::Selector, Option::None, [].span(), 0,
+        id, StageType::BatchSelector, Option::None, [].span(), 0,
     );
 
     start_cheat_caller_address(stage_address, buyer);
-    let stage_dispatcher = IStageSelectorDispatcher { contract_address: stage_address };
+    let stage_dispatcher = IStageBatchSelectorDispatcher { contract_address: stage_address };
     start_cheat_block_timestamp(stage_address, (stage.endTime + 1).try_into().unwrap());
 
     start_cheat_caller_address(stage_address, not_owner);
     stage_dispatcher.withdrawSales();
 }
+

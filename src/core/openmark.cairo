@@ -33,10 +33,6 @@ pub mod OpenMark {
     use openmark::core::interface::{IOpenMark, IOpenMarkCamel, IOpenMarkProvider, IOpenMarkManager};
     use openmark::core::events::{OrderFilled, OrderCancelled};
     use openmark::core::errors::OMErrors as Errors;
-    // use openmark::primitives::utils::{
-    //     nft_transfer_from, payment_transfer_from, payment_balance_of, nft_owner_of,
-    //     nft_safe_transfer_from
-    // };
 
     use openmark::primitives::constants::{PERMYRIAD};
 

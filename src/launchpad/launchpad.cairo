@@ -1,5 +1,6 @@
 #[starknet::contract]
 pub mod Launchpad {
+    use core::num::traits::Zero;
     use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::access::ownable::OwnableComponent;
@@ -15,7 +16,7 @@ pub mod Launchpad {
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use openmark::launchpad::interface::{ILaunchpad};
     use openmark::primitives::types::{Stage, ID, StageType};
-    use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
+    use openmark::primitives::constants::{MINTER_ROLE};
     use openmark::launchpad::errors::LPErrors as Errors;
 
     /// Ownable
@@ -81,8 +82,15 @@ pub mod Launchpad {
 
     #[abi(embed_v0)]
     impl LaunchpadImpl of ILaunchpad<ContractState> {
-        fn createStage(ref self: ContractState, id: ID, stage: Stage,rootWhitelist: Option::<felt252>, collectionWhitelists: Span<ContractAddress> ) {
+        fn createStage(
+            ref self: ContractState,
+            id: ID,
+            stage: Stage,
+            rootWhitelist: Option::<felt252>,
+            collectionWhitelists: Span<ContractAddress>,
+        ) {
             self.ownable.assert_only_owner();
+            assert(self.stages.read(id).is_zero(), Errors::STAGE_ID_USED);
             let owner = get_caller_address();
             self.validateStage(stage, owner);
 
@@ -122,7 +130,7 @@ pub mod Launchpad {
             );
         }
 
-         fn getStage(self: @ContractState, id: ID) -> ContractAddress {
+        fn getStage(self: @ContractState, id: ID) -> ContractAddress {
             return self.stages.read(id);
         }
     }
