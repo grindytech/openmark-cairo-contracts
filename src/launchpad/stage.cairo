@@ -11,7 +11,7 @@ pub mod StageComponent {
     };
 
     use starknet::{
-        ClassHash, ContractAddress, get_block_timestamp, get_caller_address, get_contract_address,
+        ContractAddress, get_block_timestamp, get_contract_address,
     };
     use openmark::launchpad::errors::LPErrors as Errors;
 
@@ -20,7 +20,6 @@ pub mod StageComponent {
     use openmark::primitives::types::{Stage};
     use openmark::primitives::constants::{PERMYRIAD};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
 
     #[storage]
@@ -86,10 +85,11 @@ pub mod StageComponent {
 
             sales = token_dispatcher.balance_of(get_contract_address());
 
-            let fee = self.commission.read().into() * sales / PERMYRIAD.into();
-            let payout = sales - fee.into();
+            let commission = self.commission.read().into() * sales / PERMYRIAD.into();
+            let payout = sales - commission.into();
+
             token_dispatcher.transfer(receiver, payout.into());
-            token_dispatcher.transfer(self.commissionReceiver.read(), fee.into());
+            token_dispatcher.transfer(self.commissionReceiver.read(), commission.into());
 
             if let Option::Some(amount) = sales.try_into() {
                 self.emit(SalesWithdrawn { owner: receiver, tokenPayment: paymentToken, amount });
@@ -120,7 +120,7 @@ pub mod StageComponent {
         }
 
         fn validateStage(self: @ComponentState<TContractState>) -> bool {
-            assert(!self.isClosed.read(), Errors::LAUNCHPAD_CLOSED);
+            assert(!self.isClosed.read(), Errors::STAGE_CLOSED);
 
             let currentTimestamp: u128 = get_block_timestamp().into();
             assert(currentTimestamp >= self.stage.startTime.read(), Errors::STAGE_NOT_STARTED);
@@ -137,7 +137,7 @@ pub mod StageComponent {
         ) -> bool {
             // Validate merkle tree
             if let Option::Some(root) = self.rootWhitelist.read() {
-                assert(verify_merkle_proof(root, merkleProof, minter), Errors::WHITELIST_FAILED);
+                assert(verify_merkle_proof(root, merkleProof, minter), Errors::ROOT_WHITELIST_FAILED);
             }
 
             // Validate collection ownership

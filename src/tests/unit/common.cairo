@@ -87,14 +87,13 @@ pub fn deploy_mock_account() -> ContractAddress {
     contract_address
 }
 
-pub fn deploy_erc20() -> ContractAddress {
+pub fn create_erc20(owner: ContractAddress) -> ContractAddress {
     let contract = declare("OpenMarkCoinMock").unwrap().contract_class();
     let mut constructor_calldata = array![];
     let initial_supply = 1000000000000000000000000000_u256;
-    let recipient: ContractAddress = toAddress(BUYER1);
 
     constructor_calldata.append_serde(initial_supply);
-    constructor_calldata.append_serde(recipient);
+    constructor_calldata.append_serde(owner);
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
@@ -410,4 +409,30 @@ pub fn create_launchpad_factory(
 pub fn get_contract_state_for_testing() -> ContractState {
     let mut state = openmark::core::OpenMark::contract_state_for_testing();
     state
+}
+
+pub fn do_create_oerc721(
+    owner: ContractAddress,
+    name: ByteArray,
+    symbol: ByteArray,
+    baseURI: ByteArray,
+    totalSupply: u256,
+    royaltyPercentage: u256,
+) -> ContractAddress {
+    let contract = declare("OERC721").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(name);
+    constructor_calldata.append_serde(symbol);
+    constructor_calldata.append_serde(baseURI);
+    constructor_calldata.append_serde(totalSupply);
+    constructor_calldata.append_serde(royaltyPercentage);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    contract_address
+}
+
+pub fn create_oerc721(owner: ContractAddress,) -> ContractAddress {
+    return do_create_oerc721(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
 }

@@ -4,13 +4,13 @@ pub mod LPErrors {
     pub const STAGE_ENDED: felt252 = 'OM: stage has ended';
     pub const EXCEED_LIMIT: felt252 = 'OM: exceed limit';
     pub const SOLD_OUT: felt252 = 'OM: sold out';
-    pub const WHITELIST_FAILED: felt252 = 'OM: whitelist failed';
+    pub const ROOT_WHITELIST_FAILED: felt252 = 'OM: root whitelist failed';
     pub const COLLECTION_WHITELIST_FAILED: felt252 = 'OM: collection whitelist failed';
 
     pub const INVALID_PAYMENT_TOKEN: felt252 = 'OM: invalid payment';
     pub const LENGTH_MISMATCH: felt252 = 'OM: length mismatch';
     pub const ZERO_MINT_AMOUNT: felt252 = 'OM: zero mint amount';
-    pub const LAUNCHPAD_CLOSED: felt252 = 'OM: closed';
+    pub const STAGE_CLOSED: felt252 = 'OM: closed';
     pub const NO_SALES: felt252 = 'OM: no sales';
     pub const INVALID_PAY_VALUE: felt252 = 'OM: invalid pay value';
     pub const WITHDRAW_FAILED: felt252 = 'OM: withdraw failed';

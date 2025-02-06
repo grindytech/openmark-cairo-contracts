@@ -1,6 +1,7 @@
 #[starknet::contract]
 pub mod OpenLaunchpad {
-    use openzeppelin::access::ownable::interface::IOwnable;
+    use core::num::traits::Zero;
+use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
@@ -96,6 +97,8 @@ pub mod OpenLaunchpad {
             collectionWhitelists: Span<ContractAddress>,
         ) {
             let owner = get_caller_address();
+
+            assert(self.stages.read(id).is_zero(), Errors::STAGE_ID_USED);
             self.validateStage(stage, owner);
 
             let mut constructor_calldata = ArrayTrait::new();

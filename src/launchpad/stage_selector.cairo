@@ -79,7 +79,6 @@ pub mod StageSelector {
         fn buy(ref self: ContractState, tokenIds: Span<u256>, merkleProof: Span<felt252>) {
             // Make sure stage is valid
             self.validateStage();
-
             let mintAmount = tokenIds.len().into();
             assert(mintAmount > 0, Errors::ZERO_MINT_AMOUNT);
 
