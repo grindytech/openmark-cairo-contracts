@@ -7,9 +7,10 @@ use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTr
 use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
 use openmark::assets::interface::{IERC1155MinterDispatcher, IERC1155MinterDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
+use openmark::primitives::types::{Stage, StageType};
 
 use snforge_std::{
-    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, get_class_hash,
+    declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address,
 };
 
 use starknet::{ContractAddress, contract_address_const};
@@ -18,7 +19,6 @@ use openmark::{
     primitives::types::{Order, OrderType}, hasher::interface::{IOffchainMessageHashDispatcher},
     core::OpenMark::{ContractState},
 };
-use openmark::factory::interface::{ILaunchpadFactoryDispatcher};
 
 pub fn ZERO() -> ContractAddress {
     contract_address_const::<0>()
@@ -395,43 +395,6 @@ pub fn create_offer_with_value() -> (
     (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
 }
 
-fn create_launchpad_template() -> ContractAddress {
-    let contract = declare("Launchpad").unwrap().contract_class();
-    let mut constructor_calldata = array![];
-    constructor_calldata.append_serde(toAddress(SELLER1));
-    constructor_calldata.append_serde(NFT_BASE_URI());
-    constructor_calldata.append_serde(0_u128);
-    constructor_calldata.append_serde(toAddress(TEST_PAYMENT));
-    constructor_calldata.append_serde(toAddress(TEST_PAYMENT));
-
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-    return contract_address;
-}
-
-pub fn create_launchpad_factory(
-    owner: ContractAddress,
-    lockAmount: u128,
-    lockTokenAddress: ContractAddress,
-    paymentTokens: Span<ContractAddress>,
-) -> (ContractAddress, ILaunchpadFactoryDispatcher) {
-    let launchpad = create_launchpad_template();
-    let launchpad_classhash = get_class_hash(launchpad);
-
-    let contract = declare("LaunchpadFactory").unwrap().contract_class();
-
-    let mut constructor_calldata = array![];
-
-    constructor_calldata.append_serde(owner);
-    constructor_calldata.append_serde(lockAmount);
-    constructor_calldata.append_serde(lockTokenAddress);
-    constructor_calldata.append_serde(paymentTokens);
-    constructor_calldata.append_serde(launchpad_classhash);
-
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-
-    (contract_address, ILaunchpadFactoryDispatcher { contract_address })
-}
-
 pub fn get_contract_state_for_testing() -> ContractState {
     let mut state = openmark::core::OpenMark::contract_state_for_testing();
     state
@@ -461,4 +424,39 @@ pub fn do_create_oerc721(
 
 pub fn create_oerc721(owner: ContractAddress) -> ContractAddress {
     return do_create_oerc721(owner, NFT_NAME(), NFT_SYMBOL(), NFT_BASE_URI(), 100, 0);
+}
+
+pub fn create_stage(
+    stageType: StageType,
+    owner: ContractAddress,
+    nft_address: ContractAddress,
+    payment_address: ContractAddress,
+    rootWhitelist: Option::<felt252>,
+    collectionWhitelists: Span<ContractAddress>,
+    commission: u128,
+    commissionReceiver: ContractAddress,
+) -> ContractAddress {
+    let stage = Stage {
+        stageType: stageType,
+        collection: nft_address,
+        payment: payment_address,
+        price: 10,
+        maxAllocation: 10,
+        limit: 6,
+        startTime: 10,
+        endTime: 100,
+    };
+
+    let contract = declare("StageBatchSelector").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(stage);
+    constructor_calldata.append_serde(rootWhitelist);
+    constructor_calldata.append_serde(collectionWhitelists);
+    constructor_calldata.append_serde(commission);
+    constructor_calldata.append_serde(commissionReceiver);
+
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    contract_address
 }

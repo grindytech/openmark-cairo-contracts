@@ -8,7 +8,7 @@ pub mod OERC1155Factory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use openmark::factory::interface::{IOERC1155Factory, IOERC1155FactoryCamel, IFactoryManager};
+    use openmark::factory::interface::{IOERC1155Factory, IFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -51,12 +51,12 @@ pub mod OERC1155Factory {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
-        CollectionCreated: CollectionCreated
+        CollectionCreated: CollectionCreated,
     }
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash
+        ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash,
     ) {
         self.ownable.initializer(owner);
         self.collection_classhash.write(collection_classhash);
@@ -64,7 +64,7 @@ pub mod OERC1155Factory {
 
     #[abi(embed_v0)]
     impl NFTFactoryImpl of IOERC1155Factory<ContractState> {
-        fn create_collection(
+        fn createInstance(
             ref self: ContractState,
             id: u256,
             owner: ContractAddress,
@@ -74,7 +74,7 @@ pub mod OERC1155Factory {
             total_supply: u256,
             royalty_percentage: u256,
         ) {
-            assert(self.get_collection(id).is_zero(), 'OM: ID in use');
+            assert(self.factory.read(id).is_zero(), 'OM: ID in use');
 
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
@@ -85,7 +85,7 @@ pub mod OERC1155Factory {
             royalty_percentage.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
-                self.collection_classhash.read(), 0, constructor_calldata.span(), false
+                self.collection_classhash.read(), 0, constructor_calldata.span(), false,
             )
                 .unwrap_syscall();
 
@@ -93,33 +93,13 @@ pub mod OERC1155Factory {
             self
                 .emit(
                     CollectionCreated {
-                        id, address, owner, name, symbol, uri, total_supply, royalty_percentage
-                    }
+                        id, address, owner, name, symbol, uri, total_supply, royalty_percentage,
+                    },
                 );
         }
 
-        fn get_collection(self: @ContractState, id: u256) -> ContractAddress {
+        fn getInstance(self: @ContractState, id: u256) -> ContractAddress {
             self.factory.read(id)
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl NFTFactoryCamelImpl of IOERC1155FactoryCamel<ContractState> {
-        fn createCollection(
-            ref self: ContractState,
-            id: u256,
-            owner: ContractAddress,
-            name: ByteArray,
-            symbol: ByteArray,
-            URI: ByteArray,
-            totalSupply: u256,
-            royaltyPercentage: u256,
-        ) {
-            self.create_collection(id, owner, name, symbol, URI, totalSupply, royaltyPercentage);
-        }
-
-        fn getCollection(self: @ContractState, id: u256) -> ContractAddress {
-            self.get_collection(id)
         }
     }
 

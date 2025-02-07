@@ -3,157 +3,101 @@ use openmark::factory::interface::{
     ILaunchpadFactoryDispatcherTrait,
 };
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 use snforge_std::{
     declare, ContractClassTrait, get_class_hash, start_cheat_caller_address,
-    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait, DeclareResultTrait
+    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait, DeclareResultTrait,
 };
-use starknet::{ContractAddress};
+use starknet::{ContractAddress, ClassHash};
 
-use openmark::factory::oerc721_factory::OERC721Factory::Event as NFTEvents;
-use openmark::factory::oerc721_factory::OERC721Factory::CollectionCreated;
-
-use openmark::factory::launchpad_factory::LaunchpadFactory::Event as LaunchpadEvents;
 use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
 use openmark::tests::unit::common::{
-    create_test_oerc721, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress,
-    create_launchpad_factory
+    create_test_oerc721, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress, create_stage, ZERO,
+};
+use openmark::primitives::types::{Stage, StageType};
+use openmark::launchpad::interface::{
+    ILaunchpadProviderDispatcher, ILaunchpadProviderDispatcherTrait,
 };
 
-fn create_nft_factory() -> (ContractAddress, IOERC721FactoryDispatcher) {
-    let nft_token = create_test_oerc721();
-    let nft_classhash = get_class_hash(nft_token);
+fn create_launchpad_template() -> ContractAddress {
+    let contract = declare("Launchpad").unwrap().contract_class();
+    let mut constructor_calldata = array![];
+    constructor_calldata.append_serde(toAddress(SELLER1));
+    constructor_calldata.append_serde(0_u128);
+    constructor_calldata.append_serde(toAddress(SELLER1));
+    constructor_calldata.append_serde(0);
+    constructor_calldata.append_serde(0);
 
-    let contract = declare("OERC721Factory").unwrap().contract_class();
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
+    return contract_address;
+}
+
+
+pub fn create_launchpad_factory(
+    owner: ContractAddress,
+) -> (ContractAddress, ILaunchpadFactoryDispatcher, ClassHash, ClassHash) {
+    let launchpad = create_launchpad_template();
+    let launchpad_classhash = get_class_hash(launchpad);
+
+    let selector = create_stage(
+        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
+    );
+    let batchSelector = create_stage(
+        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
+    );
+    let selector_classhash = get_class_hash(selector);
+    let batch_selector_classhash = get_class_hash(batchSelector);
+
+    let contract = declare("LaunchpadFactory").unwrap().contract_class();
 
     let mut constructor_calldata = array![];
 
-    constructor_calldata.append_serde(SELLER1);
-    constructor_calldata.append_serde(nft_classhash);
+    constructor_calldata.append_serde(owner);
+    constructor_calldata.append_serde(launchpad_classhash);
+    constructor_calldata.append_serde(500);
+    constructor_calldata.append_serde(selector_classhash);
+    constructor_calldata.append_serde(batch_selector_classhash);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
-    (contract_address, IOERC721FactoryDispatcher { contract_address })
+    (
+        contract_address,
+        ILaunchpadFactoryDispatcher { contract_address },
+        selector_classhash,
+        batch_selector_classhash,
+    )
 }
+
 
 #[test]
 fn create_collection_works() {
-    let (_contract_address, factory_contract) = create_nft_factory();
-
-    factory_contract
-        .create_collection(
-            0,
-            toAddress(SELLER1),
-            "Starknet NFT",
-            "Stark NFT",
-            "https://starknet.io",
-            1000_u256,
-            0_u256
-        );
-
-    let nft_address = factory_contract.get_collection(0);
-
-    let _expected_event = NFTEvents::CollectionCreated(
-        CollectionCreated {
-            id: 0,
-            address: nft_address,
-            owner: toAddress(SELLER1),
-            name: "Starknet NFT",
-            symbol: "Stark NFT",
-            base_uri: "https://starknet.io",
-            total_supply: 1000_u256,
-        }
+    let (contract_address, factory_contract, selector_classhash, batch_selector_classhash) =
+        create_launchpad_factory(
+        toAddress(SELLER1),
     );
+
+    factory_contract.createInstance(10, toAddress(SELLER1));
+
+    let launchpad_address = factory_contract.getInstance(10);
+
+    let launchpad_dispatcher = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
+
+    let config = launchpad_dispatcher.getConfig();
+    assert(config == (500, selector_classhash, batch_selector_classhash), 'Create launchpd failed');
+    // let mut spy = spy_events();
+// let expected_event = LaunchpadCreated {
+//     id: 10, address: launchpad_address, owner: toAddress(SELLER1),
+// };
+// spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
+
 
 #[test]
 #[should_panic(expected: ('OM: ID in use',))]
-fn create_collection_id_used_panics() {
-    let (_, factory_contract) = create_nft_factory();
-
-    factory_contract
-        .create_collection(
-            0,
-            toAddress(SELLER1),
-            "Starknet NFT",
-            "Stark NFT",
-            "https://starknet.io",
-            1000_u256,
-            0_u256
-        );
-
-    factory_contract
-        .create_collection(
-            0, toAddress(SELLER1), "Starknet", "Stark", "https://starknet.io", 1000_u256, 0_u256
-        );
+fn create_launchpad_id_used_panics() {
+    let (_, factory_contract, _, _) = create_launchpad_factory(toAddress(SELLER1));
+    factory_contract.createInstance(10, toAddress(SELLER1));
+    factory_contract.createInstance(10, toAddress(SELLER1));
 }
-// #[test]
-// fn create_factory_works() {
-//     let owner = toAddress(SELLER1);
-//     let lockAmount = 1000_u128;
-//     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
-
-//     let lockPaymentTokens = array![payment_token].span();
-
-//     let (factory_address, factory_contract) = create_launchpad_factory(
-//         owner, lockAmount, payment_token, lockPaymentTokens
-//     );
-
-//     let erc20_dispatcher = IERC20Dispatcher { contract_address: payment_token };
-//     start_cheat_caller_address(payment_token, owner);
-//     erc20_dispatcher.approve(factory_address, 10000000);
-//     stop_cheat_caller_address(payment_token);
-
-//     let owner_balance = erc20_dispatcher.balance_of(owner);
-//     start_cheat_caller_address(factory_address, owner);
-//     let mut spy = spy_events();
-
-//     factory_contract.create_launchpad(0, toAddress(SELLER1), "https://starknet.io");
-
-//     let provider_dispatcher = ILaunchpadFactoryDispatcher { contract_address: factory_address };
-//     let launchpad_address = provider_dispatcher.get_launchpad(0);
-
-//     let expected_event = LaunchpadEvents::LaunchpadCreated(
-//         LaunchpadCreated {
-//             id: 0, address: launchpad_address, owner: toAddress(SELLER1), uri:
-//             "https://starknet.io"
-//         }
-//     );
-//     spy.assert_emitted(@array![(factory_address, expected_event)]);
-
-//     assert(
-//         erc20_dispatcher.balance_of(owner) == owner_balance - lockAmount.into(),
-//         'owner balance not correct'
-//     );
-
-//     assert(
-//         erc20_dispatcher.balance_of(launchpad_address) == lockAmount.into(),
-//         'launchpad balance not correct'
-//     );
-// }
-
-// #[test]
-// #[should_panic(expected: ('OM: ID in use',))]
-// fn create_launchpad_id_used_panics() {
-//     let owner = toAddress(SELLER1);
-//     let lockAmount = 1000_u128;
-//     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
-
-//     let lockPaymentTokens = array![payment_token].span();
-
-//     let (factory_address, factory_contract) = create_launchpad_factory(
-//         owner, lockAmount, payment_token, lockPaymentTokens
-//     );
-
-//     let erc20_dispatcher = IERC20Dispatcher { contract_address: payment_token };
-//     start_cheat_caller_address(payment_token, owner);
-//     erc20_dispatcher.approve(factory_address, 10000000);
-//     stop_cheat_caller_address(payment_token);
-//     start_cheat_caller_address(factory_address, owner);
-
-//     factory_contract.create_launchpad(0, toAddress(SELLER1), "https://starknet.io");
-//     factory_contract.create_launchpad(0, toAddress(SELLER1), "https://starknet.io");
-// }
-
 

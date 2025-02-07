@@ -15,7 +15,8 @@ use snforge_std::{
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
     SELLER1, SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at,
-    setup_oerc721_at, ZERO, create_oerc1155, create_erc20, setup_account, create_oerc721,
+    setup_oerc721_at, create_stage, create_oerc1155, create_erc20, setup_account, create_oerc721,
+    ZERO,
 };
 use openmark::primitives::types::{Stage, StageType};
 use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
@@ -28,41 +29,6 @@ use openmark::assets::interface::{
     IERC721MinterDispatcherTrait,
 };
 
-pub fn create_stage(
-    stageType: StageType,
-    owner: ContractAddress,
-    nft_address: ContractAddress,
-    payment_address: ContractAddress,
-    rootWhitelist: Option::<felt252>,
-    collectionWhitelists: Span<ContractAddress>,
-    commission: u128,
-    commissionReceiver: ContractAddress,
-) -> ContractAddress {
-    let stage = Stage {
-        stageType: stageType,
-        collection: nft_address,
-        payment: payment_address,
-        price: 10,
-        maxAllocation: 10,
-        limit: 6,
-        startTime: 10,
-        endTime: 100,
-    };
-
-    let contract = declare("StageBatchSelector").unwrap().contract_class();
-    let mut constructor_calldata = array![];
-
-    constructor_calldata.append_serde(owner);
-    constructor_calldata.append_serde(stage);
-    constructor_calldata.append_serde(rootWhitelist);
-    constructor_calldata.append_serde(collectionWhitelists);
-    constructor_calldata.append_serde(commission);
-    constructor_calldata.append_serde(commissionReceiver);
-
-    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-    contract_address
-}
-
 fn create_open_launchpad(
     owner: ContractAddress, payments: Span<ContractAddress>, commission: u128,
 ) -> (ContractAddress, ILaunchpadDispatcher) {
@@ -70,7 +36,7 @@ fn create_open_launchpad(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
     );
     let batchSelector = create_stage(
-        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), 0, owner,
+        StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
     );
     let selector_classhash = get_class_hash(selector);
     let batch_selector_classhash = get_class_hash(batchSelector);

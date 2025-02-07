@@ -11,7 +11,7 @@ use starknet::{ContractAddress};
 use openmark::{
     assets::interface::{
         IERC721MinterDispatcher, IERC721MinterDispatcherTrait
-    }, // assets::interface::{IOMERC721Dispatcher, IOMERC721DispatcherTrait},
+    },
 };
 use openmark::tests::unit::common::{toAddress, setup_account, BUYER1, SELLER1};
 

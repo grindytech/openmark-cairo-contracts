@@ -1,4 +1,4 @@
-use starknet::{ContractAddress};
+use starknet::{ContractAddress, ClassHash};
 use openmark::primitives::types::{Stage, ID, Balance};
 
 
@@ -46,4 +46,9 @@ pub trait IOStage<T> {
     fn validateStage(self: @T) -> bool;
 
     fn validateWhitelist(self: @T, minter: ContractAddress, merkleProof: Span<felt252>) -> bool;
+}
+
+#[starknet::interface]
+pub trait ILaunchpadProvider<T> {
+    fn getConfig(self: @T) -> (u32, ClassHash, ClassHash);
 }

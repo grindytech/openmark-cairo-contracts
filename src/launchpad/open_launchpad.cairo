@@ -147,4 +147,51 @@ pub mod OpenLaunchpad {
             return self.stages.read(id);
         }
     }
+
+    #[generate_trait]
+    impl ExternalFunctions of ExternalFunctionsTrait {
+        fn setCommission(ref self: ContractState, newCommission: u32) {
+            self.ownable.assert_only_owner();
+            self.commission.write(newCommission);
+        }
+
+        fn setPaymentTokens(
+            ref self: ContractState, paymentTokens: Span<ContractAddress>, approved: Span<bool>,
+        ) {
+            self.ownable.assert_only_owner();
+            let mut i = 0;
+            while (i < paymentTokens.len()) {
+                self.paymentTokens.write(*paymentTokens.at(i), *approved.at(i));
+                i += 1;
+            }
+        }
+
+        fn setMaxSalesDuration(ref self: ContractState, newSalesDuration: u128) {
+            self.ownable.assert_only_owner();
+            self.maxSalesDuration.write(newSalesDuration);
+        }
+
+        fn setSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.selector_classhash.write(newClasshash);
+        }
+
+        fn setBatchSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.batch_selector_classhash.write(newClasshash);
+        }
+
+        fn getConfig(self: @ContractState) -> (u32, u128, ClassHash, ClassHash) {
+            return (
+                self.commission.read(),
+                self.maxSalesDuration.read(),
+                self.selector_classhash.read(),
+                self.batch_selector_classhash.read(),
+            );
+        }
+
+        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
+            return self.paymentTokens.read(paymentToken);
+        }
+    }
 }

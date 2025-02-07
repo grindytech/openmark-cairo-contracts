@@ -1,25 +1,13 @@
-use openmark::factory::interface::{
-    IOERC1155FactoryDispatcher, IOERC1155FactoryDispatcherTrait, ILaunchpadFactoryDispatcher,
-    ILaunchpadFactoryDispatcherTrait,
-};
+use openmark::factory::interface::{IOERC1155FactoryDispatcher, IOERC1155FactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-use snforge_std::{
-    declare, ContractClassTrait, get_class_hash, start_cheat_caller_address,
-    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait, DeclareResultTrait
-};
+use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait};
 use starknet::{ContractAddress};
 
 use openmark::factory::oerc1155_factory::OERC1155Factory::Event as NFTEvents;
 use openmark::factory::oerc1155_factory::OERC1155Factory::CollectionCreated;
 
-use openmark::factory::launchpad_factory::LaunchpadFactory::Event as LaunchpadEvents;
-use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
-use openmark::tests::unit::common::{
-    create_test_oerc721, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress,
-    create_launchpad_factory
-};
+use openmark::tests::unit::common::{create_test_oerc721, SELLER1, toAddress};
 
 fn create_nft_factory() -> (ContractAddress, IOERC1155FactoryDispatcher) {
     let nft_token = create_test_oerc721();
@@ -42,17 +30,17 @@ fn create_collection_works() {
     let (_contract_address, factory_contract) = create_nft_factory();
 
     factory_contract
-        .create_collection(
+        .createInstance(
             0,
             toAddress(SELLER1),
             "Starknet NFT",
             "Stark NFT",
             "https://starknet.io",
             1000_u256,
-            0_u256
+            0_u256,
         );
 
-    let nft_address = factory_contract.get_collection(0);
+    let nft_address = factory_contract.getInstance(0);
 
     let _expected_event = NFTEvents::CollectionCreated(
         CollectionCreated {
@@ -64,7 +52,7 @@ fn create_collection_works() {
             uri: "https://starknet.io",
             total_supply: 1000_u256,
             royalty_percentage: 0_u256,
-        }
+        },
     );
 }
 
@@ -74,18 +62,18 @@ fn create_collection_id_used_panics() {
     let (_, factory_contract) = create_nft_factory();
 
     factory_contract
-        .create_collection(
+        .createInstance(
             0,
             toAddress(SELLER1),
             "Starknet NFT",
             "Stark NFT",
             "https://starknet.io",
             1000_u256,
-            0_u256
+            0_u256,
         );
 
     factory_contract
-        .create_collection(
-            0, toAddress(SELLER1), "Starknet", "Stark", "https://starknet.io", 1000_u256, 0_u256
+        .createInstance(
+            0, toAddress(SELLER1), "Starknet", "Stark", "https://starknet.io", 1000_u256, 0_u256,
         );
 }

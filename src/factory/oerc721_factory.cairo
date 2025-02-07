@@ -8,7 +8,7 @@ pub mod OERC721Factory {
     use core::num::traits::Zero;
 
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
-    use openmark::factory::interface::{IOERC721Factory, IOERC721FactoryCamel, IFactoryManager};
+    use openmark::factory::interface::{IOERC721Factory, IFactoryManager};
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -64,7 +64,7 @@ pub mod OERC721Factory {
 
     #[abi(embed_v0)]
     impl NFTFactoryImpl of IOERC721Factory<ContractState> {
-        fn create_collection(
+        fn createInstance(
             ref self: ContractState,
             id: u256,
             owner: ContractAddress,
@@ -74,7 +74,7 @@ pub mod OERC721Factory {
             total_supply: u256,
             royalty_percentage: u256,
         ) {
-            assert(self.get_collection(id).is_zero(), 'OM: ID in use');
+            assert(self.factory.read(id).is_zero(), 'OM: ID in use');
 
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
@@ -98,31 +98,8 @@ pub mod OERC721Factory {
                 );
         }
 
-        fn get_collection(self: @ContractState, id: u256) -> ContractAddress {
+        fn getInstance(self: @ContractState, id: u256) -> ContractAddress {
             self.factory.read(id)
-        }
-    }
-
-    #[abi(embed_v0)]
-    impl NFTFactoryCamelImpl of IOERC721FactoryCamel<ContractState> {
-        fn createCollection(
-            ref self: ContractState,
-            id: u256,
-            owner: ContractAddress,
-            name: ByteArray,
-            symbol: ByteArray,
-            baseURI: ByteArray,
-            totalSupply: u256,
-            royaltyPercentage: u256,
-        ) {
-            self
-                .create_collection(
-                    id, owner, name, symbol, baseURI, totalSupply, royaltyPercentage
-                );
-        }
-
-        fn getCollection(self: @ContractState, id: u256) -> ContractAddress {
-            self.get_collection(id)
         }
     }
 
