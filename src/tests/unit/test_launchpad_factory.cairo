@@ -1,21 +1,11 @@
-use openmark::factory::interface::{
-    IOERC721FactoryDispatcher, IOERC721FactoryDispatcherTrait, ILaunchpadFactoryDispatcher,
-    ILaunchpadFactoryDispatcherTrait,
-};
+use openmark::factory::interface::{ILaunchpadFactoryDispatcher, ILaunchpadFactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
-use snforge_std::{
-    declare, ContractClassTrait, get_class_hash, start_cheat_caller_address,
-    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait, DeclareResultTrait,
-};
+use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait};
 use starknet::{ContractAddress, ClassHash};
 
-use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
-use openmark::tests::unit::common::{
-    create_test_oerc721, SELLER1, TEST_PAYMENT, setup_balance_at, toAddress, create_stage, ZERO,
-};
-use openmark::primitives::types::{Stage, StageType};
+use openmark::tests::unit::common::{SELLER1, toAddress, create_stage, ZERO};
+use openmark::primitives::types::{StageType};
 use openmark::launchpad::interface::{
     ILaunchpadProviderDispatcher, ILaunchpadProviderDispatcherTrait,
 };
@@ -72,7 +62,7 @@ pub fn create_launchpad_factory(
 
 #[test]
 fn create_collection_works() {
-    let (contract_address, factory_contract, selector_classhash, batch_selector_classhash) =
+    let (_contract_address, factory_contract, selector_classhash, batch_selector_classhash) =
         create_launchpad_factory(
         toAddress(SELLER1),
     );

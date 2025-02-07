@@ -1,5 +1,5 @@
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Stage, ID, Balance};
+use openmark::primitives::types::{Stage, ID};
 
 
 #[starknet::interface]

@@ -14,7 +14,6 @@ pub mod HasherComponent {
     use core::traits::TryInto;
     use starknet::{VALIDATED, get_tx_info};
 
-    use openzeppelin::utils::serde::SerializedAppend;
     use openmark::hasher::interface::{IOffchainMessageHash};
     use openmark::primitives::types::{Order, StarknetDomain, IStructHash};
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};

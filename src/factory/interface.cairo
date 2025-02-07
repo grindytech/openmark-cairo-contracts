@@ -1,5 +1,4 @@
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Balance};
 
 #[starknet::interface]
 pub trait IOERC721Factory<T> {

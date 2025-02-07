@@ -2,9 +2,6 @@ use starknet::ContractAddress;
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 use openmark::primitives::constants::{STARKNET_DOMAIN_TYPE_HASH, ORDER_STRUCT_TYPE_HASH};
-use starknet::storage::{Mutable, MutableVecTrait, StorageAsPath, StoragePath, Vec, VecTrait};
-use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-use starknet::storage_access::StorePacking;
 
 pub type ID = u128;
 pub type Balance = u128;
@@ -41,6 +38,7 @@ pub struct Bag {
     pub signature: Span<felt252>,
 }
 
+#[allow(starknet::store_no_default_variant)]
 #[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
 pub enum StageType {
      // Buying specific token IDs
