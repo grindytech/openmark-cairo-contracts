@@ -15,8 +15,9 @@ pub mod OpenLaunchpad {
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use openmark::launchpad::interface::{ILaunchpad};
     use openmark::primitives::types::{Stage, ID, StageType};
-    use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
+    use openmark::primitives::constants::{MINTER_ROLE};
     use openmark::launchpad::errors::LPErrors as Errors;
+    use openmark::launchpad::events::StageCreated;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -65,6 +66,7 @@ pub mod OpenLaunchpad {
         ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+        StageCreated: StageCreated,
     }
 
     #[constructor]
@@ -124,6 +126,18 @@ pub mod OpenLaunchpad {
 
                 self.stages.write(id, address);
             }
+
+            self
+                .emit(
+                    StageCreated {
+                        id,
+                        owner,
+                        stage,
+                        rootWhitelist,
+                        collectionWhitelists,
+                        commission: self.commission.read(),
+                    },
+                );
         }
 
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {

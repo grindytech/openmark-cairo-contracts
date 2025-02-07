@@ -8,7 +8,6 @@ pub mod StageBatchSelector {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     use openmark::primitives::types::{Stage};
-    use openmark::primitives::constants::{PERMYRIAD};
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::launchpad::events::{TokensBought};

@@ -28,3 +28,16 @@ pub struct LaunchpadClosed {
     #[key]
     pub owner: ContractAddress,
 }
+
+#[derive(Drop, PartialEq, starknet::Event)]
+pub struct StageCreated {
+    #[key]
+    pub id: ID,
+    #[key]
+    pub owner: ContractAddress,
+    #[key]
+    pub stage: Stage,
+    pub rootWhitelist: Option::<felt252>,
+    pub collectionWhitelists: Span<ContractAddress>,
+    pub commission: u32,
+}

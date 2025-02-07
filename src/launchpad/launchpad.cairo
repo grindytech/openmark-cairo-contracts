@@ -1,7 +1,6 @@
 #[starknet::contract]
 pub mod Launchpad {
     use core::num::traits::Zero;
-    use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::security::ReentrancyGuardComponent;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
@@ -18,6 +17,7 @@ pub mod Launchpad {
     use openmark::primitives::types::{Stage, ID, StageType};
     use openmark::primitives::constants::{MINTER_ROLE};
     use openmark::launchpad::errors::LPErrors as Errors;
+    use openmark::launchpad::events::StageCreated;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -63,6 +63,7 @@ pub mod Launchpad {
         ReentrancyGuardEvent: ReentrancyGuardComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+        StageCreated: StageCreated,
     }
 
     #[constructor]
@@ -123,6 +124,18 @@ pub mod Launchpad {
 
                 self.stages.write(id, address);
             }
+
+             self
+                .emit(
+                    StageCreated {
+                        id,
+                        owner,
+                        stage,
+                        rootWhitelist,
+                        collectionWhitelists,
+                        commission: self.commission.read(),
+                    },
+                );
         }
 
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
