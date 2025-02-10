@@ -95,9 +95,13 @@ pub mod OpenMark {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress, paymentToken: ContractAddress) {
+    fn constructor(
+        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>,
+    ) {
         self.ownable.initializer(owner);
-        self.paymentTokens.write(paymentToken, true);
+        for token in paymentTokens {
+            self.paymentTokens.write(*token, true);
+        };
         self.commission.write(0);
     }
 

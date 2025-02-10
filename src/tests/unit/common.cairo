@@ -69,7 +69,7 @@ pub fn deploy_openmark(payment_token: ContractAddress) -> ContractAddress {
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(SELLER1);
-    constructor_calldata.append_serde(payment_token);
+    constructor_calldata.append_serde([payment_token].span());
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
