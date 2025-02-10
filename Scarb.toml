@@ -15,7 +15,6 @@ keywords = ["openmark", "starknet", "cairo", "contracts"]
 
 [dependencies]
 starknet = "2.9.1"
-# openzeppelin = { path = "../cairo-contracts" }
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.20.0" }
 
 [dev-dependencies]
