@@ -1,7 +1,8 @@
+use snforge_std::EventSpyAssertionsTrait;
 use openmark::factory::interface::{ILaunchpadFactoryDispatcher, ILaunchpadFactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait};
+use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait, spy_events};
 use starknet::{ContractAddress, ClassHash};
 
 use openmark::tests::unit::common::{SELLER1, toAddress, create_stage, ZERO};
@@ -9,6 +10,8 @@ use openmark::primitives::types::{StageType};
 use openmark::launchpad::interface::{
     ILaunchpadProviderDispatcher, ILaunchpadProviderDispatcherTrait,
 };
+use openmark::factory::launchpad_factory::LaunchpadFactory;
+use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
 
 fn create_launchpad_template() -> ContractAddress {
     let contract = declare("Launchpad").unwrap().contract_class();
@@ -62,24 +65,22 @@ pub fn create_launchpad_factory(
 
 #[test]
 fn create_collection_works() {
-    let (_contract_address, factory_contract, selector_classhash, batch_selector_classhash) =
+    let (factory_address, factory_contract, selector_classhash, batch_selector_classhash) =
         create_launchpad_factory(
         toAddress(SELLER1),
     );
 
+    let mut spy = spy_events();
     factory_contract.createInstance(10, toAddress(SELLER1));
-
     let launchpad_address = factory_contract.getInstance(10);
+    
+    let expected_event = LaunchpadFactory::Event::LaunchpadCreated(LaunchpadCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1) });
+    spy.assert_emitted(@array![(factory_address, expected_event)]);
 
     let launchpad_dispatcher = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
 
     let config = launchpad_dispatcher.getConfig();
     assert(config == (500, selector_classhash, batch_selector_classhash), 'Create launchpd failed');
-    // let mut spy = spy_events();
-// let expected_event = LaunchpadCreated {
-//     id: 10, address: launchpad_address, owner: toAddress(SELLER1),
-// };
-// spy.assert_emitted(@array![(contract_address, expected_event)]);
 }
 
 

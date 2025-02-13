@@ -68,12 +68,14 @@ async function deploy() {
             '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',   // STRK
             '0x06866b14e2d9d4a48c8ae11f4711a6f976d528215239e9f49850be8f22f8c0cf'    // OMC
         ];
+        const commission = 300; // 3%
         const selector_classhash = "0x7caf7f84f8c41b2a0f3c86da0006899da63012703e6c4c221e188ab2f1a4fe4";
         const batch_selector_classhash = "0x52b7488853817656b7796e41a0c28ff5575cbfa61edc65b563d3c926113a648";
 
         const data: RawArgs = {
             owner: Deployer,
             paymentTokens: paymentTokens,
+            commission: commission,
             selector_classhash: selector_classhash,
             batch_selector_classhash: batch_selector_classhash,
         }

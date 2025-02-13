@@ -74,6 +74,7 @@ pub mod OpenLaunchpad {
         ref self: ContractState,
         owner: ContractAddress,
         paymentTokens: Span<ContractAddress>,
+        commission: u32,
         selector_classhash: ClassHash,
         batch_selector_classhash: ClassHash,
     ) {
@@ -82,8 +83,7 @@ pub mod OpenLaunchpad {
         for token in paymentTokens {
             self.paymentTokens.write(*token, true);
         };
-
-        self.commission.write(500); // per mille (default 5%)
+        self.commission.write(commission); // per mille (default 5%)
         self.maxSalesDuration.write(2592000); // 30 days
         self.selector_classhash.write(selector_classhash);
         self.batch_selector_classhash.write(batch_selector_classhash);

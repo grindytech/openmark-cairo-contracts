@@ -10,13 +10,11 @@ pub mod StageComponent {
         MutableVecTrait,
     };
 
-    use starknet::{
-        ContractAddress, get_block_timestamp, get_contract_address,
-    };
+    use starknet::{ContractAddress, get_block_timestamp, get_contract_address, get_caller_address};
     use openmark::launchpad::errors::LPErrors as Errors;
 
     use openmark::launchpad::interface::{IOStage};
-    use openmark::launchpad::events::{SalesWithdrawn, LaunchpadClosed};
+    use openmark::launchpad::events::{SalesWithdrawn, StageClosed};
     use openmark::primitives::types::{Stage};
     use openmark::primitives::constants::{PERMYRIAD};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -46,7 +44,7 @@ pub mod StageComponent {
     #[derive(Drop, starknet::Event)]
     pub enum Event {
         SalesWithdrawn: SalesWithdrawn,
-        LaunchpadClosed: LaunchpadClosed,
+        StageClosed: StageClosed,
     }
 
     //
@@ -91,13 +89,15 @@ pub mod StageComponent {
             token_dispatcher.transfer(receiver, payout.into());
             token_dispatcher.transfer(self.commissionReceiver.read(), commission.into());
 
-            if let Option::Some(amount) = sales.try_into() {
-                self.emit(SalesWithdrawn { owner: receiver, tokenPayment: paymentToken, amount });
-            }
+            self
+                .emit(
+                    SalesWithdrawn { owner: receiver, tokenPayment: paymentToken, amount: payout },
+                );
         }
 
         fn closeStage(ref self: ComponentState<TContractState>) {
             self.isClosed.write(true);
+            self.emit(StageClosed { caller: get_caller_address() });
         }
     }
 
@@ -137,7 +137,9 @@ pub mod StageComponent {
         ) -> bool {
             // Validate merkle tree
             if let Option::Some(root) = self.rootWhitelist.read() {
-                assert(verify_merkle_proof(root, merkleProof, minter), Errors::ROOT_WHITELIST_FAILED);
+                assert(
+                    verify_merkle_proof(root, merkleProof, minter), Errors::ROOT_WHITELIST_FAILED,
+                );
             }
 
             // Validate collection ownership

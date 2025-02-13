@@ -1,10 +1,11 @@
+use snforge_std::EventSpyAssertionsTrait;
 use openmark::factory::interface::{IOERC1155FactoryDispatcher, IOERC1155FactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait};
+use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait, spy_events};
 use starknet::{ContractAddress};
 
-use openmark::factory::oerc1155_factory::OERC1155Factory::Event as NFTEvents;
+use openmark::factory::oerc1155_factory::OERC1155Factory;
 use openmark::factory::oerc1155_factory::OERC1155Factory::CollectionCreated;
 
 use openmark::tests::unit::common::{create_test_oerc721, SELLER1, toAddress};
@@ -27,8 +28,9 @@ fn create_nft_factory() -> (ContractAddress, IOERC1155FactoryDispatcher) {
 
 #[test]
 fn create_collection_works() {
-    let (_contract_address, factory_contract) = create_nft_factory();
+    let (factory_address, factory_contract) = create_nft_factory();
 
+    let mut spy = spy_events();
     factory_contract
         .createInstance(
             0,
@@ -42,7 +44,8 @@ fn create_collection_works() {
 
     let nft_address = factory_contract.getInstance(0);
 
-    let _expected_event = NFTEvents::CollectionCreated(
+
+    let expected_event = OERC1155Factory::Event::CollectionCreated(
         CollectionCreated {
             id: 0,
             address: nft_address,
@@ -54,6 +57,8 @@ fn create_collection_works() {
             royalty_percentage: 0_u256,
         },
     );
+
+    spy.assert_emitted(@array![(factory_address, expected_event)]);
 }
 
 #[test]

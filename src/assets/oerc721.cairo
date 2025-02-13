@@ -49,7 +49,7 @@ mod OERC721 {
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]
@@ -60,7 +60,7 @@ mod OERC721 {
         symbol: ByteArray,
         baseURI: ByteArray,
         totalSupply: u256,
-        royaltyPercentage: u256
+        royaltyPercentage: u256,
     ) {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
@@ -81,7 +81,7 @@ mod OERC721 {
         }
 
         fn safe_mint(
-            ref self: ContractState, to: ContractAddress, tokenId: u256, data: Span<felt252>
+            ref self: ContractState, to: ContractAddress, tokenId: u256, data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
             assert(tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
@@ -89,14 +89,7 @@ mod OERC721 {
             self.erc721.safe_mint(to, tokenId, data);
         }
 
-        fn safeMint(
-            ref self: ContractState, to: ContractAddress, tokenId: u256, data: Span<felt252>
-        ) {
-            self.accesscontrol.assert_only_role(MINTER_ROLE);
-            self.safe_mint(to, tokenId, data);
-        }
-
-        fn mintBatch(ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>) {
+        fn mint_batch(ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
             for tokenId in tokenIds {
@@ -104,14 +97,30 @@ mod OERC721 {
             };
         }
 
-        fn safeMintBatch(
-            ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>, data: Span<felt252>
+        fn safe_mint_batch(
+            ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>, data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
             for tokenId in tokenIds {
                 self.safeMint(to, *tokenId, data);
             };
+        }
+
+        fn safeMint(
+            ref self: ContractState, to: ContractAddress, tokenId: u256, data: Span<felt252>,
+        ) {
+            self.safe_mint(to, tokenId, data);
+        }
+
+        fn mintBatch(ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>) {
+            self.mint_batch(to, tokenIds);
+        }
+
+        fn safeMintBatch(
+            ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>, data: Span<felt252>,
+        ) {
+            self.safe_mint_batch(to, tokenIds, data);
         }
     }
 }

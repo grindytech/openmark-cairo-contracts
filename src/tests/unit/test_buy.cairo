@@ -7,8 +7,9 @@ use openzeppelin::token::erc1155::interface::{IERC1155DispatcherTrait, IERC1155D
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 use snforge_std::{
-    start_cheat_caller_address, map_entry_address, start_cheat_block_timestamp, load,
+    start_cheat_caller_address, map_entry_address, start_cheat_block_timestamp, load, spy_events,
 };
+use snforge_std::EventSpyAssertionsTrait;
 
 use openmark::{
     core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
@@ -16,8 +17,10 @@ use openmark::{
     core::interface::{IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait},
 };
 use openmark::tests::unit::common::{
-    create_offer, create_buy, create_buy_with_value, create_mock_hasher, ZERO
+    create_offer, create_buy, create_buy_with_value, create_mock_hasher, ZERO,
 };
+use openmark::core::OpenMark;
+use openmark::core::events::{OrderFilled, OrderCancelled};
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
 #[test]
@@ -43,18 +46,21 @@ fn buy_works() {
     start_cheat_caller_address(openmark_address, buyer);
     start_cheat_caller_address(nft_token, openmark_address);
 
+    let mut spy = spy_events();
     openmark.buy(seller, order, signature);
+    let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
     let seller_after_balance = payment_dispatcher.balance_of(seller);
 
     assert(nft_dispatcher.owner_of(order.tokenId.into()) == buyer, 'NFT owner not correct');
     assert(
         buyer_after_balance == buyer_before_balance - order.price.into(),
-        'Buyer balance not correct'
+        'Buyer balance not correct',
     );
     assert(
         seller_after_balance == seller_before_balance + order.price.into(),
-        'Seller balance not correct'
+        'Seller balance not correct',
     );
 }
 
@@ -81,25 +87,29 @@ fn buy_with_value_works() {
     start_cheat_caller_address(nft_token, openmark_address);
     start_cheat_caller_address(openmark_address, buyer);
 
+    let mut spy = spy_events();
     openmark.buy_with_value(seller, order, 5, signature);
+    let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
+
     assert(
         payment_dispatcher.balance_of(buyer) == buyer_before_balance - (order.price.into() * 5),
-        'Buyer balance not correct'
+        'Buyer balance not correct',
     );
     assert(
         payment_dispatcher.balance_of(seller) == seller_before_balance + (order.price.into() * 5),
-        'Seller balance not correct'
+        'Seller balance not correct',
     );
     assert(nft_dispatcher.balance_of(buyer, order.tokenId.into()) == 5, 'NFT owner not correct');
-    
+
     openmark.buy_with_value(seller, order, 5, signature);
     assert(
         payment_dispatcher.balance_of(buyer) == buyer_before_balance - (order.price.into() * 10),
-        'Buyer balance not correct'
+        'Buyer balance not correct',
     );
     assert(
         payment_dispatcher.balance_of(seller) == seller_before_balance + (order.price.into() * 10),
-        'Seller balance not correct'
+        'Seller balance not correct',
     );
     assert(nft_dispatcher.balance_of(buyer, order.tokenId.into()) == 10, 'NFT owner not correct');
 }
@@ -112,13 +122,19 @@ fn cancel_buy_works() {
 
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
+    let mut spy = spy_events();
     openmark.cancel_order(order, signature);
+    let expected_event = OpenMark::Event::OrderCancelled(
+        OrderCancelled { who: seller, order: order },
+    );
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
+
     let hasher = create_mock_hasher();
     let hash_sig: felt252 = hasher.hash_array(signature);
 
     let usedSignatures = load(
         openmark_address,
-        map_entry_address(selector!("usedSignatures"), array![hash_sig].span(),),
+        map_entry_address(selector!("usedSignatures"), array![hash_sig].span()),
         1,
     );
 
@@ -128,7 +144,7 @@ fn cancel_buy_works() {
 #[test]
 #[should_panic(expected: ('OM: invalid sig len',))]
 fn buy_invalid_signature_len_panics() {
-    let (order, _, openmark_address, _, payment_token, seller, buyer,) = create_buy();
+    let (order, _, openmark_address, _, payment_token, seller, buyer) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, buyer);
@@ -140,7 +156,7 @@ fn buy_invalid_signature_len_panics() {
 #[test]
 #[should_panic(expected: ('OM: sig used',))]
 fn buy_signature_used_panics() {
-    let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
+    let (order, signature, openmark_address, _, payment_token, seller, buyer) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(payment_token, buyer);
@@ -154,7 +170,7 @@ fn buy_signature_used_panics() {
 #[test]
 #[should_panic(expected: ('OM: order expired',))]
 fn buy_order_expired_panics() {
-    let (order, signature, openmark_address, _, payment_token, seller, buyer,) = create_buy();
+    let (order, signature, openmark_address, _, payment_token, seller, buyer) = create_buy();
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
 
     start_cheat_caller_address(openmark_address, buyer);

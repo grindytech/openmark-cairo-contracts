@@ -49,7 +49,7 @@ mod OERC1155 {
         #[flat]
         ERC1155Event: ERC1155Component::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]
@@ -60,7 +60,7 @@ mod OERC1155 {
         symbol: ByteArray,
         uri: ByteArray,
         totalSupply: u256,
-        royaltyPercentage: u256
+        royaltyPercentage: u256,
     ) {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
@@ -77,7 +77,7 @@ mod OERC1155 {
             to: ContractAddress,
             tokenId: u256,
             value: u256,
-            data: Span<felt252>
+            data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
             assert(tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
@@ -85,18 +85,28 @@ mod OERC1155 {
             self.erc1155.mint_with_acceptance_check(to, tokenId, value, data);
         }
 
-        fn mintBatch(
+        fn mint_batch(
             ref self: ContractState,
             to: ContractAddress,
             tokenIds: Span<u256>,
             values: Span<u256>,
-            data: Span<felt252>
+            data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
             for tokenId in tokenIds {
                 assert(*tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
             };
             self.erc1155.batch_mint_with_acceptance_check(to, tokenIds, values, data);
+        }
+
+        fn mintBatch(
+            ref self: ContractState,
+            to: ContractAddress,
+            tokenIds: Span<u256>,
+            values: Span<u256>,
+            data: Span<felt252>,
+        ) {
+            self.mint_batch(to, tokenIds, values, data);
         }
     }
 }

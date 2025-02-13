@@ -1,3 +1,4 @@
+use snforge_std::EventSpyAssertionsTrait;
 use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
 use openmark::launchpad::interface::{ILaunchpadDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
@@ -10,7 +11,7 @@ use openzeppelin::access::ownable::interface::{IOwnableDispatcher, IOwnableDispa
 
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address,
-    start_cheat_block_timestamp, DeclareResultTrait, get_class_hash,
+    start_cheat_block_timestamp, DeclareResultTrait, get_class_hash, spy_events,
 };
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
@@ -24,13 +25,14 @@ use openmark::launchpad::interface::{
     IOStageDispatcher, IOStageDispatcherTrait, IStageBatchSelectorDispatcher,
     IStageBatchSelectorDispatcherTrait,
 };
-use openmark::assets::interface::{
-    IERC721MinterDispatcher,
-    IERC721MinterDispatcherTrait,
-};
+use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
+use openmark::launchpad::stage::StageComponent;
+use openmark::launchpad::open_launchpad::OpenLaunchpad;
+use openmark::launchpad::events::{StageCreated, TokensBought, StageClosed, SalesWithdrawn};
+use openmark::launchpad::stage_batch_selector::StageBatchSelector;
 
 fn create_open_launchpad(
-    owner: ContractAddress, payments: Span<ContractAddress>, commission: u128,
+    owner: ContractAddress, payments: Span<ContractAddress>, commission: u32,
 ) -> (ContractAddress, ILaunchpadDispatcher) {
     let selector = create_stage(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
@@ -46,6 +48,7 @@ fn create_open_launchpad(
 
     constructor_calldata.append_serde(owner);
     constructor_calldata.append_serde(payments);
+    constructor_calldata.append_serde(commission);
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
 
@@ -68,7 +71,7 @@ fn setup_stage(
     stageType: StageType,
     rootWhitelist: Option::<felt252>,
     collectionWhitelists: Span<ContractAddress>,
-    commission: u128,
+    commission: u32,
 ) -> (ContractAddress, ContractAddress, Stage, ContractAddress, ContractAddress, ContractAddress) {
     let owner = setup_account(SELLER1);
     let buyer = setup_account(BUYER1);
@@ -112,7 +115,7 @@ fn setup_stage(
 }
 
 #[test]
-fn create_stages_works() {
+fn create_stage_works() {
     let owner = setup_account(SELLER1);
 
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
@@ -135,7 +138,21 @@ fn create_stages_works() {
 
     let id = 10;
     start_cheat_caller_address(launchpad_address, owner);
+
+    let mut spy = spy_events();
     launchpad_contract.createStage(id, stage, Option::None, [].span());
+    let expected_event = OpenLaunchpad::Event::StageCreated(
+        StageCreated {
+            id,
+            owner,
+            stage,
+            rootWhitelist: Option::None,
+            collectionWhitelists: [].span(),
+            commission: 0,
+        },
+    );
+    spy.assert_emitted(@array![(launchpad_address, expected_event)]);
+
     let stage_selector = launchpad_contract.getStage(id);
 
     let ostage_dispatcher = IOStageDispatcher { contract_address: stage_selector };
@@ -160,7 +177,14 @@ fn buy_works() {
     let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
         contract_address: stage_address,
     };
+
+    let mut spy = spy_events();
     stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), [].span());
+    let expected_event = StageBatchSelector::Event::TokensBought(
+        TokensBought { buyer, amount: 6, paymentToken: payment_address, price: stage.price },
+    );
+    spy.assert_emitted(@array![(stage_address, expected_event)]);
+
     let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
@@ -194,7 +218,14 @@ fn buy_with_root_whitelist_works() {
     let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
         contract_address: stage_address,
     };
+
+    let mut spy = spy_events();
     stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), PROOF.span());
+    let expected_event = StageBatchSelector::Event::TokensBought(
+        TokensBought { buyer, amount: 6, paymentToken: payment_address, price: stage.price },
+    );
+    spy.assert_emitted(@array![(stage_address, expected_event)]);
+
     let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
@@ -235,7 +266,14 @@ fn buy_with_collection_whitelist_works() {
     let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
         contract_address: stage_address,
     };
+
+    let mut spy = spy_events();
     stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), [].span());
+    let expected_event = StageBatchSelector::Event::TokensBought(
+        TokensBought { buyer, amount: 6, paymentToken: payment_address, price: stage.price },
+    );
+    spy.assert_emitted(@array![(stage_address, expected_event)]);
+
     let amount = 6;
     let cost = amount * stage.price;
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
@@ -265,7 +303,13 @@ fn close_stages_works() {
     let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
         contract_address: stage_address,
     };
+    
+     let mut spy = spy_events();
     stage_selector_dispatcher.closeStage();
+
+    let expected_event = StageComponent::Event::StageClosed(StageClosed { caller: owner });
+    spy.assert_emitted(@array![(stage_address, expected_event)]);
+
     start_cheat_caller_address(stage_address, buyer);
     stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), PROOF.span());
 }
@@ -296,7 +340,14 @@ fn withdraw_sales_works() {
     ownable_dispatcher.transfer_ownership(admin);
 
     start_cheat_caller_address(stage_address, admin);
+
+     let mut spy = spy_events();
     stage_selector_dispatcher.withdrawSales();
+
+    let expected_event = StageComponent::Event::SalesWithdrawn(
+        SalesWithdrawn { owner: admin, tokenPayment: stage.payment, amount: payout },
+    );
+    spy.assert_emitted(@array![(stage_address, expected_event)]);
 
     assert(
         payment_dispatcher.balance_of(admin) == owner_balance + payout.into(),

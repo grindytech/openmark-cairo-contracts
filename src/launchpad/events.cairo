@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use openmark::primitives::types::{Stage, ID, Balance};
+use openmark::primitives::types::{Stage, ID};
 
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct SalesWithdrawn {
@@ -8,7 +8,7 @@ pub struct SalesWithdrawn {
     #[key]
     pub tokenPayment: ContractAddress,
     #[key]
-    pub amount: Balance,
+    pub amount: u256,
 }
 
 #[derive(Drop, PartialEq, starknet::Event)]
@@ -22,11 +22,9 @@ pub struct TokensBought {
 }
 
 #[derive(Drop, PartialEq, starknet::Event)]
-pub struct LaunchpadClosed {
+pub struct StageClosed {
     #[key]
-    pub launchpad: ContractAddress,
-    #[key]
-    pub owner: ContractAddress,
+    pub caller: ContractAddress,
 }
 
 #[derive(Drop, PartialEq, starknet::Event)]

@@ -433,7 +433,7 @@ pub fn create_stage(
     payment_address: ContractAddress,
     rootWhitelist: Option::<felt252>,
     collectionWhitelists: Span<ContractAddress>,
-    commission: u128,
+    commission: u32,
     commissionReceiver: ContractAddress,
 ) -> ContractAddress {
     let stage = Stage {
