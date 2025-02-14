@@ -11,7 +11,7 @@ use openmark::launchpad::interface::{
     ILaunchpadProviderDispatcher, ILaunchpadProviderDispatcherTrait,
 };
 use openmark::factory::launchpad_factory::LaunchpadFactory;
-use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
+use openmark::factory::launchpad_factory::LaunchpadFactory::StageCreated;
 
 fn create_launchpad_template() -> ContractAddress {
     let contract = declare("Launchpad").unwrap().contract_class();
@@ -48,7 +48,7 @@ pub fn create_launchpad_factory(
 
     constructor_calldata.append_serde(owner);
     constructor_calldata.append_serde(launchpad_classhash);
-    constructor_calldata.append_serde(500);
+    constructor_calldata.append_serde(0);
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
 
@@ -64,7 +64,7 @@ pub fn create_launchpad_factory(
 
 
 #[test]
-fn create_collection_works() {
+fn create_launchpad_works() {
     let (factory_address, factory_contract, selector_classhash, batch_selector_classhash) =
         create_launchpad_factory(
         toAddress(SELLER1),
@@ -74,13 +74,13 @@ fn create_collection_works() {
     factory_contract.createInstance(10, toAddress(SELLER1));
     let launchpad_address = factory_contract.getInstance(10);
     
-    let expected_event = LaunchpadFactory::Event::LaunchpadCreated(LaunchpadCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1) });
+    let expected_event = LaunchpadFactory::Event::StageCreated(StageCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1), commission: 0 });
     spy.assert_emitted(@array![(factory_address, expected_event)]);
 
     let launchpad_dispatcher = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
 
     let config = launchpad_dispatcher.getConfig();
-    assert(config == (500, selector_classhash, batch_selector_classhash), 'Create launchpd failed');
+    assert(config == (0, selector_classhash, batch_selector_classhash), 'Create launchpd failed');
 }
 
 
