@@ -9,6 +9,7 @@
 
 #[starknet::contract]
 pub mod OpenMark {
+    // use openzeppelin_access::ownable::interface::IOwnable;
     use core::array::ArrayTrait;
     use core::traits::Into;
     use core::array::SpanTrait;
@@ -19,9 +20,12 @@ pub mod OpenMark {
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
     use openzeppelin::token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
+    use openzeppelin::token::common::erc2981::interface::{
+        IERC2981Dispatcher, IERC2981DispatcherTrait,
+    };
 
     use starknet::{
-        get_caller_address, get_contract_address, get_tx_info, ContractAddress, get_block_timestamp,
+        get_caller_address, get_tx_info, ContractAddress, get_block_timestamp,
     };
     use starknet::ClassHash;
 
@@ -92,6 +96,8 @@ pub mod OpenMark {
         partialSignatures: starknet::storage::Map<felt252, u128>,
         /// store allowed payment tokens
         paymentTokens: starknet::storage::Map<ContractAddress, bool>,
+        /// maximum royalty fee allowed
+        maxRoyalty: u256,
     }
 
     #[constructor]
@@ -103,6 +109,7 @@ pub mod OpenMark {
             self.paymentTokens.write(*token, true);
         };
         self.commission.write(0);
+        self.maxRoyalty.write(1000); // 10%
     }
 
     #[abi(embed_v0)]
@@ -122,7 +129,10 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            self._process_payment(buyer, seller, price, order.payment);
+            self
+                ._process_payment(
+                    buyer, seller, price, order.payment, order.nftContract, order.tokenId,
+                );
 
             self.emit(OrderFilled { seller, buyer, order });
             self.reentrancy_guard.end();
@@ -141,7 +151,15 @@ pub mod OpenMark {
             nft_dispatcher.transfer_from(seller, buyer, order.tokenId.into());
 
             let price: u256 = order.price.into();
-            self._process_payment(buyer, get_caller_address(), price, order.payment);
+            self
+                ._process_payment(
+                    buyer,
+                    get_caller_address(),
+                    price,
+                    order.payment,
+                    order.nftContract,
+                    order.tokenId,
+                );
 
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
@@ -177,7 +195,10 @@ pub mod OpenMark {
                 .safe_transfer_from(seller, buyer, order.tokenId.into(), value.into(), [].span());
 
             let price: u256 = (value * order.price).into();
-            self._process_payment(buyer, seller, price, order.payment);
+            self
+                ._process_payment(
+                    buyer, seller, price, order.payment, order.nftContract, order.tokenId,
+                );
 
             self.emit(OrderFilled { seller, buyer, order });
             self.reentrancy_guard.end();
@@ -212,7 +233,15 @@ pub mod OpenMark {
                 .safe_transfer_from(seller, buyer, order.tokenId.into(), value.into(), [].span());
 
             let price: u256 = (value * order.price).into();
-            self._process_payment(buyer, get_caller_address(), price, order.payment);
+            self
+                ._process_payment(
+                    buyer,
+                    get_caller_address(),
+                    price,
+                    order.payment,
+                    order.nftContract,
+                    order.tokenId,
+                );
 
             self.emit(OrderFilled { seller: get_caller_address(), buyer, order });
             self.reentrancy_guard.end();
@@ -382,15 +411,33 @@ pub mod OpenMark {
             receiver: ContractAddress,
             amount: u256,
             payment_token: ContractAddress,
+            nft_contract: ContractAddress,
+            token_id: u128,
         ) {
+            // Check if the contract supports IERC2981 (royalty standard)
+            let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
+            let (royalty_receiver, mut royalty_amount) = royalty_dispatcher
+                .royalty_info(token_id.into(), amount);
+
+            // Ensure the royaltyAmount does not exceed the maximum allowed royalty
+            let max_royalty_amount = (amount * self.maxRoyalty.read()) / PERMYRIAD;
+            if (royalty_amount > max_royalty_amount) {
+                royalty_amount = max_royalty_amount;
+            }
+
+            // Calculate the fee and payout
             let commission = self._calculate_commission(amount);
-            let payout = amount - commission;
+            let payout = amount - royalty_amount - commission;
 
             let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
             token_dispatcher.transfer_from(sender, receiver, payout);
 
+            if royalty_amount > 0 {
+                token_dispatcher.transfer_from(sender, royalty_receiver, royalty_amount);
+            }
+
             if commission > 0 {
-                token_dispatcher.transfer_from(sender, get_contract_address(), commission);
+                token_dispatcher.transfer_from(sender, self.owner(), commission);
             }
         }
     }
