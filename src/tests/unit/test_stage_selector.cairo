@@ -66,7 +66,7 @@ pub fn create_stage(
 }
 
 fn create_open_launchpad(
-    owner: ContractAddress, payments: Span<ContractAddress>, commission: u32,
+    owner: ContractAddress, commission: u32,
 ) -> (ContractAddress, ILaunchpadDispatcher) {
     let selector = create_stage(
         StageType::Selector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
@@ -81,7 +81,6 @@ fn create_open_launchpad(
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
-    constructor_calldata.append_serde(payments);
     constructor_calldata.append_serde(commission);
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
@@ -113,9 +112,7 @@ fn setup_stage(
     let payment_address = create_erc20(buyer);
     let nft_address = create_oerc721(owner);
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), commission,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, commission);
 
     let stage = Stage {
         stageType: StageType::Selector,
@@ -155,9 +152,7 @@ fn create_stages_works() {
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
     let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), 0,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, 0);
 
     let stage = Stage {
         stageType: StageType::Selector,
@@ -487,9 +482,7 @@ fn update_stages_id_used_panics() {
     let payment_address = create_erc20(buyer);
     let nft_address = create_oerc721(owner);
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), 0,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, 0);
 
     let stage = Stage {
         stageType: StageType::Selector,

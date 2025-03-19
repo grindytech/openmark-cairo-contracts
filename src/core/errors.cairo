@@ -18,9 +18,6 @@ pub mod OMErrors {
     /// Commission exceeds maximum allowed.
     pub const INVALID_COMMISSION: felt252 = 'OM: invalid commission';
 
-    /// Payment token not allowd
-    pub const INVALID_PAYMENT_TOKEN: felt252 = 'OM: Invalid payment token';
-
     /// Exceeds Available Amount
     pub const EXCEEDS_AVAILABLE_AMOUNT: felt252 = 'OM: Exceed available amount';
 }

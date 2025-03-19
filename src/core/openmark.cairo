@@ -24,9 +24,7 @@ pub mod OpenMark {
         IERC2981Dispatcher, IERC2981DispatcherTrait,
     };
 
-    use starknet::{
-        get_caller_address, get_tx_info, ContractAddress, get_block_timestamp,
-    };
+    use starknet::{get_caller_address, get_tx_info, ContractAddress, get_block_timestamp};
     use starknet::ClassHash;
 
     use core::num::traits::Zero;
@@ -94,20 +92,13 @@ pub mod OpenMark {
         usedSignatures: starknet::storage::Map<felt252, bool>,
         /// store partial order
         partialSignatures: starknet::storage::Map<felt252, u128>,
-        /// store allowed payment tokens
-        paymentTokens: starknet::storage::Map<ContractAddress, bool>,
         /// maximum royalty fee allowed
         maxRoyalty: u256,
     }
 
     #[constructor]
-    fn constructor(
-        ref self: ContractState, owner: ContractAddress, paymentTokens: Span<ContractAddress>,
-    ) {
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
-        for token in paymentTokens {
-            self.paymentTokens.write(*token, true);
-        };
         self.commission.write(0);
         self.maxRoyalty.write(1000); // 10%
     }
@@ -295,10 +286,6 @@ pub mod OpenMark {
             self.commission.read()
         }
 
-        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
-            self.paymentTokens.read(paymentToken)
-        }
-
         fn isUsedSignature(self: @ContractState, signature: Span<felt252>) -> bool {
             self.usedSignatures.read(self.hash_array(signature))
         }
@@ -345,13 +332,9 @@ pub mod OpenMark {
             self.commission.write(new_commission);
         }
 
-        fn add_payment_token(ref self: ContractState, payment_token: ContractAddress) {
+        fn set_max_royalty(ref self: ContractState, new_royalty: u256) {
             self.ownable.assert_only_owner();
-            self.paymentTokens.write(payment_token, true);
-        }
-        fn remove_payment_token(ref self: ContractState, payment_token: ContractAddress) {
-            self.ownable.assert_only_owner();
-            self.paymentTokens.write(payment_token, false);
+            self.maxRoyalty.write(new_royalty);
         }
     }
 
@@ -388,7 +371,6 @@ pub mod OpenMark {
         ) {
             assert(order.expiry > get_block_timestamp().into(), Errors::ORDER_EXPIRED);
             assert(order.option == order_type, Errors::INVALID_ORDER_TYPE);
-            assert(self.verifyPaymentToken(order.payment), Errors::INVALID_PAYMENT_TOKEN);
 
             assert(!seller.is_zero(), Errors::ZERO_ADDRESS);
             assert(!buyer.is_zero(), Errors::ZERO_ADDRESS);

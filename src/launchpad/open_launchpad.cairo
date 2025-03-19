@@ -49,8 +49,6 @@ pub mod OpenLaunchpad {
         stages: Map<ID, ContractAddress>,
         // Store sales commission
         commission: u32,
-        // Mapping of payment tokens
-        paymentTokens: Map<ContractAddress, bool>,
         // Stored maximum allowed sales duration
         maxSalesDuration: u128,
         selector_classhash: ClassHash,
@@ -73,16 +71,11 @@ pub mod OpenLaunchpad {
     fn constructor(
         ref self: ContractState,
         owner: ContractAddress,
-        paymentTokens: Span<ContractAddress>,
         commission: u32,
         selector_classhash: ClassHash,
         batch_selector_classhash: ClassHash,
     ) {
         self.ownable.initializer(owner);
-
-        for token in paymentTokens {
-            self.paymentTokens.write(*token, true);
-        };
         self.commission.write(commission); // per mille (default 5%)
         self.maxSalesDuration.write(2592000); // 30 days
         self.selector_classhash.write(selector_classhash);
@@ -148,7 +141,6 @@ pub mod OpenLaunchpad {
                 Errors::SALE_DURATION_EXCEEDED,
             );
 
-            assert(self.paymentTokens.read(stage.payment), Errors::INVALID_PAYMENT_TOKEN);
             let access_dispatcher = IAccessControlDispatcher { contract_address: stage.collection };
             assert(
                 access_dispatcher.has_role(DEFAULT_ADMIN_ROLE, owner)
@@ -167,17 +159,6 @@ pub mod OpenLaunchpad {
         fn setCommission(ref self: ContractState, newCommission: u32) {
             self.ownable.assert_only_owner();
             self.commission.write(newCommission);
-        }
-
-        fn setPaymentTokens(
-            ref self: ContractState, paymentTokens: Span<ContractAddress>, approved: Span<bool>,
-        ) {
-            self.ownable.assert_only_owner();
-            let mut i = 0;
-            while (i < paymentTokens.len()) {
-                self.paymentTokens.write(*paymentTokens.at(i), *approved.at(i));
-                i += 1;
-            }
         }
 
         fn setMaxSalesDuration(ref self: ContractState, newSalesDuration: u128) {
@@ -202,10 +183,6 @@ pub mod OpenLaunchpad {
                 self.selector_classhash.read(),
                 self.batch_selector_classhash.read(),
             );
-        }
-
-        fn verifyPaymentToken(self: @ContractState, paymentToken: ContractAddress) -> bool {
-            return self.paymentTokens.read(paymentToken);
         }
     }
 }

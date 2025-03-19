@@ -2,45 +2,44 @@ use starknet::{ContractAddress};
 use openmark::primitives::types::{Order, Bag};
 
 #[starknet::interface]
-pub trait IOpenMark<TState> {
-    fn buy(ref self: TState, seller: ContractAddress, order: Order, signature: Span<felt252>);
+pub trait IOpenMark<T> {
+    fn buy(ref self: T, seller: ContractAddress, order: Order, signature: Span<felt252>);
 
     fn accept_offer(
-        ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+        ref self: T, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-    fn buy_with_value(ref self: TState, seller: ContractAddress, order: Order, value:u128, signature: Span<felt252>);
+    fn buy_with_value(ref self: T, seller: ContractAddress, order: Order, value:u128, signature: Span<felt252>);
 
     fn accept_offer_with_value(
-        ref self: TState, buyer: ContractAddress, order: Order, value: u128, signature: Span<felt252>
+        ref self: T, buyer: ContractAddress, order: Order, value: u128, signature: Span<felt252>
     );
 
 
-    fn cancel_order(ref self: TState, order: Order, signature: Span<felt252>);
+    fn cancel_order(ref self: T, order: Order, signature: Span<felt252>);
 
-    fn batch_buy(ref self: TState, bags: Span<Bag>);
+    fn batch_buy(ref self: T, bags: Span<Bag>);
 }
 
 #[starknet::interface]
-pub trait IOpenMarkCamel<TState> {
+pub trait IOpenMarkCamel<T> {
     fn acceptOffer(
-        ref self: TState, buyer: ContractAddress, order: Order, signature: Span<felt252>
+        ref self: T, buyer: ContractAddress, order: Order, signature: Span<felt252>
     );
 
-    fn cancelOrder(ref self: TState, order: Order, signature: Span<felt252>);
+    fn cancelOrder(ref self: T, order: Order, signature: Span<felt252>);
 
-    fn batchBuy(ref self: TState, bags: Span<Bag>);
+    fn batchBuy(ref self: T, bags: Span<Bag>);
 }
 
 #[starknet::interface]
-pub trait IOpenMarkProvider<TState> {
-    fn getChainId(self: @TState) -> felt252;
-    fn getCommission(self: @TState) -> u256;
-    fn verifyPaymentToken(self: @TState, paymentToken: ContractAddress) -> bool;
-    fn isUsedSignature(self: @TState, signature: Span<felt252>) -> bool;
+pub trait IOpenMarkProvider<T> {
+    fn getChainId(self: @T) -> felt252;
+    fn getCommission(self: @T) -> u256;
+    fn isUsedSignature(self: @T, signature: Span<felt252>) -> bool;
 
     fn verifyBuy(
-        self: @TState,
+        self: @T,
         order: Order,
         signature: Span<felt252>,
         seller: ContractAddress,
@@ -48,19 +47,18 @@ pub trait IOpenMarkProvider<TState> {
     );
 
     fn verifyAcceptOffer(
-        self: @TState,
+        self: @T,
         order: Order,
         signature: Span<felt252>,
         seller: ContractAddress,
         buyer: ContractAddress
     );
 
-    fn getVersion(self: @TState) -> (u32, u32, u32);
+    fn getVersion(self: @T) -> (u32, u32, u32);
 }
 
 #[starknet::interface]
-pub trait IOpenMarkManager<TState> {
-    fn set_commission(ref self: TState, new_commission: u256);
-    fn add_payment_token(ref self: TState, payment_token: ContractAddress);
-    fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
+pub trait IOpenMarkManager<T> {
+    fn set_commission(ref self: T, new_commission: u256);
+    fn set_max_royalty(ref self: T, new_royalty: u256);
 }

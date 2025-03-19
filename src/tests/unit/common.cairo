@@ -64,12 +64,11 @@ pub fn NFT_BASE_URI() -> ByteArray {
     "https://nft-api.openmark.io/"
 }
 
-pub fn deploy_openmark(payment_token: ContractAddress) -> ContractAddress {
+pub fn deploy_openmark() -> ContractAddress {
     let contract = declare("OpenMark").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(SELLER1);
-    constructor_calldata.append_serde([payment_token].span());
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
 }
@@ -206,7 +205,7 @@ pub fn create_buy() -> (
 ) {
     let nft_token = setup_oerc721_at(toAddress(TEST_NFT));
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
-    let openmark_address = deploy_openmark(payment_token);
+    let openmark_address = deploy_openmark();
     let seller: ContractAddress = toAddress(SELLER1);
     let buyer: ContractAddress = toAddress(BUYER1);
     let ERC721Dispatcher = IERC721Dispatcher { contract_address: nft_token };
@@ -253,7 +252,7 @@ pub fn create_buy_with_value() -> (
     ContractAddress // buyer
 ) {
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
-    let openmark_address = deploy_openmark(payment_token);
+    let openmark_address = deploy_openmark();
     let seller: ContractAddress = setup_account(SELLER1);
 
     let nft_token = create_oerc1155_at(seller, toAddress(TEST_NFT));
@@ -303,7 +302,7 @@ pub fn create_offer() -> (
     let nft_token: ContractAddress = setup_oerc721_at(toAddress(TEST_NFT));
     let payment_token: ContractAddress = setup_balance_at(toAddress(TEST_PAYMENT));
 
-    let openmark_address = deploy_openmark(payment_token);
+    let openmark_address = deploy_openmark();
     let seller: ContractAddress = toAddress(SELLER1);
     let buyer: ContractAddress = toAddress(BUYER1);
     let ERC721Dispatcher = IERC721Dispatcher { contract_address: nft_token };
@@ -357,7 +356,7 @@ pub fn create_offer_with_value() -> (
     ContractAddress // buyer
 ) {
     let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
-    let openmark_address = deploy_openmark(payment_token);
+    let openmark_address = deploy_openmark();
     let seller: ContractAddress = setup_account(SELLER1);
 
     let nft_token = create_oerc1155_at(seller, toAddress(TEST_NFT));

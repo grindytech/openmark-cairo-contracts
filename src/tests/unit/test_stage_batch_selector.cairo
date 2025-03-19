@@ -32,7 +32,7 @@ use openmark::launchpad::events::{StageCreated, TokensBought, StageClosed, Sales
 use openmark::launchpad::stage_batch_selector::StageBatchSelector;
 
 fn create_open_launchpad(
-    owner: ContractAddress, payments: Span<ContractAddress>, commission: u32,
+    owner: ContractAddress, commission: u32,
 ) -> (ContractAddress, ILaunchpadDispatcher) {
     let selector = create_stage(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
@@ -47,7 +47,6 @@ fn create_open_launchpad(
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
-    constructor_calldata.append_serde(payments);
     constructor_calldata.append_serde(commission);
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
@@ -80,7 +79,7 @@ fn setup_stage(
     let nft_address = create_oerc1155(owner);
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), commission,
+        owner, commission,
     );
 
     let stage = Stage {
@@ -122,7 +121,7 @@ fn create_stage_works() {
     let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), 0,
+        owner, 0,
     );
 
     let stage = Stage {
@@ -481,7 +480,7 @@ fn update_stages_id_used_panics() {
     let nft_address = create_oerc1155(owner);
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, [payment_address].span(), 0,
+        owner,  0,
     );
 
     let stage = Stage {

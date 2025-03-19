@@ -14,7 +14,6 @@ use snforge_std::EventSpyAssertionsTrait;
 use openmark::{
     core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
     core::interface::{IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait},
-    core::interface::{IOpenMarkManagerDispatcher, IOpenMarkManagerDispatcherTrait},
 };
 use openmark::tests::unit::common::{
     create_offer, create_buy, create_buy_with_value, create_mock_hasher, ZERO,
@@ -194,20 +193,4 @@ fn buy_seller_is_zero_panics() {
     let openmark = IOpenMarkProviderDispatcher { contract_address: openmark_address };
 
     openmark.verifyBuy(order, signature, ZERO(), buyer);
-}
-
-#[test]
-#[should_panic(expected: ('OM: Invalid payment token',))]
-fn invalid_payment_token_panics() {
-    let (order, signature, openmark_address, _, payment_token, seller, buyer) = create_buy();
-    let openmark = IOpenMarkManagerDispatcher { contract_address: openmark_address };
-
-    start_cheat_caller_address(openmark_address, seller);
-    openmark.remove_payment_token(payment_token);
-
-    let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
-    start_cheat_caller_address(openmark_address, buyer);
-    start_cheat_caller_address(payment_token, buyer);
-
-    openmark.buy(seller, order, signature);
 }

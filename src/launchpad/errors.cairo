@@ -7,7 +7,6 @@ pub mod LPErrors {
     pub const ROOT_WHITELIST_FAILED: felt252 = 'OM: root whitelist failed';
     pub const COLLECTION_WHITELIST_FAILED: felt252 = 'OM: collection whitelist failed';
 
-    pub const INVALID_PAYMENT_TOKEN: felt252 = 'OM: invalid payment';
     pub const LENGTH_MISMATCH: felt252 = 'OM: length mismatch';
     pub const ZERO_MINT_AMOUNT: felt252 = 'OM: zero mint amount';
     pub const STAGE_CLOSED: felt252 = 'OM: closed';
