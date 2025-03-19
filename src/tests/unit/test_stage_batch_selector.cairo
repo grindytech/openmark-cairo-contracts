@@ -329,7 +329,7 @@ fn withdraw_sales_works() {
     };
     stage_selector_dispatcher.buy([0, 1, 2].span(), [2, 2, 2].span(), array![].span());
     let sales = 6 * stage.price;
-    let payout = sales - (sales * commission.into() / PERMYRIAD.into());
+    let payout = sales - (sales * commission.into() / PERMYRIAD);
     let fee = sales - payout;
     let owner_balance = payment_dispatcher.balance_of(owner);
     let admin_balance = payment_dispatcher.balance_of(admin);

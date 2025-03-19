@@ -97,9 +97,9 @@ pub mod OpenMark {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(ref self: ContractState, owner: ContractAddress ) {
         self.ownable.initializer(owner);
-        self.commission.write(0);
+        self.commission.write(0); // 0%
         self.maxRoyalty.write(1000); // 10%
     }
 
@@ -298,7 +298,7 @@ pub mod OpenMark {
             buyer: ContractAddress,
         ) {
             // 1. verify order
-            self._verify_order(order, seller, get_caller_address(), OrderType::Buy);
+            self._verify_order(order, seller, buyer, OrderType::Buy);
 
             // 2. verify signature
             self._validate_order_signature(order, seller, signature);
@@ -377,7 +377,7 @@ pub mod OpenMark {
         }
 
         fn _calculate_commission(self: @ContractState, price: u256) -> u256 {
-            price * self.commission.read().into() / PERMYRIAD.into()
+            price * self.commission.read().into() / PERMYRIAD
         }
 
         /// Processes a payment from sender to a receiver.
@@ -387,6 +387,8 @@ pub mod OpenMark {
         /// - `receiver`: The address to receive the payment.
         /// - `amount`: The amount to be transferred.
         /// - `payment_token`: The address of the payment token contract.
+        /// - `nft_contract`: The address of the nft contract.
+        /// - `token_id`: token id traded.
         fn _process_payment(
             self: @ContractState,
             sender: ContractAddress,

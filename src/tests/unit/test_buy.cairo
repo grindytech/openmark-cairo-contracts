@@ -12,13 +12,18 @@ use snforge_std::{
 use snforge_std::EventSpyAssertionsTrait;
 
 use openmark::{
-    core::interface::{IOpenMarkDispatcher, IOpenMarkDispatcherTrait},
+    core::interface::{
+        IOpenMarkDispatcher, IOpenMarkDispatcherTrait, IOpenMarkManagerDispatcher,
+        IOpenMarkManagerDispatcherTrait,
+    },
     core::interface::{IOpenMarkProviderDispatcher, IOpenMarkProviderDispatcherTrait},
 };
 use openmark::tests::unit::common::{
-    create_offer, create_buy, create_buy_with_value, create_mock_hasher, ZERO,
+    create_offer, create_buy, create_buy_with_value, create_mock_hasher, ZERO, OM_OWNER, toAddress,
+    ROYALTY, NFT_OWNER,
 };
 use openmark::core::OpenMark;
+use openmark::primitives::constants::{PERMYRIAD};
 use openmark::core::events::{OrderFilled, OrderCancelled};
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
@@ -26,6 +31,11 @@ use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 fn buy_works() {
     let (order, signature, openmark_address, nft_token, payment_token, seller, buyer) =
         create_buy();
+    let commission = 500; // 5%
+    // setup commission and royalty
+    let manager_dispatcher = IOpenMarkManagerDispatcher { contract_address: openmark_address };
+    start_cheat_caller_address(openmark_address, toAddress(OM_OWNER));
+    manager_dispatcher.set_commission(commission);
 
     // buy and verify
     start_cheat_caller_address(openmark_address, buyer);
@@ -33,7 +43,6 @@ fn buy_works() {
 
     start_cheat_caller_address(payment_token, buyer);
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
-    payment_dispatcher.approve(openmark_address, order.price.try_into().unwrap());
 
     let nft_dispatcher = IERC721Dispatcher { contract_address: nft_token };
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
@@ -51,22 +60,33 @@ fn buy_works() {
     spy.assert_emitted(@array![(openmark_address, expected_event)]);
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);
     let seller_after_balance = payment_dispatcher.balance_of(seller);
+    let owner_balance = payment_dispatcher.balance_of(toAddress(OM_OWNER));
+    let nft_owner_balance = payment_dispatcher.balance_of(toAddress(NFT_OWNER));
+
+    let price: u256 = (order.price * order.value).into();
+    let commission = price * commission / PERMYRIAD;
+    let royalty = price * ROYALTY / PERMYRIAD;
+    let payout = price - commission - royalty;
 
     assert(nft_dispatcher.owner_of(order.tokenId.into()) == buyer, 'NFT owner not correct');
     assert(
         buyer_after_balance == buyer_before_balance - order.price.into(),
         'Buyer balance not correct',
     );
-    assert(
-        seller_after_balance == seller_before_balance + order.price.into(),
-        'Seller balance not correct',
-    );
+    assert(seller_after_balance == seller_before_balance + payout, 'Seller balance not correct');
+    assert(owner_balance == commission, 'commission not correct');
+    assert(nft_owner_balance == royalty, 'royalty not correct');
 }
 
 #[test]
 fn buy_with_value_works() {
     let (order, signature, openmark_address, nft_token, payment_token, seller, buyer) =
         create_buy_with_value();
+    let COMMISSION = 500; // 5%
+    // setup commission and royalty
+    let manager_dispatcher = IOpenMarkManagerDispatcher { contract_address: openmark_address };
+    start_cheat_caller_address(openmark_address, toAddress(OM_OWNER));
+    manager_dispatcher.set_commission(COMMISSION);
 
     // buy and verify
     start_cheat_caller_address(openmark_address, buyer);
@@ -74,7 +94,7 @@ fn buy_with_value_works() {
 
     start_cheat_caller_address(payment_token, buyer);
     let payment_dispatcher = IERC20Dispatcher { contract_address: payment_token };
-    payment_dispatcher.approve(openmark_address, 1000);
+    payment_dispatcher.approve(openmark_address, order.price.into() * order.value.into());
 
     let nft_dispatcher = IERC1155Dispatcher { contract_address: nft_token };
     let openmark = IOpenMarkDispatcher { contract_address: openmark_address };
@@ -87,30 +107,54 @@ fn buy_with_value_works() {
     start_cheat_caller_address(openmark_address, buyer);
 
     let mut spy = spy_events();
-    openmark.buy_with_value(seller, order, 5, signature);
+    let value = 5;
+    openmark.buy_with_value(seller, order, value, signature);
     let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
     spy.assert_emitted(@array![(openmark_address, expected_event)]);
+    let owner_balance = payment_dispatcher.balance_of(toAddress(OM_OWNER));
+    let nft_owner_balance = payment_dispatcher.balance_of(toAddress(NFT_OWNER));
+
+    let price: u256 = (order.price * value).into();
+    let commission = price * COMMISSION / PERMYRIAD;
+    let royalty = price * ROYALTY / PERMYRIAD;
+    let payout = price - commission - royalty;
 
     assert(
-        payment_dispatcher.balance_of(buyer) == buyer_before_balance - (order.price.into() * 5),
+        payment_dispatcher.balance_of(buyer) == buyer_before_balance - price,
         'Buyer balance not correct',
     );
     assert(
-        payment_dispatcher.balance_of(seller) == seller_before_balance + (order.price.into() * 5),
+        payment_dispatcher.balance_of(seller) == seller_before_balance + payout,
         'Seller balance not correct',
     );
     assert(nft_dispatcher.balance_of(buyer, order.tokenId.into()) == 5, 'NFT owner not correct');
+    assert(owner_balance == commission, 'OM Owner balance not correct');
+    assert(nft_owner_balance == royalty, 'royalty not correct');
 
-    openmark.buy_with_value(seller, order, 5, signature);
+    openmark.buy_with_value(seller, order, value, signature);
+    let owner_balance = payment_dispatcher.balance_of(toAddress(OM_OWNER));
+    let nft_owner_balance = payment_dispatcher.balance_of(toAddress(NFT_OWNER));
+
+    let price: u256 = (order.price * value * 2).into();
+    let commission = price * COMMISSION / PERMYRIAD;
+    let royalty = price * ROYALTY / PERMYRIAD;
+    let payout = price - commission - royalty;
+
     assert(
-        payment_dispatcher.balance_of(buyer) == buyer_before_balance - (order.price.into() * 10),
-        'Buyer balance not correct',
+        payment_dispatcher.balance_of(buyer) == buyer_before_balance - price,
+        '2 Buyer balance not correct',
     );
+
     assert(
-        payment_dispatcher.balance_of(seller) == seller_before_balance + (order.price.into() * 10),
-        'Seller balance not correct',
+        payment_dispatcher.balance_of(seller) == seller_before_balance + payout,
+        '2 Seller balance not correct',
     );
-    assert(nft_dispatcher.balance_of(buyer, order.tokenId.into()) == 10, 'NFT owner not correct');
+
+    assert(nft_dispatcher.balance_of(buyer, order.tokenId.into()) == 10, 'NFT owner not
+correct');
+
+    assert(owner_balance == commission, '2 OM Owner balance not correct');
+    assert(nft_owner_balance == royalty, '2 royalty not correct');
 }
 
 #[test]
