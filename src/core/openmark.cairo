@@ -85,7 +85,7 @@ pub mod OpenMark {
         #[substorage(v0)]
         hasher: HasherComponent::Storage,
         /// OpenMark's commission (per mille)
-        commission: u32,
+        commission: u256,
         /// store used order signatures
         usedSignatures: starknet::storage::Map<felt252, bool>,
         /// store partial order
@@ -262,7 +262,7 @@ pub mod OpenMark {
             get_tx_info().unbox().chain_id
         }
 
-        fn getCommission(self: @ContractState) -> u32 {
+        fn getCommission(self: @ContractState) -> u256 {
             self.commission.read()
         }
 
@@ -310,7 +310,7 @@ pub mod OpenMark {
 
     #[abi(embed_v0)]
     impl OpenMarkManagerImpl of IOpenMarkManager<ContractState> {
-        fn set_commission(ref self: ContractState, new_commission: u32) {
+        fn set_commission(ref self: ContractState, new_commission: u256) {
             self.ownable.assert_only_owner();
             assert(new_commission < PERMYRIAD, Errors::INVALID_COMMISSION);
             self.commission.write(new_commission);

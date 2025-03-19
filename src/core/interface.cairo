@@ -35,7 +35,7 @@ pub trait IOpenMarkCamel<TState> {
 #[starknet::interface]
 pub trait IOpenMarkProvider<TState> {
     fn getChainId(self: @TState) -> felt252;
-    fn getCommission(self: @TState) -> u32;
+    fn getCommission(self: @TState) -> u256;
     fn verifyPaymentToken(self: @TState, paymentToken: ContractAddress) -> bool;
     fn isUsedSignature(self: @TState, signature: Span<felt252>) -> bool;
 
@@ -60,7 +60,7 @@ pub trait IOpenMarkProvider<TState> {
 
 #[starknet::interface]
 pub trait IOpenMarkManager<TState> {
-    fn set_commission(ref self: TState, new_commission: u32);
+    fn set_commission(ref self: TState, new_commission: u256);
     fn add_payment_token(ref self: TState, payment_token: ContractAddress);
     fn remove_payment_token(ref self: TState, payment_token: ContractAddress);
 }

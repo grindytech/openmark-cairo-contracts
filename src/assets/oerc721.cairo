@@ -1,14 +1,16 @@
 #[starknet::contract]
 mod OERC721 {
+    use ERC721Component::InternalTrait as ERC721InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use starknet::ContractAddress;
-    use openmark::assets::interface::{IERC721Minter};
+    use openzeppelin::token::common::erc2981::interface::{IERC2981};
+    use openmark::assets::interface::{IERC721Minter, IOERC721Handler};
 
     use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
-    use openmark::primitives::constants::{MINTER_ROLE};
+    use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
 
     use openmark::assets::errors::Errors;
 
@@ -39,6 +41,7 @@ mod OERC721 {
         // self storage
         totalSupply: u256,
         royaltyPercentage: u256,
+        royaltyReceiver: ContractAddress,
     }
 
     #[event]
@@ -67,8 +70,8 @@ mod OERC721 {
         self.erc721.initializer(name, symbol, baseURI);
         self.totalSupply.write(totalSupply);
         self.royaltyPercentage.write(royaltyPercentage);
+        self.royaltyReceiver.write(owner);
     }
-
 
     #[abi(embed_v0)]
     impl ERC721MinterImpl of IERC721Minter<ContractState> {
@@ -121,6 +124,46 @@ mod OERC721 {
             ref self: ContractState, to: ContractAddress, tokenIds: Span<u256>, data: Span<felt252>,
         ) {
             self.safe_mint_batch(to, tokenIds, data);
+        }
+    }
+
+    //**** Implement IOERC721Handler ****//
+    #[abi(embed_v0)]
+    impl OERC721HandlerImpl of IOERC721Handler<ContractState> {
+        fn setBaseURI(ref self: ContractState, newBaseURI: ByteArray, newTotalSupply: u256) {
+            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
+
+            self.erc721._set_base_uri(newBaseURI);
+            self.totalSupply.write(newTotalSupply);
+        }
+        fn BaseURI(self: @ContractState) -> ByteArray {
+            self.erc721._base_uri()
+        }
+        fn getTotalSupply(self: @ContractState) -> u256 {
+            self.totalSupply.read()
+        }
+
+        fn setRoyalty(
+            ref self: ContractState, royaltyPercentage: u256, royaltyReceiver: ContractAddress,
+        ) {
+            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
+            self.royaltyPercentage.write(royaltyPercentage);
+            self.royaltyReceiver.write(royaltyReceiver);
+        }
+
+        fn getRoyalty(self: @ContractState) -> (u256, ContractAddress) {
+            return (self.royaltyPercentage.read(), self.royaltyReceiver.read());
+        }
+    }
+
+    //**** Implement IERC2981 Royalties ****//
+    #[abi(embed_v0)]
+    impl IERC2981Impl of IERC2981<ContractState> {
+        fn royalty_info(
+            self: @ContractState, token_id: u256, sale_price: u256,
+        ) -> (ContractAddress, u256) {
+            let royaltyAmount = (sale_price * self.royaltyPercentage.read()) / PERMYRIAD.into();
+            return (self.royaltyReceiver.read(), royaltyAmount);
         }
     }
 }

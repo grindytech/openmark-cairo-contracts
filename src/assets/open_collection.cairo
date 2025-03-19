@@ -6,7 +6,6 @@ mod OpenCollection {
     use openmark::assets::interface::{IOpenCollection};
     use starknet::storage::Map;
 
-
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -72,4 +71,10 @@ mod OpenCollection {
             current_token_index
         }
     }
+
+    #[external(v0)]
+    fn get_contract_name(self: @ContractState) -> felt252 {
+        'Name Registry'
+    }
+
 }
