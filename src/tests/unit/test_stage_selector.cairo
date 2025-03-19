@@ -16,7 +16,7 @@ use snforge_std::{
 use starknet::{ContractAddress};
 use openmark::tests::unit::common::{
     SELLER1, SELLER2, BUYER1, BUYER2, TEST_PAYMENT, TEST_NFT, toAddress, setup_balance_at,
-    setup_oerc721_at, ZERO, create_oerc721, create_erc20,
+    do_setup_oerc721_at, ZERO, create_oerc721, create_erc20,
 };
 use openmark::primitives::types::{Stage, StageType};
 use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
@@ -150,7 +150,7 @@ fn create_stages_works() {
     let owner = toAddress(SELLER1);
 
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
-    let nft_address = setup_oerc721_at(toAddress(TEST_NFT));
+    let nft_address = do_setup_oerc721_at(toAddress(TEST_NFT), owner);
 
     let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, 0);
 

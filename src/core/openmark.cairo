@@ -24,7 +24,14 @@ pub mod OpenMark {
         IERC2981Dispatcher, IERC2981DispatcherTrait,
     };
 
-    use starknet::{get_caller_address, get_tx_info, ContractAddress, get_block_timestamp};
+    use openzeppelin::introspection::interface::ISRC5DispatcherTrait;
+    use openzeppelin::introspection::interface::ISRC5Dispatcher;
+    use openzeppelin::token::common::erc2981::interface::IERC2981_ID;
+
+    use starknet::{
+        get_caller_address, get_tx_info, ContractAddress, get_block_timestamp,
+        contract_address_const,
+    };
     use starknet::ClassHash;
 
     use core::num::traits::Zero;
@@ -97,7 +104,7 @@ pub mod OpenMark {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress ) {
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
         self.commission.write(0); // 0%
         self.maxRoyalty.write(1000); // 10%
@@ -398,14 +405,52 @@ pub mod OpenMark {
             nft_contract: ContractAddress,
             token_id: u128,
         ) {
-            // Check if the contract supports IERC2981 (royalty standard)
-            let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
-            let (royalty_receiver, mut royalty_amount) = royalty_dispatcher
-                .royalty_info(token_id.into(), amount);
+            // // Check if the contract supports IERC2981 (royalty standard)
+            // let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
+            // let (royalty_receiver, mut royalty_amount) = royalty_dispatcher
+            //     .royalty_info(token_id.into(), amount);
 
-            // Ensure the royaltyAmount does not exceed the maximum allowed royalty
+            // // Ensure the royaltyAmount does not exceed the maximum allowed royalty
+            // let max_royalty_amount = (amount * self.maxRoyalty.read()) / PERMYRIAD;
+            // if (royalty_amount > max_royalty_amount) {
+            //     royalty_amount = max_royalty_amount;
+            // }
+
+            // // Calculate the fee and payout
+            // let commission = self._calculate_commission(amount);
+            // let payout = amount - royalty_amount - commission;
+
+            // let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
+            // token_dispatcher.transfer_from(sender, receiver, payout);
+
+            // if royalty_amount > 0 {
+            //     token_dispatcher.transfer_from(sender, royalty_receiver, royalty_amount);
+            // }
+
+            // if commission > 0 {
+            //     token_dispatcher.transfer_from(sender, self.owner(), commission);
+            // }
+
+            // Default royalty values
+            let mut royalty_receiver: ContractAddress = contract_address_const::<0>();
+            let mut royalty_amount: u256 = 0;
+
+            // Check if nft_contract supports IERC2981 using ERC165
+            let erc165_dispatcher = ISRC5Dispatcher { contract_address: nft_contract };
+            let supports_royalty = erc165_dispatcher.supports_interface(IERC2981_ID);
+
+            // If IERC2981 is supported, fetch royalty info
+            if supports_royalty {
+                let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
+                let (receiver, amount_from_nft) = royalty_dispatcher
+                    .royalty_info(token_id.into(), amount);
+                royalty_receiver = receiver;
+                royalty_amount = amount_from_nft;
+            }
+
+            // Ensure the royalty_amount does not exceed the maximum allowed royalty
             let max_royalty_amount = (amount * self.maxRoyalty.read()) / PERMYRIAD;
-            if (royalty_amount > max_royalty_amount) {
+            if royalty_amount > max_royalty_amount {
                 royalty_amount = max_royalty_amount;
             }
 
@@ -413,6 +458,7 @@ pub mod OpenMark {
             let commission = self._calculate_commission(amount);
             let payout = amount - royalty_amount - commission;
 
+            // Perform transfers
             let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
             token_dispatcher.transfer_from(sender, receiver, payout);
 

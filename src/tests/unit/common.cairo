@@ -127,10 +127,10 @@ pub fn create_test_oerc721() -> ContractAddress {
     return setup_oerc721_at(toAddress(TEST_NFT));
 }
 
-pub fn setup_oerc721_at(addr: ContractAddress) -> ContractAddress {
+pub fn do_setup_oerc721_at(addr: ContractAddress, owner: ContractAddress) -> ContractAddress {
     let contract = declare("OERC721").unwrap().contract_class();
     let mut constructor_calldata = array![];
-    constructor_calldata.append_serde(NFT_OWNER);
+    constructor_calldata.append_serde(owner);
     constructor_calldata.append_serde(NFT_NAME());
     constructor_calldata.append_serde(NFT_SYMBOL());
     constructor_calldata.append_serde(NFT_BASE_URI());
@@ -138,6 +138,10 @@ pub fn setup_oerc721_at(addr: ContractAddress) -> ContractAddress {
     constructor_calldata.append_serde(ROYALTY);
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
     contract_address
+}
+
+pub fn setup_oerc721_at(addr: ContractAddress) -> ContractAddress {
+    return do_setup_oerc721_at(addr, toAddress(NFT_OWNER));
 }
 
 pub fn do_create_oerc1155_at(
@@ -195,7 +199,12 @@ pub fn create_oerc1155_at(owner: ContractAddress, addr: ContractAddress) -> Cont
     );
 }
 
-pub fn create_buy() -> (
+pub fn do_create_buy(
+    nft_token: ContractAddress,
+    payment_token: ContractAddress,
+    seller: ContractAddress,
+    buyer: ContractAddress,
+) -> (
     Order, // order 
     Span<felt252>, // signature
     ContractAddress, // openmark address
@@ -204,11 +213,7 @@ pub fn create_buy() -> (
     ContractAddress, // seller
     ContractAddress // buyer
 ) {
-    let nft_token = setup_oerc721_at(toAddress(TEST_NFT));
-    let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
     let openmark_address = deploy_openmark();
-    let seller: ContractAddress = toAddress(SELLER1);
-    let buyer: ContractAddress = toAddress(BUYER1);
     let ERC721Dispatcher = IERC721Dispatcher { contract_address: nft_token };
     let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
     let tokenId = 2;
@@ -241,6 +246,22 @@ pub fn create_buy() -> (
     ];
 
     (order, signature.span(), openmark_address, nft_token, payment_token, seller, buyer)
+}
+
+pub fn create_buy() -> (
+    Order, // order 
+    Span<felt252>, // signature
+    ContractAddress, // openmark address
+    ContractAddress, // nft address
+    ContractAddress, // payment token
+    ContractAddress, // seller
+    ContractAddress // buyer
+) {
+    let nft_token = setup_oerc721_at(toAddress(TEST_NFT));
+    let payment_token = setup_balance_at(toAddress(TEST_PAYMENT));
+    let seller: ContractAddress = toAddress(SELLER1);
+    let buyer: ContractAddress = toAddress(BUYER1);
+    return do_create_buy(nft_token, payment_token, seller, buyer);
 }
 
 

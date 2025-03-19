@@ -19,9 +19,6 @@ pub mod HasherComponent {
     use openzeppelin::account::interface::{ISRC6Dispatcher, ISRC6DispatcherTrait};
 
     use openzeppelin::account::utils::{is_valid_stark_signature};
-    // use openzeppelin::utils::{try_selector_with_fallback};
-    // use openzeppelin::utils::selectors;
-    // use openzeppelin::utils::UnwrapAndCast;
 
     // Hash
     use core::poseidon::PoseidonTrait;
