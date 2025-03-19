@@ -32,6 +32,19 @@ pub trait IERC1155Minter<T> {
 }
 
 #[starknet::interface]
+pub trait IOERC1155Handler<T> {
+    fn name(self: @T)-> ByteArray;
+    fn symbol(self: @T)-> ByteArray;
+
+    fn setURI(ref self: T, newBaseURI: ByteArray, newTotalSupply: u256);
+    fn tokenURI(self: @T, tokenId: u256) -> ByteArray;
+    fn getTotalSupply(self: @T)->u256;
+
+    fn setRoyalty(ref self: T, royaltyPercentage: u256, royaltyReceiver: ContractAddress);
+    fn getRoyalty(self: @T) -> (u256, ContractAddress);
+}
+
+#[starknet::interface]
 pub trait IOpenCollection<T> {
     fn mintURIs(ref self: T, to: ContractAddress,uris: Span<ByteArray> );
 }

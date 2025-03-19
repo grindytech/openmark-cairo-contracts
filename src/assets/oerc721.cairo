@@ -162,7 +162,7 @@ mod OERC721 {
         fn royalty_info(
             self: @ContractState, token_id: u256, sale_price: u256,
         ) -> (ContractAddress, u256) {
-            let royaltyAmount = (sale_price * self.royaltyPercentage.read()) / PERMYRIAD.into();
+            let royaltyAmount = (sale_price * self.royaltyPercentage.read()) / PERMYRIAD;
             return (self.royaltyReceiver.read(), royaltyAmount);
         }
     }
