@@ -39,7 +39,7 @@ mod OERC721 {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         // self storage
-        totalSupply: u256,
+        maxTokenId: u256,
         royaltyPercentage: u256,
         royaltyReceiver: ContractAddress,
     }
@@ -62,13 +62,13 @@ mod OERC721 {
         name: ByteArray,
         symbol: ByteArray,
         baseURI: ByteArray,
-        totalSupply: u256,
+        maxTokenId: u256,
         royaltyPercentage: u256,
     ) {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
         self.erc721.initializer(name, symbol, baseURI);
-        self.totalSupply.write(totalSupply);
+        self.maxTokenId.write(maxTokenId);
         self.royaltyPercentage.write(royaltyPercentage);
         self.royaltyReceiver.write(owner);
     }
@@ -78,7 +78,7 @@ mod OERC721 {
         fn mint(ref self: ContractState, to: ContractAddress, tokenId: u256) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
 
-            assert(tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
+            assert(tokenId < self.maxTokenId.read(), Errors::INVALID_TOKEN_ID);
 
             self.erc721.mint(to, tokenId);
         }
@@ -87,7 +87,7 @@ mod OERC721 {
             ref self: ContractState, to: ContractAddress, tokenId: u256, data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
-            assert(tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
+            assert(tokenId < self.maxTokenId.read(), Errors::INVALID_TOKEN_ID);
 
             self.erc721.safe_mint(to, tokenId, data);
         }
@@ -130,17 +130,17 @@ mod OERC721 {
     //**** Implement IOERC721Handler ****//
     #[abi(embed_v0)]
     impl OERC721HandlerImpl of IOERC721Handler<ContractState> {
-        fn setBaseURI(ref self: ContractState, newBaseURI: ByteArray, newTotalSupply: u256) {
+        fn setBaseURI(ref self: ContractState, newBaseURI: ByteArray, newMaxTokenId: u256) {
             self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
 
             self.erc721._set_base_uri(newBaseURI);
-            self.totalSupply.write(newTotalSupply);
+            self.maxTokenId.write(newMaxTokenId);
         }
         fn BaseURI(self: @ContractState) -> ByteArray {
             self.erc721._base_uri()
         }
-        fn getTotalSupply(self: @ContractState) -> u256 {
-            self.totalSupply.read()
+        fn getMaxTokenId(self: @ContractState) -> u256 {
+            self.maxTokenId.read()
         }
 
         fn setRoyalty(

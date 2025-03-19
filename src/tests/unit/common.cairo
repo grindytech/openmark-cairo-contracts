@@ -145,7 +145,7 @@ pub fn do_create_oerc1155_at(
     name: ByteArray,
     symbol: ByteArray,
     URI: ByteArray,
-    totalSupply: u256,
+    maxTokenId: u256,
     royaltyPercentage: u256,
 ) -> ContractAddress {
     let contract = declare("OERC1155").unwrap().contract_class();
@@ -155,7 +155,7 @@ pub fn do_create_oerc1155_at(
     constructor_calldata.append_serde(name);
     constructor_calldata.append_serde(symbol);
     constructor_calldata.append_serde(URI);
-    constructor_calldata.append_serde(totalSupply);
+    constructor_calldata.append_serde(maxTokenId);
     constructor_calldata.append_serde(royaltyPercentage);
 
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
@@ -167,7 +167,7 @@ pub fn do_create_oerc1155(
     name: ByteArray,
     symbol: ByteArray,
     URI: ByteArray,
-    totalSupply: u256,
+    maxTokenId: u256,
     royaltyPercentage: u256,
 ) -> ContractAddress {
     let contract = declare("OERC1155").unwrap().contract_class();
@@ -177,7 +177,7 @@ pub fn do_create_oerc1155(
     constructor_calldata.append_serde(name);
     constructor_calldata.append_serde(symbol);
     constructor_calldata.append_serde(URI);
-    constructor_calldata.append_serde(totalSupply);
+    constructor_calldata.append_serde(maxTokenId);
     constructor_calldata.append_serde(royaltyPercentage);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
@@ -404,7 +404,7 @@ pub fn do_create_oerc721(
     name: ByteArray,
     symbol: ByteArray,
     baseURI: ByteArray,
-    totalSupply: u256,
+    maxTokenId: u256,
     royaltyPercentage: u256,
 ) -> ContractAddress {
     let contract = declare("OERC721").unwrap().contract_class();
@@ -414,7 +414,7 @@ pub fn do_create_oerc721(
     constructor_calldata.append_serde(name);
     constructor_calldata.append_serde(symbol);
     constructor_calldata.append_serde(baseURI);
-    constructor_calldata.append_serde(totalSupply);
+    constructor_calldata.append_serde(maxTokenId);
     constructor_calldata.append_serde(royaltyPercentage);
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();

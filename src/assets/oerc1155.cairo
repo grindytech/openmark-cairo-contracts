@@ -41,7 +41,7 @@ mod OERC1155 {
         // self storage
         name: ByteArray,
         symbol: ByteArray,
-        totalSupply: u256,
+        maxTokenId: u256,
         royaltyPercentage: u256,
         royaltyReceiver: ContractAddress,
     }
@@ -64,13 +64,13 @@ mod OERC1155 {
         name: ByteArray,
         symbol: ByteArray,
         uri: ByteArray,
-        totalSupply: u256,
+        maxTokenId: u256,
         royaltyPercentage: u256,
     ) {
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, owner);
         self.accesscontrol._grant_role(MINTER_ROLE, owner);
         self.erc1155.initializer(uri);
-        self.totalSupply.write(totalSupply);
+        self.maxTokenId.write(maxTokenId);
         self.name.write(name);
         self.symbol.write(symbol);
         self.royaltyPercentage.write(royaltyPercentage);
@@ -88,7 +88,7 @@ mod OERC1155 {
             data: Span<felt252>,
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
-            assert(tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
+            assert(tokenId < self.maxTokenId.read(), Errors::INVALID_TOKEN_ID);
 
             self.erc1155.mint_with_acceptance_check(to, tokenId, value, data);
         }
@@ -102,7 +102,7 @@ mod OERC1155 {
         ) {
             self.accesscontrol.assert_only_role(MINTER_ROLE);
             for tokenId in tokenIds {
-                assert(*tokenId < self.totalSupply.read(), Errors::INVALID_TOKEN_ID);
+                assert(*tokenId < self.maxTokenId.read(), Errors::INVALID_TOKEN_ID);
             };
             self.erc1155.batch_mint_with_acceptance_check(to, tokenIds, values, data);
         }
@@ -128,19 +128,19 @@ mod OERC1155 {
             self.symbol.read()
         }
 
-        fn setURI(ref self: ContractState, newBaseURI: ByteArray, newTotalSupply: u256) {
+        fn setURI(ref self: ContractState, newBaseURI: ByteArray, newMaxTokenId: u256) {
             self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
 
             self.erc1155._set_base_uri(newBaseURI);
-            self.totalSupply.write(newTotalSupply);
+            self.maxTokenId.write(newMaxTokenId);
         }
 
         fn tokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
             self.erc1155.uri(tokenId)
         }
 
-        fn getTotalSupply(self: @ContractState) -> u256 {
-            self.totalSupply.read()
+        fn getMaxTokenId(self: @ContractState) -> u256 {
+            self.maxTokenId.read()
         }
 
         fn setRoyalty(
