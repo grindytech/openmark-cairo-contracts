@@ -1,13 +1,15 @@
 #[starknet::contract]
 mod OERC721 {
+    use SRC5Component::InternalTrait as SRC5InternalTrait;
     use ERC721Component::InternalTrait as ERC721InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
+    use openzeppelin::token::erc721::interface::IERC721_ID;
     use starknet::ContractAddress;
-    use openzeppelin::token::common::erc2981::interface::{IERC2981};
+    use openzeppelin::token::common::erc2981::interface::{IERC2981, IERC2981_ID};
     use openmark::assets::interface::{IERC721Minter, IOERC721Handler};
 
-    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
+    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait as AccessInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
@@ -71,6 +73,8 @@ mod OERC721 {
         self.maxTokenId.write(maxTokenId);
         self.royaltyPercentage.write(royaltyPercentage);
         self.royaltyReceiver.write(owner);
+        self.src5.register_interface(IERC2981_ID);
+        self.src5.register_interface(IERC721_ID);
     }
 
     #[abi(embed_v0)]

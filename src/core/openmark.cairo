@@ -24,7 +24,14 @@ pub mod OpenMark {
         IERC2981Dispatcher, IERC2981DispatcherTrait,
     };
 
-    use starknet::{get_caller_address, get_tx_info, ContractAddress, get_block_timestamp};
+    use openzeppelin::introspection::interface::ISRC5DispatcherTrait;
+    use openzeppelin::introspection::interface::ISRC5Dispatcher;
+    use openzeppelin::token::common::erc2981::interface::IERC2981_ID;
+
+    use starknet::{
+        get_caller_address, get_tx_info, ContractAddress, get_block_timestamp,
+        contract_address_const,
+    };
     use starknet::ClassHash;
 
     use core::num::traits::Zero;
@@ -99,7 +106,7 @@ pub mod OpenMark {
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
         self.ownable.initializer(owner);
-        self.commission.write(0);
+        self.commission.write(0); // 0%
         self.maxRoyalty.write(1000); // 10%
     }
 
@@ -298,7 +305,7 @@ pub mod OpenMark {
             buyer: ContractAddress,
         ) {
             // 1. verify order
-            self._verify_order(order, seller, get_caller_address(), OrderType::Buy);
+            self._verify_order(order, seller, buyer, OrderType::Buy);
 
             // 2. verify signature
             self._validate_order_signature(order, seller, signature);
@@ -377,7 +384,7 @@ pub mod OpenMark {
         }
 
         fn _calculate_commission(self: @ContractState, price: u256) -> u256 {
-            price * self.commission.read().into() / PERMYRIAD.into()
+            price * self.commission.read().into() / PERMYRIAD
         }
 
         /// Processes a payment from sender to a receiver.
@@ -387,6 +394,8 @@ pub mod OpenMark {
         /// - `receiver`: The address to receive the payment.
         /// - `amount`: The amount to be transferred.
         /// - `payment_token`: The address of the payment token contract.
+        /// - `nft_contract`: The address of the nft contract.
+        /// - `token_id`: token id traded.
         fn _process_payment(
             self: @ContractState,
             sender: ContractAddress,
@@ -396,14 +405,26 @@ pub mod OpenMark {
             nft_contract: ContractAddress,
             token_id: u128,
         ) {
-            // Check if the contract supports IERC2981 (royalty standard)
-            let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
-            let (royalty_receiver, mut royalty_amount) = royalty_dispatcher
-                .royalty_info(token_id.into(), amount);
+            // Default royalty values
+            let mut royalty_receiver: ContractAddress = contract_address_const::<0>();
+            let mut royalty_amount: u256 = 0;
 
-            // Ensure the royaltyAmount does not exceed the maximum allowed royalty
+            // Check if nft_contract supports IERC2981 using ERC165
+            let erc165_dispatcher = ISRC5Dispatcher { contract_address: nft_contract };
+            let supports_royalty = erc165_dispatcher.supports_interface(IERC2981_ID);
+
+            // If IERC2981 is supported, fetch royalty info
+            if supports_royalty {
+                let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
+                let (receiver, amount_from_nft) = royalty_dispatcher
+                    .royalty_info(token_id.into(), amount);
+                royalty_receiver = receiver;
+                royalty_amount = amount_from_nft;
+            }
+
+            // Ensure the royalty_amount does not exceed the maximum allowed royalty
             let max_royalty_amount = (amount * self.maxRoyalty.read()) / PERMYRIAD;
-            if (royalty_amount > max_royalty_amount) {
+            if royalty_amount > max_royalty_amount {
                 royalty_amount = max_royalty_amount;
             }
 
@@ -411,6 +432,7 @@ pub mod OpenMark {
             let commission = self._calculate_commission(amount);
             let payout = amount - royalty_amount - commission;
 
+            // Perform transfers
             let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
             token_dispatcher.transfer_from(sender, receiver, payout);
 

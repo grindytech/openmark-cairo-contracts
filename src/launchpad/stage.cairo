@@ -83,7 +83,7 @@ pub mod StageComponent {
 
             sales = token_dispatcher.balance_of(get_contract_address());
 
-            let commission = self.commission.read().into() * sales / PERMYRIAD.into();
+            let commission = self.commission.read().into() * sales / PERMYRIAD;
             let payout = sales - commission.into();
 
             token_dispatcher.transfer(receiver, payout.into());
