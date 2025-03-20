@@ -405,32 +405,6 @@ pub mod OpenMark {
             nft_contract: ContractAddress,
             token_id: u128,
         ) {
-            // // Check if the contract supports IERC2981 (royalty standard)
-            // let royalty_dispatcher = IERC2981Dispatcher { contract_address: nft_contract };
-            // let (royalty_receiver, mut royalty_amount) = royalty_dispatcher
-            //     .royalty_info(token_id.into(), amount);
-
-            // // Ensure the royaltyAmount does not exceed the maximum allowed royalty
-            // let max_royalty_amount = (amount * self.maxRoyalty.read()) / PERMYRIAD;
-            // if (royalty_amount > max_royalty_amount) {
-            //     royalty_amount = max_royalty_amount;
-            // }
-
-            // // Calculate the fee and payout
-            // let commission = self._calculate_commission(amount);
-            // let payout = amount - royalty_amount - commission;
-
-            // let token_dispatcher = IERC20Dispatcher { contract_address: payment_token };
-            // token_dispatcher.transfer_from(sender, receiver, payout);
-
-            // if royalty_amount > 0 {
-            //     token_dispatcher.transfer_from(sender, royalty_receiver, royalty_amount);
-            // }
-
-            // if commission > 0 {
-            //     token_dispatcher.transfer_from(sender, self.owner(), commission);
-            // }
-
             // Default royalty values
             let mut royalty_receiver: ContractAddress = contract_address_const::<0>();
             let mut royalty_amount: u256 = 0;

@@ -19,15 +19,15 @@ use openmark::{
         IOpenMarkManagerDispatcherTrait,
     },
 };
-use openmark::assets::interface::{IOpenCollectionDispatcher,IOpenCollectionDispatcherTrait};
+use openmark::assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait};
 
 use openmark::tests::unit::common::{
-     OM_OWNER, toAddress,
-    ROYALTY, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1, do_create_buy,
-    setup_balance_at, TEST_PAYMENT,
+    OM_OWNER, toAddress, ROYALTY, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1,
+    do_create_buy, setup_balance_at, TEST_PAYMENT, deploy_openmark,
 };
 use openmark::core::OpenMark;
 use openmark::primitives::constants::{PERMYRIAD};
+use openmark::primitives::types::{Order, OrderType};
 use openmark::core::events::{OrderFilled, OrderCancelled};
 use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
 
@@ -38,7 +38,7 @@ pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> Cont
     constructor_calldata.append_serde(NFT_SYMBOL());
     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
 
-    let collectionDispatcher = IOpenCollectionDispatcher{contract_address};
+    let collectionDispatcher = IOpenCollectionDispatcher { contract_address };
     collectionDispatcher.mintURIs(receiver, ["", "", "", ""].span());
     contract_address
 }
@@ -50,9 +50,36 @@ fn buy_works() {
     let nft_token = setup_erc721_at(toAddress(TEST_NFT), seller);
     let buyer: ContractAddress = toAddress(BUYER1);
 
-    let (order, signature, openmark_address, nft_token, payment_token, _, _) = do_create_buy(
-        nft_token, payment_token, seller, buyer,
-    );
+    let openmark_address = deploy_openmark();
+    let ERC721Dispatcher = IERC721Dispatcher { contract_address: nft_token };
+    let ERC20Dispatcher = IERC20Dispatcher { contract_address: payment_token };
+    let tokenId = 2;
+    let order = Order {
+        nftContract: nft_token,
+        tokenId: tokenId,
+        value: 1,
+        payment: payment_token,
+        price: 10000,
+        salt: 4,
+        expiry: 5,
+        option: OrderType::Buy,
+    };
+
+    // create and approve
+    {
+        start_cheat_caller_address(nft_token, toAddress(NFT_OWNER));
+        start_cheat_caller_address(nft_token, seller);
+        ERC721Dispatcher.set_approval_for_all(openmark_address, true);
+    }
+    start_cheat_caller_address(openmark_address, buyer);
+    start_cheat_caller_address(payment_token, buyer);
+
+    ERC20Dispatcher.approve(openmark_address, 100000);
+    let signature = array![
+        0x36037f2776f6b844c80a863f09d635ac9464017193a668bede2e82cd8146303,
+        0x570bbef96c0334beb61513f923d0ec45751e40baba45829f84fb0dba5202342,
+    ];
+
     let commission = 500; // 5%
     // setup commission and royalty
     let manager_dispatcher = IOpenMarkManagerDispatcher { contract_address: openmark_address };
@@ -77,7 +104,8 @@ fn buy_works() {
     start_cheat_caller_address(nft_token, openmark_address);
 
     let mut spy = spy_events();
-    openmark.buy(seller, order, signature);
+    openmark.buy(seller, order, signature.span());
+
     let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
     spy.assert_emitted(@array![(openmark_address, expected_event)]);
     let buyer_after_balance = payment_dispatcher.balance_of(buyer);

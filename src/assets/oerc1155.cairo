@@ -1,12 +1,12 @@
 #[starknet::contract]
 mod OERC1155 {
-    // use openzeppelin_token::erc1155::interface::IERC1155MetadataURI;
+    use openzeppelin::token::erc1155::interface::IERC1155_ID;
+    use SRC5Component::InternalTrait as SRC5InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
     use starknet::ContractAddress;
-    use openzeppelin::token::common::erc2981::interface::{IERC2981};
-
-    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
+    use openzeppelin::token::common::erc2981::interface::{IERC2981, IERC2981_ID};
+    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait as AccessInternalTrait;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openmark::primitives::constants::{MINTER_ROLE, PERMYRIAD};
@@ -75,8 +75,9 @@ mod OERC1155 {
         self.symbol.write(symbol);
         self.royaltyPercentage.write(royaltyPercentage);
         self.royaltyReceiver.write(owner);
+        self.src5.register_interface(IERC2981_ID);
+        self.src5.register_interface(IERC1155_ID);
     }
-
 
     #[abi(embed_v0)]
     impl ERC1155MinterImpl of IERC1155Minter<ContractState> {
