@@ -1,6 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contracts for Cairo
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
 use starknet::{ContractAddress, ClassHash};
 use openmark::primitives::types::{Stage, ID};
-
 
 #[starknet::interface]
 pub trait ILaunchpad<T> {

@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contracts for Cairo
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
 #[starknet::contract]
 mod OERC1155 {
     use openzeppelin::token::erc1155::interface::IERC1155_ID;

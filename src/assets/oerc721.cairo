@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contracts for Cairo
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
 #[starknet::contract]
 mod OERC721 {
     use SRC5Component::InternalTrait as SRC5InternalTrait;

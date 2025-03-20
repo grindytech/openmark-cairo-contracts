@@ -58,4 +58,4 @@ For a detailed API reference, please see the [API.md](./API.md) file.
 
 ## License
 
-OpenMark Contracts for Cairo is released under the [MIT License](LICENSE).
+OpenMark Contracts for Cairo is released under the [GPL-3.0 license](LICENSE).

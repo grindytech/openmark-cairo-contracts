@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contracts for Cairo
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
 pub const MINTER_ROLE: felt252 = 'MINTER_ROLE';
 pub const PERMYRIAD: u256 = 10000;
 
