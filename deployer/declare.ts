@@ -41,12 +41,12 @@ async function declareContract(
     try {
         await provider.getClassByHash(computedClassHash);
         console.log(`${contractName} already declared with classHash:`, computedClassHash);
-        return computedClassHash; // Return existing class hash if already declared
+        return computedClassHash;
     } catch (error) {
-        `Failed to check class hash for ${contractName}: ${(error as Error).message}`
+        `Failed to check class hash for ${contractName}: ${(error as Error).message}`;
     }
 
-    // If not declared, declare the contract
+    // Declare the contract
     const declareResponse = await account.declare({
         contract: sierraArtifact,
         casm: casmArtifact,
@@ -60,98 +60,61 @@ async function declareContract(
 }
 
 async function declareAll() {
-    const account0 = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
     const classHashes: ClassHashRecord = {};
 
-    // Declare OpenMark
-    classHashes['OpenMark'] = await declareContract(
-        account0,
-        'OpenMark',
-        './target/dev/openmark_OpenMark.contract_class.json',
-        './target/dev/openmark_OpenMark.compiled_contract_class.json'
-    );
+    // Map of contract names to their artifact paths
+    const contractArtifacts: { [key: string]: { sierra: string; casm: string } } = {
+        'OpenMark': {
+            sierra: './target/dev/openmark_OpenMark.contract_class.json',
+            casm: './target/dev/openmark_OpenMark.compiled_contract_class.json',
+        },
+        'OpenCollection': {
+            sierra: './target/dev/openmark_OpenCollection.contract_class.json',
+            casm: './target/dev/openmark_OpenCollection.compiled_contract_class.json',
+        },
+        'OpenLaunchpad': {
+            sierra: './target/dev/openmark_OpenLaunchpad.contract_class.json',
+            casm: './target/dev/openmark_OpenLaunchpad.compiled_contract_class.json',
+        },
+        'OERC721Factory': {
+            sierra: './target/dev/openmark_OERC721Factory.contract_class.json',
+            casm: './target/dev/openmark_OERC721Factory.compiled_contract_class.json',
+        },
+        'OERC1155Factory': {
+            sierra: './target/dev/openmark_OERC1155Factory.contract_class.json',
+            casm: './target/dev/openmark_OERC1155Factory.compiled_contract_class.json',
+        },
+        'LaunchpadFactory': {
+            sierra: './target/dev/openmark_LaunchpadFactory.contract_class.json',
+            casm: './target/dev/openmark_LaunchpadFactory.compiled_contract_class.json',
+        },
+        'OERC721': {
+            sierra: './target/dev/openmark_OERC721.contract_class.json',
+            casm: './target/dev/openmark_OERC721.compiled_contract_class.json',
+        },
+        'OERC1155': {
+            sierra: './target/dev/openmark_OERC1155.contract_class.json',
+            casm: './target/dev/openmark_OERC1155.compiled_contract_class.json',
+        },
+        'Launchpad': {
+            sierra: './target/dev/openmark_Launchpad.contract_class.json',
+            casm: './target/dev/openmark_Launchpad.compiled_contract_class.json',
+        },
+        'StageSelector': {
+            sierra: './target/dev/openmark_StageSelector.contract_class.json',
+            casm: './target/dev/openmark_StageSelector.compiled_contract_class.json',
+        },
+        'StageBatchSelector': {
+            sierra: './target/dev/openmark_StageBatchSelector.contract_class.json',
+            casm: './target/dev/openmark_StageBatchSelector.compiled_contract_class.json',
+        },
+    };
 
-    // Declare OpenCollection
-    classHashes['OpenCollection'] = await declareContract(
-        account0,
-        'OpenCollection',
-        './target/dev/openmark_OpenCollection.contract_class.json',
-        './target/dev/openmark_OpenCollection.compiled_contract_class.json'
-    );
-
-    // Declare OpenLaunchpad
-    classHashes['OpenLaunchpad'] = await declareContract(
-        account0,
-        'OpenLaunchpad',
-        './target/dev/openmark_OpenLaunchpad.contract_class.json',
-        './target/dev/openmark_OpenLaunchpad.compiled_contract_class.json'
-    );
-
-    // Declare OERC721Factory
-    classHashes['OERC721Factory'] = await declareContract(
-        account0,
-        'OERC721Factory',
-        './target/dev/openmark_OERC721Factory.contract_class.json',
-        './target/dev/openmark_OERC721Factory.compiled_contract_class.json'
-    );
-
-    // Declare OERC1155Factory
-    classHashes['OERC1155Factory'] = await declareContract(
-        account0,
-        'OERC1155Factory',
-        './target/dev/openmark_OERC1155Factory.contract_class.json',
-        './target/dev/openmark_OERC1155Factory.compiled_contract_class.json'
-    );
-
-    // Declare LaunchpadFactory
-    classHashes['LaunchpadFactory'] = await declareContract(
-        account0,
-        'LaunchpadFactory',
-        './target/dev/openmark_LaunchpadFactory.contract_class.json',
-        './target/dev/openmark_LaunchpadFactory.compiled_contract_class.json'
-    );
-    
-    //**  Declare Utilities *//
-    
-    // Declare OERC721
-    classHashes['OERC721'] = await declareContract(
-        account0,
-        'OERC721',
-        './target/dev/openmark_OERC721.contract_class.json',
-        './target/dev/openmark_OERC721.compiled_contract_class.json'
-    );
-
-    // Declare OERC1155
-    classHashes['OERC1155'] = await declareContract(
-        account0,
-        'OERC1155',
-        './target/dev/openmark_OERC1155.contract_class.json',
-        './target/dev/openmark_OERC1155.compiled_contract_class.json'
-    );
-   
-    // Declare Launchpad
-    classHashes['Launchpad'] = await declareContract(
-        account0,
-        'Launchpad',
-        './target/dev/openmark_Launchpad.contract_class.json',
-        './target/dev/openmark_Launchpad.compiled_contract_class.json'
-    );
-   
-    // Declare StageSelector
-    classHashes['StageSelector'] = await declareContract(
-        account0,
-        'StageSelector',
-        './target/dev/openmark_StageSelector.contract_class.json',
-        './target/dev/openmark_StageSelector.compiled_contract_class.json'
-    );
-
-    // Declare StageBatchSelector
-    classHashes['StageBatchSelector'] = await declareContract(
-        account0,
-        'StageBatchSelector',
-        './target/dev/openmark_StageBatchSelector.contract_class.json',
-        './target/dev/openmark_StageBatchSelector.compiled_contract_class.json'
-    );
+    // Declare all contracts
+    for (const [contractName, { sierra, casm }] of Object.entries(contractArtifacts)) {
+        classHashes[contractName] = await declareContract(account, contractName, sierra, casm);
+    }
 
     // Save class hashes to file
     fs.writeFileSync('./classhashes.json', JSON.stringify(classHashes, null, 2));
