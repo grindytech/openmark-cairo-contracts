@@ -67,7 +67,7 @@ async function deploy() {
             maxTokenId: 1000,
             royaltyPercentage: 500, // 5%
         };
-        deployedAddresses['OpenCollection'] = await do_deploy('OpenCollection', classHashes['OERC721'], data);
+        deployedAddresses['OpenCollection'] = await do_deploy('OpenCollection', classHashes['OpenCollection'], data);
     } else {
         console.log(`Skipping OpenCollection: already deployed at ${deployedAddresses['OpenCollection']}`);
     }
