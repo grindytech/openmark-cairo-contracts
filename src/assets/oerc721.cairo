@@ -140,7 +140,7 @@ mod OERC721 {
             self.erc721._set_base_uri(newBaseURI);
             self.maxTokenId.write(newMaxTokenId);
         }
-        fn BaseURI(self: @ContractState) -> ByteArray {
+        fn baseURI(self: @ContractState) -> ByteArray {
             self.erc721._base_uri()
         }
         fn getMaxTokenId(self: @ContractState) -> u256 {

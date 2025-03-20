@@ -17,7 +17,7 @@ pub trait IERC721Minter<T> {
 #[starknet::interface]
 pub trait IOERC721Handler<T> {
     fn setBaseURI(ref self: T, newBaseURI: ByteArray, newMaxTokenId: u256);
-    fn BaseURI(self: @T) -> ByteArray;
+    fn baseURI(self: @T) -> ByteArray;
     fn getMaxTokenId(self: @T) -> u256;
 
     fn setRoyalty(ref self: T, royaltyPercentage: u256, royaltyReceiver: ContractAddress);

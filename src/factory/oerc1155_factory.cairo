@@ -40,7 +40,7 @@ pub mod OERC1155Factory {
         pub name: ByteArray,
         pub symbol: ByteArray,
         pub uri: ByteArray,
-        pub total_supply: u256,
+        pub max_token_id: u256,
         pub royalty_percentage: u256,
     }
 
@@ -71,7 +71,7 @@ pub mod OERC1155Factory {
             name: ByteArray,
             symbol: ByteArray,
             uri: ByteArray,
-            total_supply: u256,
+            max_token_id: u256,
             royalty_percentage: u256,
         ) {
             assert(self.factory.read(id).is_zero(), 'OM: ID in use');
@@ -81,7 +81,7 @@ pub mod OERC1155Factory {
             name.serialize(ref constructor_calldata);
             symbol.serialize(ref constructor_calldata);
             uri.serialize(ref constructor_calldata);
-            total_supply.serialize(ref constructor_calldata);
+            max_token_id.serialize(ref constructor_calldata);
             royalty_percentage.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
@@ -93,7 +93,7 @@ pub mod OERC1155Factory {
             self
                 .emit(
                     CollectionCreated {
-                        id, address, owner, name, symbol, uri, total_supply, royalty_percentage,
+                        id, address, owner, name, symbol, uri, max_token_id, royalty_percentage,
                     },
                 );
         }

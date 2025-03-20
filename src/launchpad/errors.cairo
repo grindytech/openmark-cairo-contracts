@@ -20,5 +20,4 @@ pub mod LPErrors {
     pub const STAGE_ID_USED: felt252 = 'OM: stage id used';
 
     pub const INVALID_DURATION: felt252 = 'OM: invalid duration';
-    pub const SALE_DURATION_EXCEEDED: felt252 = 'OM: duration exceeded';
 }

@@ -18,6 +18,7 @@ pub mod OpenLaunchpad {
     use openmark::primitives::constants::{MINTER_ROLE};
     use openmark::launchpad::errors::LPErrors as Errors;
     use openmark::launchpad::events::StageCreated;
+    use openzeppelin::upgrades::interface::IUpgradeable;
 
     /// Ownable
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -49,8 +50,6 @@ pub mod OpenLaunchpad {
         stages: Map<ID, ContractAddress>,
         // Store sales commission
         commission: u32,
-        // Stored maximum allowed sales duration
-        maxSalesDuration: u128,
         selector_classhash: ClassHash,
         batch_selector_classhash: ClassHash,
     }
@@ -77,7 +76,6 @@ pub mod OpenLaunchpad {
     ) {
         self.ownable.initializer(owner);
         self.commission.write(commission); // per mille (default 5%)
-        self.maxSalesDuration.write(2592000); // 30 days
         self.selector_classhash.write(selector_classhash);
         self.batch_selector_classhash.write(batch_selector_classhash);
     }
@@ -136,11 +134,6 @@ pub mod OpenLaunchpad {
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
             assert(stage.startTime < stage.endTime, Errors::INVALID_DURATION);
 
-            assert(
-                stage.endTime - stage.startTime < self.maxSalesDuration.read(),
-                Errors::SALE_DURATION_EXCEEDED,
-            );
-
             let access_dispatcher = IAccessControlDispatcher { contract_address: stage.collection };
             assert(
                 access_dispatcher.has_role(DEFAULT_ADMIN_ROLE, owner)
@@ -154,16 +147,22 @@ pub mod OpenLaunchpad {
         }
     }
 
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.ownable.assert_only_owner();
+
+            // Replace the class hash upgrading the contract
+            self.upgradeable.upgrade(new_class_hash);
+        }
+    }
+
     #[generate_trait]
     impl ExternalFunctions of ExternalFunctionsTrait {
         fn setCommission(ref self: ContractState, newCommission: u32) {
             self.ownable.assert_only_owner();
             self.commission.write(newCommission);
-        }
-
-        fn setMaxSalesDuration(ref self: ContractState, newSalesDuration: u128) {
-            self.ownable.assert_only_owner();
-            self.maxSalesDuration.write(newSalesDuration);
         }
 
         fn setSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
@@ -176,10 +175,9 @@ pub mod OpenLaunchpad {
             self.batch_selector_classhash.write(newClasshash);
         }
 
-        fn getConfig(self: @ContractState) -> (u32, u128, ClassHash, ClassHash) {
+        fn getConfig(self: @ContractState) -> (u32, ClassHash, ClassHash) {
             return (
                 self.commission.read(),
-                self.maxSalesDuration.read(),
                 self.selector_classhash.read(),
                 self.batch_selector_classhash.read(),
             );

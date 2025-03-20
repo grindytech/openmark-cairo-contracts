@@ -113,4 +113,30 @@ pub mod LaunchpadFactory {
             self.launchpad_classhash.write(classhash);
         }
     }
+
+     #[generate_trait]
+    impl ExternalFunctions of ExternalFunctionsTrait {
+        fn setCommission(ref self: ContractState, newCommission: u32) {
+            self.ownable.assert_only_owner();
+            self.commission.write(newCommission);
+        }
+
+        fn setSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.selector_classhash.write(newClasshash);
+        }
+
+        fn setBatchSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.batch_selector_classhash.write(newClasshash);
+        }
+
+        fn getConfig(self: @ContractState) -> (u32, ClassHash, ClassHash) {
+            return (
+                self.commission.read(),
+                self.selector_classhash.read(),
+                self.batch_selector_classhash.read(),
+            );
+        }
+    }
 }

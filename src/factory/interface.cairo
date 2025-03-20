@@ -9,7 +9,7 @@ pub trait IOERC721Factory<T> {
         name: ByteArray,
         symbol: ByteArray,
         base_uri: ByteArray,
-        total_supply: u256,
+        max_token_id: u256,
         royalty_percentage: u256,
     );
 
@@ -25,7 +25,7 @@ pub trait IOERC1155Factory<T> {
         name: ByteArray,
         symbol: ByteArray,
         uri: ByteArray,
-        total_supply: u256,
+        max_token_id: u256,
         royalty_percentage: u256,
     );
 

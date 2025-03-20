@@ -46,7 +46,7 @@ mod OpenCollection {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, name: ByteArray, symbol: ByteArray,) {
+    fn constructor(ref self: ContractState, name: ByteArray, symbol: ByteArray) {
         self.erc721.initializer(name, symbol, "");
     }
 
@@ -76,5 +76,4 @@ mod OpenCollection {
     fn get_contract_name(self: @ContractState) -> felt252 {
         'Name Registry'
     }
-
 }

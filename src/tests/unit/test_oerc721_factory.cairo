@@ -51,7 +51,7 @@ fn create_collection_works() {
             name: "Starknet NFT",
             symbol: "Stark NFT",
             base_uri: "https://starknet.io",
-            total_supply: 1000_u256,
+            max_token_id: 1000_u256,
             royalty_percentage: 0_u256,
         },
     );
