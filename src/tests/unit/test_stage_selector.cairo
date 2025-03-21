@@ -170,19 +170,20 @@ fn create_stages_works() {
 
     let mut spy = spy_events();
     launchpad_contract.createStage(id, stage, Option::None, [].span());
+    let stage_selector = launchpad_contract.getStage(id);
+
     let expected_event = OpenLaunchpad::Event::StageCreated(
         StageCreated {
-            id,
+            stageId: id,
             owner,
+            stageAddress: stage_selector,
             stage,
             rootWhitelist: Option::None,
             collectionWhitelists: [].span(),
-            commission: 0,
         },
     );
     spy.assert_emitted(@array![(launchpad_address, expected_event)]);
 
-    let stage_selector = launchpad_contract.getStage(id);
 
     let ostage_dispatcher = IOStageDispatcher { contract_address: stage_selector };
     let stage_info = ostage_dispatcher.getStage();

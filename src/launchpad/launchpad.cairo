@@ -16,7 +16,9 @@ pub mod Launchpad {
 
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
-    use starknet::{ClassHash, ContractAddress, get_caller_address, SyscallResultTrait};
+    use starknet::{
+        ClassHash, ContractAddress, get_caller_address, SyscallResultTrait, contract_address_const,
+    };
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
     use openmark::launchpad::interface::{ILaunchpad, ILaunchpadProvider};
     use openmark::primitives::types::{Stage, ID, StageType};
@@ -114,6 +116,7 @@ pub mod Launchpad {
             self.commission.read().serialize(ref constructor_calldata);
             self.commissionReceiver.read().serialize(ref constructor_calldata);
 
+            let mut stageAddress = contract_address_const::<0>();
             if (stage.stageType == StageType::Selector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
                     self.selector_classhash.read(), 0, constructor_calldata.span(), false,
@@ -121,6 +124,7 @@ pub mod Launchpad {
                     .unwrap_syscall();
 
                 self.stages.write(id, address);
+                stageAddress = address;
             } else if (stage.stageType == StageType::BatchSelector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
                     self.batch_selector_classhash.read(), 0, constructor_calldata.span(), false,
@@ -128,17 +132,18 @@ pub mod Launchpad {
                     .unwrap_syscall();
 
                 self.stages.write(id, address);
+                stageAddress = address;
             }
 
-             self
+            self
                 .emit(
                     StageCreated {
-                        id,
                         owner,
+                        stageId: id,
+                        stageAddress: stageAddress,
                         stage,
                         rootWhitelist,
                         collectionWhitelists,
-                        commission: self.commission.read(),
                     },
                 );
         }

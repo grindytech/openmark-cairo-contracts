@@ -42,7 +42,7 @@ pub mod LaunchpadFactory {
     }
 
     #[derive(Drop, PartialEq, starknet::Event)]
-    pub struct StageCreated {
+    pub struct LaunchpadCreated {
         pub id: u256,
         pub address: ContractAddress,
         pub owner: ContractAddress,
@@ -56,7 +56,7 @@ pub mod LaunchpadFactory {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
-        StageCreated: StageCreated,
+        LaunchpadCreated: LaunchpadCreated,
     }
 
     #[constructor]
@@ -92,7 +92,7 @@ pub mod LaunchpadFactory {
                 .unwrap_syscall();
             self.factory.write(id, address);
 
-            self.emit(StageCreated { id, address, owner, commission: self.commission.read() });
+            self.emit(LaunchpadCreated { id, address, owner, commission: self.commission.read() });
         }
 
         fn getInstance(self: @ContractState, id: u256) -> ContractAddress {

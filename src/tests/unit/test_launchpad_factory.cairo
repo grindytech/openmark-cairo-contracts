@@ -11,7 +11,7 @@ use openmark::launchpad::interface::{
     ILaunchpadProviderDispatcher, ILaunchpadProviderDispatcherTrait,
 };
 use openmark::factory::launchpad_factory::LaunchpadFactory;
-use openmark::factory::launchpad_factory::LaunchpadFactory::StageCreated;
+use openmark::factory::launchpad_factory::LaunchpadFactory::LaunchpadCreated;
 
 fn create_launchpad_template() -> ContractAddress {
     let contract = declare("Launchpad").unwrap().contract_class();
@@ -74,7 +74,7 @@ fn create_launchpad_works() {
     factory_contract.createInstance(10, toAddress(SELLER1));
     let launchpad_address = factory_contract.getInstance(10);
     
-    let expected_event = LaunchpadFactory::Event::StageCreated(StageCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1), commission: 0 });
+    let expected_event = LaunchpadFactory::Event::LaunchpadCreated(LaunchpadCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1), commission: 0 });
     spy.assert_emitted(@array![(factory_address, expected_event)]);
 
     let launchpad_dispatcher = ILaunchpadProviderDispatcher { contract_address: launchpad_address };

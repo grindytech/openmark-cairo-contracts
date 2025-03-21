@@ -78,9 +78,7 @@ fn setup_stage(
     let payment_address = create_erc20(buyer);
     let nft_address = create_oerc1155(owner);
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, commission,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, commission);
 
     let stage = Stage {
         stageType: StageType::BatchSelector,
@@ -120,9 +118,7 @@ fn create_stage_works() {
     let payment_address = setup_balance_at(toAddress(TEST_PAYMENT));
     let nft_address = do_setup_oerc721_at(toAddress(TEST_NFT), owner);
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner, 0,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, 0);
 
     let stage = Stage {
         stageType: StageType::BatchSelector,
@@ -140,19 +136,19 @@ fn create_stage_works() {
 
     let mut spy = spy_events();
     launchpad_contract.createStage(id, stage, Option::None, [].span());
+    let stage_selector = launchpad_contract.getStage(id);
+
     let expected_event = OpenLaunchpad::Event::StageCreated(
         StageCreated {
-            id,
+            stageId: id,
             owner,
+            stageAddress: stage_selector,
             stage,
             rootWhitelist: Option::None,
             collectionWhitelists: [].span(),
-            commission: 0,
         },
     );
     spy.assert_emitted(@array![(launchpad_address, expected_event)]);
-
-    let stage_selector = launchpad_contract.getStage(id);
 
     let ostage_dispatcher = IOStageDispatcher { contract_address: stage_selector };
     let stage_info = ostage_dispatcher.getStage();
@@ -302,8 +298,8 @@ fn close_stages_works() {
     let stage_selector_dispatcher = IStageBatchSelectorDispatcher {
         contract_address: stage_address,
     };
-    
-     let mut spy = spy_events();
+
+    let mut spy = spy_events();
     stage_selector_dispatcher.closeStage();
 
     let expected_event = StageComponent::Event::StageClosed(StageClosed { caller: owner });
@@ -340,7 +336,7 @@ fn withdraw_sales_works() {
 
     start_cheat_caller_address(stage_address, admin);
 
-     let mut spy = spy_events();
+    let mut spy = spy_events();
     stage_selector_dispatcher.withdrawSales();
 
     let expected_event = StageComponent::Event::SalesWithdrawn(
@@ -479,9 +475,7 @@ fn update_stages_id_used_panics() {
     let payment_address = create_erc20(buyer);
     let nft_address = create_oerc1155(owner);
 
-    let (launchpad_address, launchpad_contract) = create_open_launchpad(
-        owner,  0,
-    );
+    let (launchpad_address, launchpad_contract) = create_open_launchpad(owner, 0);
 
     let stage = Stage {
         stageType: StageType::BatchSelector,

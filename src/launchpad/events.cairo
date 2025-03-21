@@ -35,12 +35,12 @@ pub struct StageClosed {
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct StageCreated {
     #[key]
-    pub id: ID,
-    #[key]
     pub owner: ContractAddress,
     #[key]
+    pub stageId: ID,
+    #[key]
+    pub stageAddress: ContractAddress,
     pub stage: Stage,
     pub rootWhitelist: Option::<felt252>,
     pub collectionWhitelists: Span<ContractAddress>,
-    pub commission: u32,
 }
