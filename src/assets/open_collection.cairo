@@ -55,16 +55,31 @@ mod OpenCollection {
         self.erc721.initializer(name, symbol, "");
     }
 
-
     #[abi(embed_v0)]
     impl OpenCollectionImpl of IOpenCollection<ContractState> {
-        fn mintURIs(ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>) {
+        fn mint_uris(ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>) {
             for uri in uris {
                 let token_index = self._next_mint_index();
                 self.token_uris.write(token_index, uri.clone());
                 self.erc721.mint(to, token_index);
                 self.emit(TokenMinted { to, token_id: token_index, uri: uri.clone() });
             };
+        }
+
+        fn mintURIs(ref self: ContractState, to: ContractAddress, uris: Span<ByteArray>) {
+            self.mint_uris(to, uris);
+        }
+
+        fn open_token_uri(self: @ContractState, token_id: u256) -> ByteArray {
+            self.token_uris.read(token_id)
+        }
+
+        fn openTokenURI(self: @ContractState, tokenId: u256) -> ByteArray {
+            self.open_token_uri(tokenId)
+        }
+
+        fn getTokenIndex(self: @ContractState) -> u256 {
+            return self.token_index.read();
         }
     }
 

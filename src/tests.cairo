@@ -16,4 +16,5 @@ pub mod unit {
     
     mod test_stage_selector;
     mod test_stage_batch_selector;
+    mod test_open_collection;
 }

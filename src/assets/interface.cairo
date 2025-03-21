@@ -63,5 +63,11 @@ pub trait IOERC1155Handler<T> {
 
 #[starknet::interface]
 pub trait IOpenCollection<T> {
+    fn mint_uris(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
     fn mintURIs(ref self: T, to: ContractAddress, uris: Span<ByteArray>);
+    
+    fn open_token_uri(self: @T, token_id: u256) -> ByteArray;
+    fn openTokenURI(self: @T, tokenId: u256) -> ByteArray;
+    
+    fn getTokenIndex(self: @T) -> u256;
 }

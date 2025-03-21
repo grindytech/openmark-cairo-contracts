@@ -39,8 +39,7 @@ async function callMintURIs() {
     const calldata = CallData.compile({
         to: Deployer,
         uris: [
-            byteArray.byteArrayFromString('ipfs://QmUMGWrnyeuPkARUYMUf5U9NWo8uihRGnhLH5yk3rzdUX6/0'),
-            byteArray.byteArrayFromString('ipfs://QmfFYf8G2Y9dvbnT843NFQs4evfJEJK1XHwo2qySjpHJ4e/1'),
+            byteArray.byteArrayFromString('ipfs://QmXmChYqhfXhtrZafjkREFBKomdk4cy345bJTnvBepAqv3/0'),
         ]
     });
 

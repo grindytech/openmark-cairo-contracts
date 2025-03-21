@@ -2,6 +2,7 @@
   "name": "openmark",
   "version": "0.0.1",
   "scripts": {
+    "build": "rm -rf target || rd /s /q target 2>nul && scarb build",
     "test": "scarb test",
     "test:staging": "jest",
     "test:openmark": "ts-node scripts/run-tests.ts",
