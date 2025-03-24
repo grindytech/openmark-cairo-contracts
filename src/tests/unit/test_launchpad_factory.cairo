@@ -2,7 +2,10 @@ use snforge_std::EventSpyAssertionsTrait;
 use openmark::factory::interface::{ILaunchpadFactoryDispatcher, ILaunchpadFactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait, spy_events};
+use snforge_std::{
+    declare, ContractClassTrait, get_class_hash, DeclareResultTrait, spy_events,
+    start_cheat_caller_address,
+};
 use starknet::{ContractAddress, ClassHash};
 
 use openmark::tests::unit::common::{SELLER1, toAddress, create_stage, ZERO};
@@ -71,10 +74,15 @@ fn create_launchpad_works() {
     );
 
     let mut spy = spy_events();
-    factory_contract.createInstance(10, toAddress(SELLER1));
+    start_cheat_caller_address(factory_address, toAddress(SELLER1));
+    factory_contract.createInstance(10);
     let launchpad_address = factory_contract.getInstance(10);
-    
-    let expected_event = LaunchpadFactory::Event::LaunchpadCreated(LaunchpadCreated { id: 10, address: launchpad_address, owner: toAddress(SELLER1), commission: 0 });
+
+    let expected_event = LaunchpadFactory::Event::LaunchpadCreated(
+        LaunchpadCreated {
+            id: 10, address: launchpad_address, owner: toAddress(SELLER1), commission: 0,
+        },
+    );
     spy.assert_emitted(@array![(factory_address, expected_event)]);
 
     let launchpad_dispatcher = ILaunchpadProviderDispatcher { contract_address: launchpad_address };
@@ -88,7 +96,7 @@ fn create_launchpad_works() {
 #[should_panic(expected: ('OM: ID in use',))]
 fn create_launchpad_id_used_panics() {
     let (_, factory_contract, _, _) = create_launchpad_factory(toAddress(SELLER1));
-    factory_contract.createInstance(10, toAddress(SELLER1));
-    factory_contract.createInstance(10, toAddress(SELLER1));
+    factory_contract.createInstance(10);
+    factory_contract.createInstance(10);
 }
 

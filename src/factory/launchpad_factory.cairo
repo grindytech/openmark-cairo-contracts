@@ -12,7 +12,7 @@ pub mod LaunchpadFactory {
 
     use core::num::traits::Zero;
 
-    use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
     use starknet::storage::{Map};
     use openmark::factory::interface::{ILaunchpadFactory, IFactoryManager};
 
@@ -77,7 +77,8 @@ pub mod LaunchpadFactory {
 
     #[abi(embed_v0)]
     impl LaunchpadFactoryImpl of ILaunchpadFactory<ContractState> {
-        fn createInstance(ref self: ContractState, id: u256, owner: ContractAddress) {
+        fn createInstance(ref self: ContractState, id: u256) {
+            let owner = get_caller_address();
             assert(self.factory.read(id).is_zero(), 'OM: ID in use');
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
@@ -119,7 +120,7 @@ pub mod LaunchpadFactory {
         }
     }
 
-     #[generate_trait]
+    #[generate_trait]
     impl ExternalFunctions of ExternalFunctionsTrait {
         fn setCommission(ref self: ContractState, newCommission: u32) {
             self.ownable.assert_only_owner();

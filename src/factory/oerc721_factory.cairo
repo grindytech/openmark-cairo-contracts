@@ -12,7 +12,7 @@ pub mod OERC721Factory {
 
     use core::num::traits::Zero;
 
-    use starknet::{ClassHash, ContractAddress, SyscallResultTrait};
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address};
     use openmark::factory::interface::{IOERC721Factory, IFactoryManager};
 
     /// Ownable
@@ -56,12 +56,12 @@ pub mod OERC721Factory {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
-        CollectionCreated: CollectionCreated
+        CollectionCreated: CollectionCreated,
     }
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash
+        ref self: ContractState, owner: ContractAddress, collection_classhash: ClassHash,
     ) {
         self.ownable.initializer(owner);
         self.collection_classhash.write(collection_classhash);
@@ -72,7 +72,6 @@ pub mod OERC721Factory {
         fn createInstance(
             ref self: ContractState,
             id: u256,
-            owner: ContractAddress,
             name: ByteArray,
             symbol: ByteArray,
             base_uri: ByteArray,
@@ -80,7 +79,7 @@ pub mod OERC721Factory {
             royalty_percentage: u256,
         ) {
             assert(self.factory.read(id).is_zero(), 'OM: ID in use');
-
+            let owner = get_caller_address();
             let mut constructor_calldata = ArrayTrait::new();
             owner.serialize(ref constructor_calldata);
             name.serialize(ref constructor_calldata);
@@ -90,7 +89,7 @@ pub mod OERC721Factory {
             royalty_percentage.serialize(ref constructor_calldata);
 
             let (address, _) = core::starknet::syscalls::deploy_syscall(
-                self.collection_classhash.read(), 0, constructor_calldata.span(), false
+                self.collection_classhash.read(), 0, constructor_calldata.span(), false,
             )
                 .unwrap_syscall();
 
@@ -98,8 +97,15 @@ pub mod OERC721Factory {
             self
                 .emit(
                     CollectionCreated {
-                        id, address, owner, name, symbol, base_uri, max_token_id, royalty_percentage
-                    }
+                        id,
+                        address,
+                        owner,
+                        name,
+                        symbol,
+                        base_uri,
+                        max_token_id,
+                        royalty_percentage,
+                    },
                 );
         }
 

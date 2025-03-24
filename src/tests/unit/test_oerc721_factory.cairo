@@ -2,7 +2,10 @@ use snforge_std::EventSpyAssertionsTrait;
 use openmark::factory::interface::{IOERC721FactoryDispatcher, IOERC721FactoryDispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
 
-use snforge_std::{declare, ContractClassTrait, get_class_hash, DeclareResultTrait, spy_events};
+use snforge_std::{
+    declare, ContractClassTrait, get_class_hash, start_cheat_caller_address, DeclareResultTrait,
+    spy_events,
+};
 use starknet::{ContractAddress};
 
 use openmark::factory::oerc721_factory::OERC721Factory;
@@ -30,17 +33,10 @@ fn create_nft_factory() -> (ContractAddress, IOERC721FactoryDispatcher) {
 fn create_collection_works() {
     let (factory_address, factory_contract) = create_nft_factory();
 
+    start_cheat_caller_address(factory_address, toAddress(SELLER1));
     let mut spy = spy_events();
     factory_contract
-        .createInstance(
-            10,
-            toAddress(SELLER1),
-            "Starknet NFT",
-            "Stark NFT",
-            "https://starknet.io",
-            1000_u256,
-            0_u256,
-        );
+        .createInstance(10, "Starknet NFT", "Stark NFT", "https://starknet.io", 1000_u256, 0_u256);
     let nft_address = factory_contract.getInstance(10);
 
     let expected_event = OERC721Factory::Event::CollectionCreated(
@@ -64,18 +60,8 @@ fn create_collection_id_used_panics() {
     let (_, factory_contract) = create_nft_factory();
 
     factory_contract
-        .createInstance(
-            0,
-            toAddress(SELLER1),
-            "Starknet NFT",
-            "Stark NFT",
-            "https://starknet.io",
-            1000_u256,
-            0_u256,
-        );
+        .createInstance(0, "Starknet NFT", "Stark NFT", "https://starknet.io", 1000_u256, 0_u256);
 
     factory_contract
-        .createInstance(
-            0, toAddress(SELLER1), "Starknet", "Stark", "https://starknet.io", 1000_u256, 0_u256,
-        );
+        .createInstance(0, "Starknet", "Stark", "https://starknet.io", 1000_u256, 0_u256);
 }
