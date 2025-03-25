@@ -67,8 +67,6 @@ pub struct DropEntry {
 
 #[starknet::interface]
 pub trait IStageVRF<T> {
-    fn setup(ref self: T, drop_table: Span<DropEntry>);
-
     fn buy(ref self: T, amount: u256, merkleProof: Span<felt252>);
 
     fn withdrawSales(ref self: T);

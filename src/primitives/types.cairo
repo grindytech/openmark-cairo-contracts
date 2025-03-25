@@ -70,6 +70,14 @@ pub struct Stage {
     pub endTime: u128,
 }
 
+// Drop table entry
+#[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
+pub struct DropEntry {
+    pub token_id: u256,
+    pub weight: u128 // Weight determines drop probability
+}
+
+
 pub trait IStructHash<T> {
     fn hash_struct(self: @T) -> felt252;
 }
