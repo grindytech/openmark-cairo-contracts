@@ -39,6 +39,7 @@ pub trait IStageBatchSelector<T> {
     fn closeStage(ref self: T);
 }
 
+
 #[starknet::interface]
 pub trait IOStage<T> {
     fn getStage(self: @T) -> Stage;
@@ -55,4 +56,22 @@ pub trait IOStage<T> {
 #[starknet::interface]
 pub trait ILaunchpadProvider<T> {
     fn getConfig(self: @T) -> (u32, ClassHash, ClassHash);
+}
+
+// Drop table entry
+#[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
+pub struct DropEntry {
+    pub token_id: u256,
+    pub weight: u128 // Weight determines drop probability
+}
+
+#[starknet::interface]
+pub trait IStageVRF<T> {
+    fn setup(ref self: T, drop_table: Span<DropEntry>);
+
+    fn buy(ref self: T, amount: u256, merkleProof: Span<felt252>);
+
+    fn withdrawSales(ref self: T);
+
+    fn closeStage(ref self: T);
 }
