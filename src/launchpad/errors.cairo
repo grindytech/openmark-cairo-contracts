@@ -23,6 +23,4 @@ pub mod LPErrors {
     pub const MISSING_MINTER_ROLE: felt252 = 'OM: missing minter role';
     pub const NOT_STAGE_OWNER: felt252 = 'OM: not stage owner';
     pub const STAGE_ID_USED: felt252 = 'OM: stage id used';
-
-    pub const INVALID_DURATION: felt252 = 'OM: invalid duration';
 }

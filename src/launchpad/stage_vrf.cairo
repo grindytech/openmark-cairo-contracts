@@ -6,7 +6,7 @@
 #[starknet::contract]
 pub mod StageVRF {
     use core::num::traits::Zero;
-use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
     use openmark::launchpad::stage::StageComponent;
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -16,10 +16,10 @@ use openzeppelin::introspection::src5::SRC5Component;
     use openmark::assets::interface::{IERC1155MinterDispatcher, IERC1155MinterDispatcherTrait};
     use core::array::{ArrayTrait};
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
-    use openmark::launchpad::interface::{IStageVRF};
-    use starknet::{
-        ContractAddress, get_caller_address, get_contract_address, contract_address_const,
+    use openmark::launchpad::interface::{
+        IStageVRF, Source, IVrfProviderDispatcher, IVrfProviderDispatcherTrait,
     };
+    use starknet::{ContractAddress, get_caller_address, get_contract_address};
 
     use core::poseidon::{poseidon_hash_span};
 
@@ -35,17 +35,6 @@ use openzeppelin::introspection::src5::SRC5Component;
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
-    #[derive(Drop, Copy, Clone, Serde)]
-    pub enum Source {
-        Nonce: ContractAddress,
-        Salt: felt252,
-    }
-
-    #[starknet::interface]
-    trait IVrfProvider<TContractState> {
-        fn request_random(self: @TContractState, caller: ContractAddress, source: Source);
-        fn consume_random(ref self: TContractState, source: Source) -> felt252;
-    }
 
     #[storage]
     struct Storage {
@@ -82,8 +71,6 @@ use openzeppelin::introspection::src5::SRC5Component;
         collectionWhitelists: Span<ContractAddress>,
         commission: u128,
         commissionReceiver: ContractAddress,
-        vrfProvider: ContractAddress,
-        drop_table: Span<DropEntry>,
     ) {
         self.ownable.initializer(owner);
         self
@@ -91,18 +78,6 @@ use openzeppelin::introspection::src5::SRC5Component;
             .initializer(
                 stage, rootWhitelist, collectionWhitelists, commission, commissionReceiver,
             );
-        assert(!vrfProvider.is_zero(), 'Invalid VRF provider');
-        self.vrf_provider.write(vrfProvider);
-
-        let mut total_weight: u128 = 0;
-        let mut i: u32 = 0;
-        for entry in drop_table {
-            self.drop_table.write(i, *entry);
-            total_weight += (*entry).weight;
-            i += 1;
-        };
-        self.drop_table_length.write(i);
-        self.total_weight.write(total_weight);
     }
 
     // Internal function to generate a random roll value
@@ -117,6 +92,24 @@ use openzeppelin::introspection::src5::SRC5Component;
 
     #[abi(embed_v0)]
     impl StageVRFImpl of IStageVRF<ContractState> {
+        fn setup(
+            ref self: ContractState, vrf_provider: ContractAddress, drop_table: Span<DropEntry>,
+        ) {
+            self.ownable.assert_only_owner();
+            self.vrf_provider.write(vrf_provider);
+
+            let mut total_weight: u128 = 0;
+            let mut i: u32 = 0;
+            for entry in drop_table {
+                self.drop_table.write(i, *entry);
+                total_weight += (*entry).weight;
+                i += 1;
+            };
+            self.drop_table_length.write(i);
+            self.total_weight.write(total_weight);
+        }
+
+
         fn buy(ref self: ContractState, amount: u256, merkleProof: Span<felt252>) {
             self.validateStage();
             assert(amount > 0, Errors::ZERO_MINT_AMOUNT);

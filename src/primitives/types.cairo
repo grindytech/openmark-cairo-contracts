@@ -53,9 +53,7 @@ pub enum StageType {
      // Minting fungible tokens
     TokenMint,
     // Buying random token(s)
-    Random, 
-    // Batch buying with random allocation
-    BatchRandom 
+    Randomness, 
 }
 
 #[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]

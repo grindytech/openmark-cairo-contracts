@@ -470,7 +470,12 @@ pub fn create_stage(
         endTime: 100,
     };
 
-    let contract = declare("StageBatchSelector").unwrap().contract_class();
+    let mut contract = declare("StageBatchSelector").unwrap().contract_class();
+    if (stageType == StageType::Randomness) {
+        contract = declare("StageVRF").unwrap().contract_class();
+    } else if (stageType == StageType::Selector) {
+        contract = declare("StageSelector").unwrap().contract_class();
+    }
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);

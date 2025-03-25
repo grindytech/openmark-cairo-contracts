@@ -4,7 +4,7 @@
 // See LICENSE file for full terms.
 
 #[starknet::contract]
-pub mod OpenLaunchpad {
+pub mod StageFactory {
     use core::num::traits::Zero;
     use openzeppelin::access::ownable::interface::IOwnable;
     use openzeppelin::security::ReentrancyGuardComponent;
@@ -16,13 +16,13 @@ pub mod OpenLaunchpad {
     };
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::merkle_tree::hashes::{PedersenCHasher, PoseidonCHasher};
-    use starknet::{ClassHash, ContractAddress, get_caller_address, SyscallResultTrait, contract_address_const};
+    use starknet::{
+        ClassHash, ContractAddress, get_caller_address, SyscallResultTrait, contract_address_const,
+    };
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
-    use openmark::launchpad::interface::{ILaunchpad};
+    use openmark::factory::interface::{IStageFactory};
     use openmark::primitives::types::{Stage, ID, StageType};
     use openmark::primitives::constants::{MINTER_ROLE};
-    use openmark::launchpad::errors::LPErrors as Errors;
-    use openmark::launchpad::events::StageCreated;
     use openzeppelin::upgrades::interface::IUpgradeable;
 
     /// Ownable
@@ -55,8 +55,22 @@ pub mod OpenLaunchpad {
         stages: Map<ID, ContractAddress>,
         // Store sales commission
         commission: u32,
-        selector_classhash: ClassHash,
-        batch_selector_classhash: ClassHash,
+        stage_selector: ClassHash,
+        stage_batch_selector: ClassHash,
+        stage_randomness: ClassHash,
+    }
+
+    #[derive(Drop, PartialEq, starknet::Event)]
+    pub struct StageCreated {
+        #[key]
+        pub owner: ContractAddress,
+        #[key]
+        pub stageId: ID,
+        #[key]
+        pub stageAddress: ContractAddress,
+        pub stage: Stage,
+        pub rootWhitelist: Option::<felt252>,
+        pub collectionWhitelists: Span<ContractAddress>,
     }
 
     #[event]
@@ -76,18 +90,20 @@ pub mod OpenLaunchpad {
         ref self: ContractState,
         owner: ContractAddress,
         commission: u32,
-        selector_classhash: ClassHash,
-        batch_selector_classhash: ClassHash,
+        stage_selector: ClassHash,
+        stage_batch_selector: ClassHash,
+        stage_randomness: ClassHash,
     ) {
         self.ownable.initializer(owner);
-        self.commission.write(commission); // per mille (default 5%)
-        self.selector_classhash.write(selector_classhash);
-        self.batch_selector_classhash.write(batch_selector_classhash);
+        self.commission.write(commission);
+        self.stage_selector.write(stage_selector);
+        self.stage_batch_selector.write(stage_batch_selector);
+        self.stage_randomness.write(stage_randomness);
     }
 
     #[abi(embed_v0)]
-    impl LaunchpadImpl of ILaunchpad<ContractState> {
-        fn createStage(
+    impl StageFactoryImpl of IStageFactory<ContractState> {
+        fn createInstance(
             ref self: ContractState,
             id: ID,
             stage: Stage,
@@ -96,7 +112,7 @@ pub mod OpenLaunchpad {
         ) {
             let owner = get_caller_address();
 
-            assert(self.stages.read(id).is_zero(), Errors::STAGE_ID_USED);
+            assert(self.stages.read(id).is_zero(), 'OM: ID in use');
             self.validateStage(stage, owner);
 
             let mut constructor_calldata = ArrayTrait::new();
@@ -110,7 +126,7 @@ pub mod OpenLaunchpad {
             let mut stageAddress = contract_address_const::<0>();
             if (stage.stageType == StageType::Selector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.selector_classhash.read(), 0, constructor_calldata.span(), false,
+                    self.stage_selector.read(), 0, constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
@@ -118,7 +134,15 @@ pub mod OpenLaunchpad {
                 stageAddress = address;
             } else if (stage.stageType == StageType::BatchSelector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.batch_selector_classhash.read(), 0, constructor_calldata.span(), false,
+                    self.stage_batch_selector.read(), 0, constructor_calldata.span(), false,
+                )
+                    .unwrap_syscall();
+
+                self.stages.write(id, address);
+                stageAddress = address;
+            } else if (stage.stageType == StageType::Randomness) {
+                let (address, _) = core::starknet::syscalls::deploy_syscall(
+                    self.stage_randomness.read(), 0, constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
@@ -140,13 +164,13 @@ pub mod OpenLaunchpad {
         }
 
         fn validateStage(self: @ContractState, stage: Stage, owner: ContractAddress) {
-            assert(stage.startTime < stage.endTime, Errors::INVALID_DURATION);
+            assert(stage.startTime < stage.endTime, 'OM: invalid duration');
 
             let access_dispatcher = IAccessControlDispatcher { contract_address: stage.collection };
             assert(
                 access_dispatcher.has_role(DEFAULT_ADMIN_ROLE, owner)
                     || access_dispatcher.has_role(MINTER_ROLE, owner),
-                Errors::UNAUTHORIZED_OWNER,
+                'OM: unauthorized owner',
             );
         }
 
@@ -175,19 +199,25 @@ pub mod OpenLaunchpad {
 
         fn setSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
             self.ownable.assert_only_owner();
-            self.selector_classhash.write(newClasshash);
+            self.stage_selector.write(newClasshash);
         }
 
         fn setBatchSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
             self.ownable.assert_only_owner();
-            self.batch_selector_classhash.write(newClasshash);
+            self.stage_batch_selector.write(newClasshash);
         }
 
-        fn getConfig(self: @ContractState) -> (u32, ClassHash, ClassHash) {
+        fn setRandomnessClasshash(ref self: ContractState, newClasshash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.stage_batch_selector.write(newClasshash);
+        }
+
+        fn getConfig(self: @ContractState) -> (u32, ClassHash, ClassHash, ClassHash) {
             return (
                 self.commission.read(),
-                self.selector_classhash.read(),
-                self.batch_selector_classhash.read(),
+                self.stage_selector.read(),
+                self.stage_batch_selector.read(),
+                self.stage_randomness.read(),
             );
         }
     }
