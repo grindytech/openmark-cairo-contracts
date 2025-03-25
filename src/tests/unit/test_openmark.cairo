@@ -1,7 +1,3 @@
-use core::array::ArrayTrait;
-use core::option::OptionTrait;
-use core::traits::TryInto;
-
 use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::utils::serde::SerializedAppend;
@@ -22,14 +18,13 @@ use openmark::{
 use openmark::assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait};
 
 use openmark::tests::unit::common::{
-    OM_OWNER, toAddress, ROYALTY, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1,
-    do_create_buy, setup_balance_at, TEST_PAYMENT, deploy_openmark,
+    OM_OWNER, toAddress, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1,
+    setup_balance_at, TEST_PAYMENT, deploy_openmark,
 };
 use openmark::core::OpenMark;
 use openmark::primitives::constants::{PERMYRIAD};
 use openmark::primitives::types::{Order, OrderType};
-use openmark::core::events::{OrderFilled, OrderCancelled};
-use openmark::hasher::interface::IOffchainMessageHashDispatcherTrait;
+use openmark::core::events::{OrderFilled};
 
 pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> ContractAddress {
     let contract = declare("OpenCollection").unwrap().contract_class();
