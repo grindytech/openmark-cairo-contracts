@@ -1,7 +1,10 @@
-import { RpcProvider, byteArray, ByteArray, Account, constants, CallData, json, shortString, Calldata, Contract, RawArgs } from 'starknet';
+import {
+    RpcProvider, byteArray, ByteArray, Account, constants, CallData, json, CairoOption,
+    CairoOptionVariant, Calldata, Contract, RawArgs, hash, CairoCustomEnum
+} from 'starknet';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
-import { do_deploy } from '../deployer/deploy';
+import { do_deploy } from './common';
 
 // Load environment variables from .env file (e.g., RPC URL, private key)
 dotenv.config();
@@ -13,16 +16,19 @@ const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
 const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 const STAGE_FACTORY_ADDRESS = '0x270464463aadca9d6f2f928d74159cf76da9234a8b7cd91976c972b354ab7d';
+const ERC1155_COLLECTION = '0x1e6c3aafa77a9d555f9694444d1b188f1129ca440418660e995eb8d48fe5127';
+
+const ZERO = '0x0000000000000000000000000000000000000000';
 
 export enum StageType {
     // Buying specific token IDs
-   Selector,
-   // Batch buying with specific IDs and quantities
-   BatchSelector, 
+    Selector,
+    // Batch buying with specific IDs and quantities
+    BatchSelector,
     // Minting fungible tokens
-   TokenMint,
-   // Buying random token(s)
-   Randomness, 
+    TokenMint,
+    // Buying random token(s)
+    Randomness,
 }
 
 async function testVrfStageBuy() {
@@ -30,8 +36,8 @@ async function testVrfStageBuy() {
     const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     // Step 1: Deploy ERC1155 tokens (or use an existing one for simplicity)
-    let nftAddress: string;
-    {
+    let nftAddress: string = ERC1155_COLLECTION;
+    if (nftAddress === "") {
         const data: RawArgs = {
             owner: Deployer,
             name: 'Test Ponies',
@@ -40,7 +46,7 @@ async function testVrfStageBuy() {
             maxTokenId: 1000,
             royaltyPercentage: 500, // 5%
         };
-        nftAddress = await do_deploy('OERC1155', classHashes['OERC1155'], data);
+        nftAddress = await do_deploy('OERC1155', Deployer, privateKey0, classHashes['OERC1155'], data);
     }
 
     // Step 2: Create VRF Stage from Stage Factory
@@ -55,7 +61,7 @@ async function testVrfStageBuy() {
         stageFactoryContract.connect(account);
 
         const stage = {
-            stageType: StageType.Randomness, // StageType::Randomness (enum value, adjust if different)
+            stageType: new CairoCustomEnum({Randomness: StageType.Randomness}) ,
             collection: nftAddress,
             payment: STRK,
             price: "100000000000000000", // 0.1 STRK in wei
@@ -69,9 +75,10 @@ async function testVrfStageBuy() {
         const createTx = await stageFactoryContract.createInstance(
             stageId,
             stage,
-            null, // No root whitelist
+            new CairoOption(CairoOptionVariant.None), // No root whitelist
             [],   // No collection whitelists
         );
+
         const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
         if (createReceipt.isSuccess()) {
             console.log("StageVRF creation succeeded!");
