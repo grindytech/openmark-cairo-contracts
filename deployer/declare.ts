@@ -3,6 +3,9 @@ import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+const DELAY_MS = 10000;
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Configuration
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
@@ -73,10 +76,6 @@ async function declareAll() {
             sierra: './target/dev/openmark_OpenCollection.contract_class.json',
             casm: './target/dev/openmark_OpenCollection.compiled_contract_class.json',
         },
-        'OpenLaunchpad': {
-            sierra: './target/dev/openmark_OpenLaunchpad.contract_class.json',
-            casm: './target/dev/openmark_OpenLaunchpad.compiled_contract_class.json',
-        },
         'OERC721Factory': {
             sierra: './target/dev/openmark_OERC721Factory.contract_class.json',
             casm: './target/dev/openmark_OERC721Factory.compiled_contract_class.json',
@@ -85,9 +84,9 @@ async function declareAll() {
             sierra: './target/dev/openmark_OERC1155Factory.contract_class.json',
             casm: './target/dev/openmark_OERC1155Factory.compiled_contract_class.json',
         },
-        'LaunchpadFactory': {
-            sierra: './target/dev/openmark_LaunchpadFactory.contract_class.json',
-            casm: './target/dev/openmark_LaunchpadFactory.compiled_contract_class.json',
+        'StageFactory': {
+            sierra: './target/dev/openmark_StageFactory.contract_class.json',
+            casm: './target/dev/openmark_StageFactory.compiled_contract_class.json',
         },
         'OERC721': {
             sierra: './target/dev/openmark_OERC721.contract_class.json',
@@ -97,10 +96,6 @@ async function declareAll() {
             sierra: './target/dev/openmark_OERC1155.contract_class.json',
             casm: './target/dev/openmark_OERC1155.compiled_contract_class.json',
         },
-        'Launchpad': {
-            sierra: './target/dev/openmark_Launchpad.contract_class.json',
-            casm: './target/dev/openmark_Launchpad.compiled_contract_class.json',
-        },
         'StageSelector': {
             sierra: './target/dev/openmark_StageSelector.contract_class.json',
             casm: './target/dev/openmark_StageSelector.compiled_contract_class.json',
@@ -109,11 +104,16 @@ async function declareAll() {
             sierra: './target/dev/openmark_StageBatchSelector.contract_class.json',
             casm: './target/dev/openmark_StageBatchSelector.compiled_contract_class.json',
         },
+        'StageVRF': {
+            sierra: './target/dev/openmark_StageVRF.contract_class.json',
+            casm: './target/dev/openmark_StageVRF.compiled_contract_class.json',
+        },
     };
 
     // Declare all contracts
     for (const [contractName, { sierra, casm }] of Object.entries(contractArtifacts)) {
         classHashes[contractName] = await declareContract(account, contractName, sierra, casm);
+        await delay(DELAY_MS);
     }
 
     // Save class hashes to file

@@ -72,23 +72,6 @@ async function deploy() {
         console.log(`Skipping OpenCollection: already deployed at ${deployedAddresses['OpenCollection']}`);
     }
 
-    // Deploy Open Launchpad if missing
-    if (!deployedAddresses['OpenLaunchpad'] || deployedAddresses['OpenLaunchpad'] === '') {
-        const commission = 300; // 3%
-        const selector_classhash = classHashes['StageSelector'];
-        const batch_selector_classhash = classHashes['StageBatchSelector'];
-
-        const data: RawArgs = {
-            owner: Deployer,
-            commission,
-            selector_classhash,
-            batch_selector_classhash,
-        };
-        deployedAddresses['OpenLaunchpad'] = await do_deploy('OpenLaunchpad', classHashes['OpenLaunchpad'], data);
-    } else {
-        console.log(`Skipping OpenLaunchpad: already deployed at ${deployedAddresses['OpenLaunchpad']}`);
-    }
-
     // Deploy OERC721Factory if missing
     if (!deployedAddresses['OERC721Factory'] || deployedAddresses['OERC721Factory'] === '') {
         const collection_classhash = classHashes['OERC721'];
@@ -113,23 +96,25 @@ async function deploy() {
         console.log(`Skipping OERC1155Factory: already deployed at ${deployedAddresses['OERC1155Factory']}`);
     }
 
-    // Deploy LaunchpadFactory if missing
-    if (!deployedAddresses['LaunchpadFactory'] || deployedAddresses['LaunchpadFactory'] === '') {
-        const launchpad_classhash = classHashes['Launchpad'];
+    // Deploy StageFactory if missing
+    if (!deployedAddresses['StageFactory'] || deployedAddresses['StageFactory'] === '') {
         const commission = 0;
-        const selector_classhash = classHashes['StageSelector'];
-        const batch_selector_classhash = classHashes['StageBatchSelector'];
+        const stage_selector = classHashes['StageSelector'];
+        const stage_batch_selector = classHashes['StageBatchSelector'];
+        const stage_randomness = classHashes['StageBatchSelector'];
+        const VRF_PROVIDER = "0x051fea4450da9d6aee758bdeba88b2f665bcbf549d2c61421aa724e9ac0ced8f";
 
         const data: RawArgs = {
             owner: Deployer,
-            launchpad_classhash,
-            commission,
-            selector_classhash,
-            batch_selector_classhash,
+            commission: commission,
+            stage_selector: stage_selector,
+            stage_batch_selector: stage_batch_selector,
+            stage_randomness: stage_randomness,
+            vrf_provider: VRF_PROVIDER
         };
-        deployedAddresses['LaunchpadFactory'] = await do_deploy('LaunchpadFactory', classHashes['LaunchpadFactory'], data);
+        deployedAddresses['StageFactory'] = await do_deploy('StageFactory', classHashes['StageFactory'], data);
     } else {
-        console.log(`Skipping LaunchpadFactory: already deployed at ${deployedAddresses['LaunchpadFactory']}`);
+        console.log(`Skipping StageFactory: already deployed at ${deployedAddresses['StageFactory']}`);
     }
 
     // Save deployed addresses to file

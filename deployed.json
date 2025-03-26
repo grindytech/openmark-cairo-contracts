@@ -1,8 +1,7 @@
 {
   "OpenMark": "0x361f63dbef1a9d6420ca775e22cbd8fd624bc1ef79baec539f1190c8adad787",
   "OpenCollection": "0x3b8af4d302af95f50150cb70a570e6b81960d2fe691f4a21b7f7429ac870bb3",
-  "OpenLaunchpad": "0x633f0e6d6d9f53df7aaf7cf11392a0dcc5d51719dc9a5c7c004f145085cbfb",
   "OERC721Factory": "0x66101df0efc6042daecd648e5d4b9e7a06d63d78219856e17bead6d86447e36",
   "OERC1155Factory": "0x580e5f0e36daeaa70a0158d5954c98c811b3bdf86471bd572e822ac1e4ce684",
-  "LaunchpadFactory": "0x4c91fc7ca9509a505926a8edc8be6d1cef916191428a11f71bb9f184e826ccc"
+  "StageFactory": "0x270464463aadca9d6f2f928d74159cf76da9234a8b7cd91976c972b354ab7d"
 }
