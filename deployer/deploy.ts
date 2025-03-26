@@ -101,7 +101,7 @@ async function deploy() {
         const commission = 0;
         const stage_selector = classHashes['StageSelector'];
         const stage_batch_selector = classHashes['StageBatchSelector'];
-        const stage_randomness = classHashes['StageBatchSelector'];
+        const stage_randomness = classHashes['StageVRF'];
         const VRF_PROVIDER = "0x051fea4450da9d6aee758bdeba88b2f665bcbf549d2c61421aa724e9ac0ced8f";
 
         const data: RawArgs = {

@@ -655,7 +655,7 @@ fn withdraw_sales_not_owner_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('Drop table not initialized',))]
+#[should_panic(expected: ('OM: Drop table not initialized',))]
 fn buy_drop_table_not_initialized_panics() {
     let id = 10;
     let mintAmount = 3;

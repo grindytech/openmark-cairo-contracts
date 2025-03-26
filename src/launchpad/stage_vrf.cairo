@@ -111,10 +111,8 @@ pub mod StageVRF {
         fn buy(ref self: ContractState, amount: u256, merkleProof: Span<felt252>) {
             self.validateStage();
             assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
-            assert(self.total_weight.read() > 0, 'Drop table not initialized');
+            assert(self.total_weight.read() > 0, 'OM: Drop table not initialized');
             
-            assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
-
             let minter: ContractAddress = get_caller_address();
             let stageMintedAmount = self.ostage.stageMintedCount.read();
             let userMintedAmount = self.ostage.userMintedCount.read(minter);
@@ -156,6 +154,7 @@ pub mod StageVRF {
                 };
                 i += 1;
             };
+
             self.ostage.stageMintedCount.write(stageMintedAmount + amount);
             self.ostage.userMintedCount.write(minter, userMintedAmount + amount);
 
@@ -193,7 +192,7 @@ pub mod StageVRF {
 
         // Getter functions
         fn get_drop_table_entry(self: @ContractState, index: u32) -> DropEntry {
-            assert(index < self.drop_table_length.read(), 'Index out of bounds');
+            assert(index < self.drop_table_length.read(), 'OM: Index out of bounds');
             self.drop_table.read(index)
         }
 
