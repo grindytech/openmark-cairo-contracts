@@ -17,6 +17,5 @@ pub mod unit {
 
     mod test_stage_batch_selector;
     mod test_stage_selector;
-    
-    // mod test_stage_vrf;
+    mod test_stage_vrf;
 }

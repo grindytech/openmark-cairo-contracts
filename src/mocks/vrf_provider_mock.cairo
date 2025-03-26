@@ -31,10 +31,7 @@ mod VRFProviderMock {
                 Source::Nonce(addr) => addr.into(),
                 Source::Salt(salt) => salt,
             };
-            // We can't write here, so just mark as requested if it hasn’t been consumed yet
-            // Validation only; actual logic moves to consume_random
             assert(!self.requested.read((caller, source_key)), 'Random value already requested');
-            // Note: We can't write self.requested here due to @ContractState, so we rely on consume_random to set it
         }
 
         fn consume_random(ref self: ContractState, source: Source) -> felt252 {

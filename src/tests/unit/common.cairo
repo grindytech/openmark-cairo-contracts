@@ -470,20 +470,23 @@ pub fn create_stage(
         endTime: 100,
     };
 
-    let mut contract = declare("StageBatchSelector").unwrap().contract_class();
-    if (stageType == StageType::Randomness) {
-        contract = declare("StageVRF").unwrap().contract_class();
-    } else if (stageType == StageType::Selector) {
-        contract = declare("StageSelector").unwrap().contract_class();
-    }
-    let mut constructor_calldata = array![];
 
+    let mut constructor_calldata = array![];
     constructor_calldata.append_serde(owner);
     constructor_calldata.append_serde(stage);
     constructor_calldata.append_serde(rootWhitelist);
     constructor_calldata.append_serde(collectionWhitelists);
     constructor_calldata.append_serde(commission);
     constructor_calldata.append_serde(commissionReceiver);
+
+    let mut contract = declare("StageBatchSelector").unwrap().contract_class();
+    if (stageType == StageType::Randomness) {
+        contract = declare("StageVRF").unwrap().contract_class();
+        constructor_calldata.append_serde(commissionReceiver); // fake vrf provider
+    } else if (stageType == StageType::Selector) {
+        contract = declare("StageSelector").unwrap().contract_class();
+    }
+
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address

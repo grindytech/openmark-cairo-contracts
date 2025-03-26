@@ -58,6 +58,7 @@ pub mod StageFactory {
         stage_selector: ClassHash,
         stage_batch_selector: ClassHash,
         stage_randomness: ClassHash,
+        vrf_provider: ContractAddress,
     }
 
     #[derive(Drop, PartialEq, starknet::Event)]
@@ -93,12 +94,14 @@ pub mod StageFactory {
         stage_selector: ClassHash,
         stage_batch_selector: ClassHash,
         stage_randomness: ClassHash,
+        vrf_provider: ContractAddress,
     ) {
         self.ownable.initializer(owner);
         self.commission.write(commission);
         self.stage_selector.write(stage_selector);
         self.stage_batch_selector.write(stage_batch_selector);
         self.stage_randomness.write(stage_randomness);
+        self.vrf_provider.write(vrf_provider);
     }
 
     #[abi(embed_v0)]
@@ -126,7 +129,7 @@ pub mod StageFactory {
             let mut stageAddress = contract_address_const::<0>();
             if (stage.stageType == StageType::Selector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.stage_selector.read(), 0, constructor_calldata.span(), false,
+                    self.stage_selector.read(), id.into(), constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
@@ -134,15 +137,16 @@ pub mod StageFactory {
                 stageAddress = address;
             } else if (stage.stageType == StageType::BatchSelector) {
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.stage_batch_selector.read(), 0, constructor_calldata.span(), false,
+                    self.stage_batch_selector.read(), id.into(), constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 
                 self.stages.write(id, address);
                 stageAddress = address;
             } else if (stage.stageType == StageType::Randomness) {
+                self.vrf_provider.read().serialize(ref constructor_calldata);
                 let (address, _) = core::starknet::syscalls::deploy_syscall(
-                    self.stage_randomness.read(), 0, constructor_calldata.span(), false,
+                    self.stage_randomness.read(), id.into(), constructor_calldata.span(), false,
                 )
                     .unwrap_syscall();
 

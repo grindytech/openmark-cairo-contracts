@@ -5,7 +5,6 @@
 
 #[starknet::contract]
 pub mod StageVRF {
-    use core::num::traits::Zero;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::access::ownable::OwnableComponent;
     use openmark::launchpad::stage::StageComponent;
@@ -71,6 +70,7 @@ pub mod StageVRF {
         collectionWhitelists: Span<ContractAddress>,
         commission: u128,
         commissionReceiver: ContractAddress,
+        vrf_provider: ContractAddress,
     ) {
         self.ownable.initializer(owner);
         self
@@ -78,6 +78,7 @@ pub mod StageVRF {
             .initializer(
                 stage, rootWhitelist, collectionWhitelists, commission, commissionReceiver,
             );
+        self.vrf_provider.write(vrf_provider);
     }
 
     // Internal function to generate a random roll value
@@ -92,11 +93,8 @@ pub mod StageVRF {
 
     #[abi(embed_v0)]
     impl StageVRFImpl of IStageVRF<ContractState> {
-        fn setup(
-            ref self: ContractState, vrf_provider: ContractAddress, drop_table: Span<DropEntry>,
-        ) {
+        fn setup(ref self: ContractState, drop_table: Span<DropEntry>) {
             self.ownable.assert_only_owner();
-            self.vrf_provider.write(vrf_provider);
 
             let mut total_weight: u128 = 0;
             let mut i: u32 = 0;
@@ -112,6 +110,9 @@ pub mod StageVRF {
 
         fn buy(ref self: ContractState, amount: u256, merkleProof: Span<felt252>) {
             self.validateStage();
+            assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
+            assert(self.total_weight.read() > 0, 'Drop table not initialized');
+            
             assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
 
             let minter: ContractAddress = get_caller_address();
@@ -140,7 +141,6 @@ pub mod StageVRF {
 
             while i < amount {
                 let roll = generate_roll(random_seed, i, total_weight);
-
                 let mut cumulative_weight: u128 = 0;
                 let mut j: u32 = 0;
 
@@ -156,7 +156,6 @@ pub mod StageVRF {
                 };
                 i += 1;
             };
-
             self.ostage.stageMintedCount.write(stageMintedAmount + amount);
             self.ostage.userMintedCount.write(minter, userMintedAmount + amount);
 
@@ -190,6 +189,24 @@ pub mod StageVRF {
         fn closeStage(ref self: ContractState) {
             self.ownable.assert_only_owner();
             self.ostage.closeStage();
+        }
+
+        // Getter functions
+        fn get_drop_table_entry(self: @ContractState, index: u32) -> DropEntry {
+            assert(index < self.drop_table_length.read(), 'Index out of bounds');
+            self.drop_table.read(index)
+        }
+
+        fn get_drop_table_length(self: @ContractState) -> u32 {
+            self.drop_table_length.read()
+        }
+
+        fn get_total_weight(self: @ContractState) -> u128 {
+            self.total_weight.read()
+        }
+
+        fn get_vrf_provider(self: @ContractState) -> ContractAddress {
+            self.vrf_provider.read()
         }
     }
 }

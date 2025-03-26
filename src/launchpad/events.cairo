@@ -4,7 +4,6 @@
 // See LICENSE file for full terms.
 
 use starknet::ContractAddress;
-use openmark::primitives::types::{Stage, ID};
 
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct SalesWithdrawn {

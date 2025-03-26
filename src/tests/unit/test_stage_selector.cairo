@@ -90,6 +90,7 @@ fn create_open_launchpad(
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
     constructor_calldata.append_serde(random_classhash);
+    constructor_calldata.append_serde(owner); // fake vrf provider
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let launpad_dispatcher = IStageFactoryDispatcher { contract_address };

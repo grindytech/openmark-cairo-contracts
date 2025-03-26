@@ -4,7 +4,7 @@
 // See LICENSE file for full terms.
 
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Stage, ID, DropEntry};
+use openmark::primitives::types::{Stage, DropEntry};
 
 #[starknet::interface]
 pub trait IStageSelector<T> {
@@ -57,11 +57,14 @@ pub trait IVrfProvider<TContractState> {
 
 #[starknet::interface]
 pub trait IStageVRF<T> {
-    fn setup(ref self: T,  vrf_provider: ContractAddress,drop_table: Span<DropEntry>);
-
+    fn setup(ref self: T, drop_table: Span<DropEntry>);
     fn buy(ref self: T, amount: u256, merkleProof: Span<felt252>);
-
     fn withdrawSales(ref self: T);
-
     fn closeStage(ref self: T);
+
+    // getters
+    fn get_drop_table_entry(self: @T, index: u32) -> DropEntry;
+    fn get_drop_table_length(self: @T) -> u32;
+    fn get_total_weight(self: @T) -> u128;
+    fn get_vrf_provider(self: @T) -> ContractAddress;
 }
