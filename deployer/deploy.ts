@@ -17,7 +17,7 @@ interface DeployedRecord {
     [contractName: string]: string;
 }
 
-async function do_deploy(name: string, classHash: string, constructorData: RawArgs): Promise<string> {
+export async function do_deploy(name: string, classHash: string, constructorData: RawArgs): Promise<string> {
     const account0 = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     const { abi: contractAbi } = await provider.getClassByHash(classHash);
