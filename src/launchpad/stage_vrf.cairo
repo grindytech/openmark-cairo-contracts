@@ -84,7 +84,7 @@ pub mod StageVRF {
     // Internal function to generate a random roll value
     #[inline(always)]
     fn generate_roll(random_seed: felt252, index: u256, total_weight: u128) -> u256 {
-        let mut hash_input: Array<felt252> = ArrayTrait::new();
+        let mut hash_input = array![];
         hash_input.append(random_seed);
         hash_input.append(index.try_into().unwrap());
         let roll_hash = poseidon_hash_span(hash_input.span());
@@ -108,21 +108,22 @@ pub mod StageVRF {
         }
 
 
-        fn buy(ref self: ContractState, amount: u256, merkleProof: Span<felt252>) {
+        fn buy(ref self: ContractState, mintAmount: u256, merkleProof: Span<felt252>) {
             self.validateStage();
-            assert(amount > 0, Errors::ZERO_MINT_AMOUNT);
+            assert(mintAmount > 0, Errors::ZERO_MINT_AMOUNT);
             assert(self.total_weight.read() > 0, 'OM: Drop table not initialized');
-            
+
             let minter: ContractAddress = get_caller_address();
             let stageMintedAmount = self.ostage.stageMintedCount.read();
             let userMintedAmount = self.ostage.userMintedCount.read(minter);
 
             assert(
-                stageMintedAmount + amount <= self.ostage.stage.maxAllocation.read(),
+                stageMintedAmount + mintAmount <= self.ostage.stage.maxAllocation.read(),
                 Errors::SOLD_OUT,
             );
             assert(
-                userMintedAmount + amount <= self.ostage.stage.limit.read(), Errors::EXCEED_LIMIT,
+                userMintedAmount + mintAmount <= self.ostage.stage.limit.read(),
+                Errors::EXCEED_LIMIT,
             );
 
             self.validateWhitelist(minter, merkleProof);
@@ -130,14 +131,14 @@ pub mod StageVRF {
             let vrf_provider = IVrfProviderDispatcher {
                 contract_address: self.vrf_provider.read(),
             };
-            let random_seed = vrf_provider.consume_random(Source::Nonce(minter));
-
-            let mut tokenIds: Array<u256> = ArrayTrait::new();
-            let mut values: Array<u256> = ArrayTrait::new();
+            // let random_seed = vrf_provider.consume_random(Source::Nonce(minter));
+            let random_seed = 100;
+            let mut tokenIds = array![];
+            let mut values = array![];
             let total_weight = self.total_weight.read();
             let mut i: u256 = 0;
 
-            while i < amount {
+            while i < mintAmount {
                 let roll = generate_roll(random_seed, i, total_weight);
                 let mut cumulative_weight: u128 = 0;
                 let mut j: u32 = 0;
@@ -155,15 +156,15 @@ pub mod StageVRF {
                 i += 1;
             };
 
-            self.ostage.stageMintedCount.write(stageMintedAmount + amount);
-            self.ostage.userMintedCount.write(minter, userMintedAmount + amount);
+            self.ostage.stageMintedCount.write(stageMintedAmount + mintAmount);
+            self.ostage.userMintedCount.write(minter, userMintedAmount + mintAmount);
 
             let mint_dispatcher = IERC1155MinterDispatcher {
                 contract_address: self.ostage.stage.collection.read(),
             };
             mint_dispatcher.mintBatch(minter, tokenIds.span(), values.span(), [].span());
 
-            let price = amount * self.ostage.stage.price.read();
+            let price = mintAmount * self.ostage.stage.price.read();
             let token_dispatcher = IERC20Dispatcher {
                 contract_address: self.ostage.stage.payment.read(),
             };
@@ -173,7 +174,7 @@ pub mod StageVRF {
                 .emit(
                     TokensBought {
                         buyer: minter,
-                        amount: amount.into(),
+                        amount: mintAmount,
                         paymentToken: self.ostage.stage.payment.read(),
                         price: self.ostage.stage.price.read(),
                     },

@@ -34,6 +34,14 @@ async function testVrfProvider() {
             calldata: CallData.compile({
                 caller: Deployer,
                 source: { type: 0, address: Deployer }, // Using Source::Nonce variant
+                // source: new CairoCustomEnum({ Nonce: Deployer }),
+            }),
+        },
+        {
+            contractAddress: VRF_PROVIDER_ADDRESS,
+            entrypoint: 'consume_random',
+            calldata: CallData.compile({
+                source: new CairoCustomEnum({ Nonce: Deployer }),
             }),
         },
         ]
@@ -46,37 +54,37 @@ async function testVrfProvider() {
     }
 
 
-    // Step 2: Consume randomness
-    console.log("Consuming randomness...");
-    try {
-        // Call consume_random as a multicall to ensure atomicity with request
-        const consumeTx = await account.execute([
-            {
-                contractAddress: VRF_PROVIDER_ADDRESS,
-                entrypoint: 'consume_random',
-                calldata: CallData.compile({
-                    source: new CairoCustomEnum({ Nonce: Deployer }),
-                }),
-            },
-        ]);
-        console.log(`Consume TX Hash: ${consumeTx.transaction_hash}`);
+    // // Step 2: Consume randomness
+    // console.log("Consuming randomness...");
+    // try {
+    //     // Call consume_random as a multicall to ensure atomicity with request
+    //     const consumeTx = await account.execute([
+    //         {
+    //             contractAddress: VRF_PROVIDER_ADDRESS,
+    //             entrypoint: 'consume_random',
+    //             calldata: CallData.compile({
+    //                 source: new CairoCustomEnum({ Nonce: Deployer }),
+    //             }),
+    //         },
+    //     ]);
+    //     console.log(`Consume TX Hash: ${consumeTx.transaction_hash}`);
 
-        const consumeReceipt = await provider.waitForTransaction(consumeTx.transaction_hash);
-        console.log("Consume Receipt:", JSON.stringify(consumeReceipt, null, 2));
+    //     const consumeReceipt = await provider.waitForTransaction(consumeTx.transaction_hash);
+    //     console.log("Consume Receipt:", JSON.stringify(consumeReceipt, null, 2));
 
-        if (consumeReceipt.isSuccess()) {
-            console.log("Randomness consumption succeeded!");
-            // Attempt to extract the random value from the call output (if returned)
-            const randomValue = await vrfProviderContract.call('consume_random', CallData.compile({
-                source: new CairoCustomEnum({ Nonce: Deployer }),
-            }));
-            console.log("Random Value:", randomValue.toString());
-        } else {
-            console.log("Randomness consumption failed:", consumeReceipt || "No revert reason");
-        }
-    } catch (error) {
-        console.error("Error during consume_random:", error.message);
-    }
+    //     if (consumeReceipt.isSuccess()) {
+    //         console.log("Randomness consumption succeeded!");
+    //         // Attempt to extract the random value from the call output (if returned)
+    //         const randomValue = await vrfProviderContract.call('consume_random', CallData.compile({
+    //             source: new CairoCustomEnum({ Nonce: Deployer }),
+    //         }));
+    //         console.log("Random Value:", randomValue.toString());
+    //     } else {
+    //         console.log("Randomness consumption failed:", consumeReceipt || "No revert reason");
+    //     }
+    // } catch (error) {
+    //     console.error("Error during consume_random:", error.message);
+    // }
 }
 
 // Execute the test and handle its promise
