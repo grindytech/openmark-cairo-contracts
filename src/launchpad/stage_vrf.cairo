@@ -131,8 +131,7 @@ pub mod StageVRF {
             let vrf_provider = IVrfProviderDispatcher {
                 contract_address: self.vrf_provider.read(),
             };
-            // let random_seed = vrf_provider.consume_random(Source::Nonce(minter));
-            let random_seed = 100;
+            let random_seed = vrf_provider.consume_random(Source::Nonce(minter));
             let mut tokenIds = array![];
             let mut values = array![];
             let total_weight = self.total_weight.read();
