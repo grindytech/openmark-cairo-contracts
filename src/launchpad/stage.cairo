@@ -110,7 +110,7 @@ pub mod StageComponent {
     impl OStage<
         TContractState, +HasComponent<TContractState>,
     > of IOStage<ComponentState<TContractState>> {
-        fn getStage(self: @ComponentState<TContractState>) -> Stage {
+        fn getInstance(self: @ComponentState<TContractState>) -> Stage {
             return self.stage.read();
         }
 

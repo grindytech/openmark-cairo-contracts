@@ -135,7 +135,7 @@ fn setup_stage(
     let id = 10;
     start_cheat_caller_address(launchpad_address, owner);
     launchpad_contract.createInstance(id, stage, rootWhitelist, collectionWhitelists);
-    let stage_address = launchpad_contract.getStage(id);
+    let stage_address = launchpad_contract.getInstance(id);
 
     start_cheat_block_timestamp(stage_address, 10);
 
@@ -177,7 +177,7 @@ fn create_stages_works() {
 
     let mut spy = spy_events();
     launchpad_contract.createInstance(id, stage, Option::None, [].span());
-    let stage_selector = launchpad_contract.getStage(id);
+    let stage_selector = launchpad_contract.getInstance(id);
 
     let expected_event = StageFactory::Event::StageCreated(
         StageCreated {
@@ -192,7 +192,7 @@ fn create_stages_works() {
     spy.assert_emitted(@array![(launchpad_address, expected_event)]);
 
     let ostage_dispatcher = IOStageDispatcher { contract_address: stage_selector };
-    let stage_info = ostage_dispatcher.getStage();
+    let stage_info = ostage_dispatcher.getInstance();
 
     assert(stage_info == stage, 'Get stage failed');
 }

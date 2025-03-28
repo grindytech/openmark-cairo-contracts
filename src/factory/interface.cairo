@@ -53,5 +53,5 @@ pub trait IStageFactory<T> {
 
     fn validateStage(self: @T, stage: Stage, owner: ContractAddress);
 
-    fn getStage(self: @T, id: ID) -> ContractAddress;
+    fn getInstance(self: @T, id: ID) -> ContractAddress;
 }

@@ -178,7 +178,7 @@ pub mod StageFactory {
             );
         }
 
-        fn getStage(self: @ContractState, id: ID) -> ContractAddress {
+        fn getInstance(self: @ContractState, id: ID) -> ContractAddress {
             return self.stages.read(id);
         }
     }

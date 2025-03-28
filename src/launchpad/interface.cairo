@@ -27,7 +27,7 @@ pub trait IStageBatchSelector<T> {
 
 #[starknet::interface]
 pub trait IOStage<T> {
-    fn getStage(self: @T) -> Stage;
+    fn getInstance(self: @T) -> Stage;
 
     fn getMintedCount(self: @T) -> u256;
 

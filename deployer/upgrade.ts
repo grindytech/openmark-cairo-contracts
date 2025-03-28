@@ -99,7 +99,6 @@ async function upgrade() {
     // Contracts to check for upgrades
     const contractsToUpgrade = [
         'OpenMark',
-        'OpenLaunchpad',
         'OERC721Factory',
         'OERC1155Factory',
         'StageFactory',
@@ -110,10 +109,6 @@ async function upgrade() {
         'OpenMark': {
             sierra: './target/dev/openmark_OpenMark.contract_class.json',
             casm: './target/dev/openmark_OpenMark.compiled_contract_class.json',
-        },
-        'OpenLaunchpad': {
-            sierra: './target/dev/openmark_OpenLaunchpad.contract_class.json',
-            casm: './target/dev/openmark_OpenLaunchpad.compiled_contract_class.json',
         },
         'OERC721Factory': {
             sierra: './target/dev/openmark_OERC721Factory.contract_class.json',

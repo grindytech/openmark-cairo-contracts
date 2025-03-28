@@ -91,7 +91,7 @@ async function testVrfStageBuy() {
         const createReceipt = await provider.waitForTransaction(createTx.transaction_hash);
         if (createReceipt.isSuccess()) {
             console.log("StageVRF creation succeeded!");
-            stageAddress = await stageFactoryContract.getStage(stageId);
+            stageAddress = await stageFactoryContract.getInstance(stageId);
             stageAddress = '0x' + BigInt(stageAddress).toString(16);
             console.log(`StageVRF deployed at: ${stageAddress}`);
         }
