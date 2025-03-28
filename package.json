@@ -24,6 +24,7 @@
     "yargs": "^17.7.2"
   },
   "dependencies": {
+    "@cartridge/controller": "^0.7.8",
     "@ericnordelo/strk-merkle-tree": "^1.0.0",
     "prettier": "^2.8.8",
     "starknet": "^6.23.1",

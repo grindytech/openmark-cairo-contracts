@@ -5,6 +5,7 @@ import {
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 import { do_deploy } from './common';
+import Controller from "@cartridge/controller";
 
 // Load environment variables from .env file (e.g., RPC URL, private key)
 dotenv.config();
@@ -39,8 +40,7 @@ async function testVrfStageBuy() {
     const deployed: { [key: string]: string } = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
     const classHashes: { [key: string]: string } = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
     const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
-    // const account = new Account(provider, Deployer, privateKey0);
-
+    // Initialize the controller
     const STAGE_FACTORY_ADDRESS = deployed["StageFactory"];
 
     // Step 1: Deploy ERC1155 tokens (or use an existing one for simplicity)
