@@ -4,7 +4,6 @@
 // See LICENSE file for full terms.
 
 use starknet::ContractAddress;
-use openmark::primitives::types::{Stage, ID};
 
 #[derive(Drop, PartialEq, starknet::Event)]
 pub struct SalesWithdrawn {
@@ -30,17 +29,4 @@ pub struct TokensBought {
 pub struct StageClosed {
     #[key]
     pub caller: ContractAddress,
-}
-
-#[derive(Drop, PartialEq, starknet::Event)]
-pub struct StageCreated {
-    #[key]
-    pub owner: ContractAddress,
-    #[key]
-    pub stageId: ID,
-    #[key]
-    pub stageAddress: ContractAddress,
-    pub stage: Stage,
-    pub rootWhitelist: Option::<felt252>,
-    pub collectionWhitelists: Span<ContractAddress>,
 }

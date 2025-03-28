@@ -4,22 +4,7 @@
 // See LICENSE file for full terms.
 
 use starknet::{ContractAddress, ClassHash};
-use openmark::primitives::types::{Stage, ID};
-
-#[starknet::interface]
-pub trait ILaunchpad<T> {
-    fn createStage(
-        ref self: T,
-        id: ID,
-        stage: Stage,
-        rootWhitelist: Option::<felt252>,
-        collectionWhitelists: Span<ContractAddress>,
-    );
-
-    fn validateStage(self: @T, stage: Stage, owner: ContractAddress);
-
-    fn getStage(self: @T, id: ID) -> ContractAddress;
-}
+use openmark::primitives::types::{Stage, DropEntry};
 
 #[starknet::interface]
 pub trait IStageSelector<T> {
@@ -39,6 +24,7 @@ pub trait IStageBatchSelector<T> {
     fn closeStage(ref self: T);
 }
 
+
 #[starknet::interface]
 pub trait IOStage<T> {
     fn getStage(self: @T) -> Stage;
@@ -54,5 +40,31 @@ pub trait IOStage<T> {
 
 #[starknet::interface]
 pub trait ILaunchpadProvider<T> {
-    fn getConfig(self: @T) -> (u32, ClassHash, ClassHash);
+    fn getConfig(self: @T) -> (u32, ClassHash, ClassHash, ClassHash);
+}
+
+#[derive(Drop, Copy, Clone, Serde)]
+pub enum Source {
+    Nonce: ContractAddress,
+    Salt: felt252,
+}
+
+#[starknet::interface]
+pub trait IVrfProvider<TContractState> {
+    fn request_random(self: @TContractState, caller: ContractAddress, source: Source);
+    fn consume_random(ref self: TContractState, source: Source) -> felt252;
+}
+
+#[starknet::interface]
+pub trait IStageVRF<T> {
+    fn setup(ref self: T, drop_table: Span<DropEntry>);
+    fn buy(ref self: T, mintAmount: u256, merkleProof: Span<felt252>);
+    fn withdrawSales(ref self: T);
+    fn closeStage(ref self: T);
+
+    // getters
+    fn get_drop_table_entry(self: @T, index: u32) -> DropEntry;
+    fn get_drop_table_length(self: @T) -> u32;
+    fn get_total_weight(self: @T) -> u128;
+    fn get_vrf_provider(self: @T) -> ContractAddress;
 }

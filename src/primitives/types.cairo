@@ -53,9 +53,7 @@ pub enum StageType {
      // Minting fungible tokens
     TokenMint,
     // Buying random token(s)
-    Random, 
-    // Batch buying with random allocation
-    BatchRandom 
+    Randomness, 
 }
 
 #[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
@@ -69,6 +67,14 @@ pub struct Stage {
     pub startTime: u128,
     pub endTime: u128,
 }
+
+// Drop table entry
+#[derive(Copy, PartialEq, Drop, Serde, Debug, starknet::Store)]
+pub struct DropEntry {
+    pub token_id: u256,
+    pub weight: u128 // Weight determines drop probability
+}
+
 
 pub trait IStructHash<T> {
     fn hash_struct(self: @T) -> felt252;

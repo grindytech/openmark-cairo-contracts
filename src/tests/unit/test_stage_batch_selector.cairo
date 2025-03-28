@@ -1,6 +1,4 @@
 use snforge_std::EventSpyAssertionsTrait;
-use super::super::super::launchpad::interface::ILaunchpadDispatcherTrait;
-use openmark::launchpad::interface::{ILaunchpadDispatcher};
 use openzeppelin::utils::serde::SerializedAppend;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::token::erc1155::interface::{IERC1155Dispatcher, IERC1155DispatcherTrait};
@@ -27,32 +25,41 @@ use openmark::launchpad::interface::{
 };
 use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
 use openmark::launchpad::stage::StageComponent;
-use openmark::launchpad::open_launchpad::OpenLaunchpad;
-use openmark::launchpad::events::{StageCreated, TokensBought, StageClosed, SalesWithdrawn};
+use openmark::factory::stage_factory::{StageFactory,};
+use openmark::launchpad::events::{TokensBought, StageClosed, SalesWithdrawn};
 use openmark::launchpad::stage_batch_selector::StageBatchSelector;
+use openmark::factory::interface::{IStageFactoryDispatcher,IStageFactoryDispatcherTrait};
+use openmark::factory::stage_factory::StageFactory::StageCreated;
 
 fn create_open_launchpad(
     owner: ContractAddress, commission: u32,
-) -> (ContractAddress, ILaunchpadDispatcher) {
+) -> (ContractAddress, IStageFactoryDispatcher) {
     let selector = create_stage(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
     );
     let batchSelector = create_stage(
         StageType::BatchSelector, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
     );
+    let randomSelector = create_stage(
+        StageType::Randomness, owner, ZERO(), ZERO(), Option::None, [].span(), commission, owner,
+    );
+   
     let selector_classhash = get_class_hash(selector);
     let batch_selector_classhash = get_class_hash(batchSelector);
+    let random_classhash = get_class_hash(randomSelector);
 
-    let contract = declare("OpenLaunchpad").unwrap().contract_class();
+    let contract = declare("StageFactory").unwrap().contract_class();
     let mut constructor_calldata = array![];
 
     constructor_calldata.append_serde(owner);
     constructor_calldata.append_serde(commission);
     constructor_calldata.append_serde(selector_classhash);
     constructor_calldata.append_serde(batch_selector_classhash);
+    constructor_calldata.append_serde(random_classhash);
+    constructor_calldata.append_serde(owner); // fake vrf provider
 
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
-    let launpad_dispatcher = ILaunchpadDispatcher { contract_address };
+    let launpad_dispatcher = IStageFactoryDispatcher { contract_address };
 
     (contract_address, launpad_dispatcher)
 }
@@ -93,7 +100,7 @@ fn setup_stage(
 
     let id = 10;
     start_cheat_caller_address(launchpad_address, owner);
-    launchpad_contract.createStage(id, stage, rootWhitelist, collectionWhitelists);
+    launchpad_contract.createInstance(id, stage, rootWhitelist, collectionWhitelists);
     let stage_address = launchpad_contract.getStage(id);
 
     start_cheat_block_timestamp(stage_address, 10);
@@ -135,10 +142,10 @@ fn create_stage_works() {
     start_cheat_caller_address(launchpad_address, owner);
 
     let mut spy = spy_events();
-    launchpad_contract.createStage(id, stage, Option::None, [].span());
+    launchpad_contract.createInstance(id, stage, Option::None, [].span());
     let stage_selector = launchpad_contract.getStage(id);
 
-    let expected_event = OpenLaunchpad::Event::StageCreated(
+    let expected_event = StageFactory::Event::StageCreated(
         StageCreated {
             stageId: id,
             owner,
@@ -467,7 +474,7 @@ fn buy_stage_ended_panics() {
 }
 
 #[test]
-#[should_panic(expected: ('OM: stage id used',))]
+#[should_panic(expected: ('OM: ID in use',))]
 fn update_stages_id_used_panics() {
     let owner = toAddress(SELLER1);
     let buyer = toAddress(BUYER1);
@@ -490,8 +497,8 @@ fn update_stages_id_used_panics() {
 
     let id = 10;
     start_cheat_caller_address(launchpad_address, owner);
-    launchpad_contract.createStage(id, stage, Option::None, [].span());
-    launchpad_contract.createStage(id, stage, Option::None, [].span());
+    launchpad_contract.createInstance(id, stage, Option::None, [].span());
+    launchpad_contract.createInstance(id, stage, Option::None, [].span());
 }
 
 #[test]
