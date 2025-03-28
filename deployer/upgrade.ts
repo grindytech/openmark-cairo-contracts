@@ -102,7 +102,7 @@ async function upgrade() {
         'OpenLaunchpad',
         'OERC721Factory',
         'OERC1155Factory',
-        'LaunchpadFactory',
+        'StageFactory',
     ];
 
     // Map of contract names to their artifact paths
@@ -123,9 +123,9 @@ async function upgrade() {
             sierra: './target/dev/openmark_OERC1155Factory.contract_class.json',
             casm: './target/dev/openmark_OERC1155Factory.compiled_contract_class.json',
         },
-        'LaunchpadFactory': {
-            sierra: './target/dev/openmark_LaunchpadFactory.contract_class.json',
-            casm: './target/dev/openmark_LaunchpadFactory.compiled_contract_class.json',
+        'StageFactory': {
+            sierra: './target/dev/openmark_StageFactory.contract_class.json',
+            casm: './target/dev/openmark_StageFactory.compiled_contract_class.json',
         },
     };
 
