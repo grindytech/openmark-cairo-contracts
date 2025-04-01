@@ -19,7 +19,7 @@ const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4
 const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 const ERC1155_COLLECTION = '0x1e6c3aafa77a9d555f9694444d1b188f1129ca440418660e995eb8d48fe5127';
 
-const STAGE_VRF_ADDRESS = '0x308e1bd8206fad60aeefd1b95dfb0993512cb799773ad39ac1c6d848c2c70e9';
+const STAGE_VRF_ADDRESS = '';
 const VRF_PROVIDER = '0x51fea4450da9d6aee758bdeba88b2f665bcbf549d2c61421aa724e9ac0ced8f';
 
 const ZERO = '0x0000000000000000000000000000000000000000';
@@ -80,7 +80,7 @@ async function testVrfStageBuy() {
             endTime: Math.floor(Date.now() / 1000) + 86400, // 24 hour from now
         };
 
-        const stageId = 10003; // Unique stage ID
+        const stageId = 10004; // Unique stage ID
         const createTx = await stageFactoryContract.createInstance(
             stageId,
             stage,
@@ -97,140 +97,47 @@ async function testVrfStageBuy() {
         }
     }
 
-    // // Grant role Minter role for stage
-    // {
-    //     const { abi: erc1155Abi } = await provider.getClassAt(nftAddress);
-    //     if (erc1155Abi === undefined) {
-    //         throw new Error('No ABI found for the contract.');
-    //     }
-
-    //     const collectionContract = new Contract(erc1155Abi, nftAddress, provider).typedv2(erc1155Abi);
-    //     collectionContract.connect(account);
-    //     const approveTx = await collectionContract.grant_role(MINTER_ROLE, stageAddress);
-    //     const approveReceipt = await provider.waitForTransaction(approveTx.transaction_hash);
-    //     if (approveReceipt.isSuccess()) {
-    //         console.log("Grant Minter Role Succeeded!");
-    //     }
-    // }
-
-
-    // // Step 3: Setup Drop Table
-    // if (stageAddress !== '') {
-    //     const { abi: testAbi } = await provider.getClassAt(stageAddress);
-    //     if (testAbi === undefined) {
-    //         throw new Error('No ABI found for the contract.');
-    //     }
-
-    //     const stageContract = new Contract(testAbi, stageAddress, provider).typedv2(testAbi);
-    //     stageContract.connect(account);
-
-    //     const dropTable = [
-    //         { token_id: 0, weight: 50 },
-    //         { token_id: 1, weight: 30 },
-    //         { token_id: 2, weight: 20 },
-    //         { token_id: 3, weight: 10 },
-    //         { token_id: 4, weight: 10 },
-    //         { token_id: 5, weight: 10 },
-    //         { token_id: 6, weight: 5 },
-    //     ];
-    //     const setupTx = await stageContract.setup(dropTable);
-    //     const setupReceipt = await provider.waitForTransaction(setupTx.transaction_hash);
-    //     if (setupReceipt.isSuccess()) {
-    //         console.log("Drop table setup succeeded!");
-    //     }
-    // }
-
-    // Step 4: Approve STRK and Call Buy with Random
+    // Grant role Minter role for stage
     {
-        // // Approve STRK
-        // {
-        //     const { abi: erc1155Abi } = await provider.getClassAt(STRK);
-        //     if (erc1155Abi === undefined) {
-        //         throw new Error('No ABI found for the contract.');
-        //     }
-
-        //     const paymentContract = new Contract(erc1155Abi, STRK, provider).typedv2(erc1155Abi);
-        //     paymentContract.connect(account);
-        //     const approveTx = await paymentContract.approve(stageAddress, "5000000000000000000"); // 5 STRK
-        //     const approveReceipt = await provider.waitForTransaction(approveTx.transaction_hash);
-        //     if (approveReceipt.isSuccess()) {
-        //         console.log("Approve Payment Succeeded!");
-        //     }
-        // }
-
-        // let calls =
-        //     [
-        //         {
-        //             contractAddress: VRF_PROVIDER,
-        //             entrypoint: 'request_random',
-        //             calldata: CallData.compile({
-        //                 caller: stageAddress,
-        //                 source: { type: 0, address: stageAddress },
-        //             }),
-        //         },
-        //         {
-        //             contractAddress: stageAddress,
-        //             entrypoint: 'buy',
-        //             calldata: CallData.compile({
-        //                 mintAmount: cairo.uint256(1),
-        //                 merkleProof: [], // No whitelist in this example
-        //             }),
-        //         },
-        //     ]
-
-        // const multicallTx = await account.execute(calls);
-        // const multicallReceipt = await provider.waitForTransaction(multicallTx.transaction_hash);
-        // if (multicallReceipt.isSuccess()) {
-        //     console.log("Buy with Random Succeeded!");
-        // }
-
-        // Request_random
-        {
-
-            let calls =
-                [
-                    {
-                        contractAddress: VRF_PROVIDER,
-                        entrypoint: 'request_random',
-                        calldata: CallData.compile({
-                            caller: stageAddress,
-                            source: { type: 0, address: stageAddress },
-                        }),
-                    },
-                ]
-
-
-            // Multicall: request_random + buy
-            const multicallTx = await account.execute(calls);
-            const multicallReceipt = await provider.waitForTransaction(multicallTx.transaction_hash);
-            if (multicallReceipt.isSuccess()) {
-                console.log("Buy with Random Succeeded!");
-            }
+        const { abi: erc1155Abi } = await provider.getClassAt(nftAddress);
+        if (erc1155Abi === undefined) {
+            throw new Error('No ABI found for the contract.');
         }
 
-        // Buy
-        {
-            let calls =
-                [
-
-                    {
-                        contractAddress: stageAddress,
-                        entrypoint: 'buy',
-                        calldata: CallData.compile({
-                            mintAmount: cairo.uint256(1),
-                            merkleProof: [], // No whitelist in this example
-                        }),
-                    },
-                ]
+        const collectionContract = new Contract(erc1155Abi, nftAddress, provider).typedv2(erc1155Abi);
+        collectionContract.connect(account);
+        const approveTx = await collectionContract.grant_role(MINTER_ROLE, stageAddress);
+        const approveReceipt = await provider.waitForTransaction(approveTx.transaction_hash);
+        if (approveReceipt.isSuccess()) {
+            console.log("Grant Minter Role Succeeded!");
+        }
+    }
 
 
-            const multicallTx = await account.execute(calls);
-            const multicallReceipt = await provider.waitForTransaction(multicallTx.transaction_hash);
-            if (multicallReceipt.isSuccess()) {
-                console.log("Buy with Random Succeeded!");
-            }
+    // Step 3: Setup Drop Table
+    if (stageAddress !== '') {
+        const { abi: testAbi } = await provider.getClassAt(stageAddress);
+        if (testAbi === undefined) {
+            throw new Error('No ABI found for the contract.');
         }
 
+        const stageContract = new Contract(testAbi, stageAddress, provider).typedv2(testAbi);
+        stageContract.connect(account);
+
+        const dropTable = [
+            { token_id: 0, weight: 50 },
+            { token_id: 1, weight: 30 },
+            { token_id: 2, weight: 20 },
+            { token_id: 3, weight: 10 },
+            { token_id: 4, weight: 10 },
+            { token_id: 5, weight: 10 },
+            { token_id: 6, weight: 5 },
+        ];
+        const setupTx = await stageContract.setup(dropTable);
+        const setupReceipt = await provider.waitForTransaction(setupTx.transaction_hash);
+        if (setupReceipt.isSuccess()) {
+            console.log("Drop table setup succeeded!");
+        }
     }
 }
 
