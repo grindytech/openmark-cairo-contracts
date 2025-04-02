@@ -38,7 +38,8 @@ pub trait IOERC1155Factory<T> {
 
 #[starknet::interface]
 pub trait IFactoryManager<T> {
-    fn set_classhash(ref self: T, classhash: ClassHash);
+    fn set_classhash(ref self: T, classhash: Span<ClassHash>);
+    fn get_classhash(self: @T)-> Span<ClassHash>;
 }
 
 #[starknet::interface]

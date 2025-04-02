@@ -1,3 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contract Deployment Script
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
+/// # OpenMark Contract Deployment Script
+///
+/// This script manages the deployment of OpenMark contracts on StarkNet:
+/// - Deploys contracts using class hashes from classhashes.json if not already deployed
+/// - Constructs contract instances with specified constructor arguments
+/// - Saves deployed addresses to deployed.json
+/// - Supports OpenMark, OpenCollection, OERC721Factory, OERC1155Factory, and StageFactory contracts
+
 import { RpcProvider, Account, constants, CallData, RawArgs, json } from 'starknet';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
@@ -33,15 +46,12 @@ export async function do_deploy(name: string, classHash: string, constructorData
         constructorCalldata: contractConstructor,
     });
 
-    console.log(`✅ ${name}:`, deployResponse.address);
+    console.log(`✅ ${name} deployed at: ${deployResponse.address}`);
     return deployResponse.address;
 }
 
 async function deploy() {
-    // Load class hashes
     const classHashes: ClassHashRecord = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
-
-    // Load existing deployed addresses or initialize an empty object
     let deployedAddresses: DeployedRecord = {};
     if (fs.existsSync('./deployed.json')) {
         deployedAddresses = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
@@ -54,10 +64,10 @@ async function deploy() {
         };
         deployedAddresses['OpenMark'] = await do_deploy('OpenMark', classHashes['OpenMark'], data);
     } else {
-        console.log(`Skipping OpenMark: already deployed at ${deployedAddresses['OpenMark']}`);
+        console.log(`OpenMark already deployed at: ${deployedAddresses['OpenMark']}`);
     }
 
-    // Deploy Open Collection if missing (assuming OERC721)
+    // Deploy OpenCollection if missing (assuming OERC721)
     if (!deployedAddresses['OpenCollection'] || deployedAddresses['OpenCollection'] === '') {
         const data: RawArgs = {
             owner: Deployer,
@@ -69,7 +79,7 @@ async function deploy() {
         };
         deployedAddresses['OpenCollection'] = await do_deploy('OpenCollection', classHashes['OpenCollection'], data);
     } else {
-        console.log(`Skipping OpenCollection: already deployed at ${deployedAddresses['OpenCollection']}`);
+        console.log(`OpenCollection already deployed at: ${deployedAddresses['OpenCollection']}`);
     }
 
     // Deploy OERC721Factory if missing
@@ -81,7 +91,7 @@ async function deploy() {
         };
         deployedAddresses['OERC721Factory'] = await do_deploy('OERC721Factory', classHashes['OERC721Factory'], data);
     } else {
-        console.log(`Skipping OERC721Factory: already deployed at ${deployedAddresses['OERC721Factory']}`);
+        console.log(`OERC721Factory already deployed at: ${deployedAddresses['OERC721Factory']}`);
     }
 
     // Deploy OERC1155Factory if missing
@@ -93,7 +103,7 @@ async function deploy() {
         };
         deployedAddresses['OERC1155Factory'] = await do_deploy('OERC1155Factory', classHashes['OERC1155Factory'], data);
     } else {
-        console.log(`Skipping OERC1155Factory: already deployed at ${deployedAddresses['OERC1155Factory']}`);
+        console.log(`OERC1155Factory already deployed at: ${deployedAddresses['OERC1155Factory']}`);
     }
 
     // Deploy StageFactory if missing
@@ -114,14 +124,13 @@ async function deploy() {
         };
         deployedAddresses['StageFactory'] = await do_deploy('StageFactory', classHashes['StageFactory'], data);
     } else {
-        console.log(`Skipping StageFactory: already deployed at ${deployedAddresses['StageFactory']}`);
+        console.log(`StageFactory already deployed at: ${deployedAddresses['StageFactory']}`);
     }
 
-    // Save deployed addresses to file
     fs.writeFileSync('./deployed.json', JSON.stringify(deployedAddresses, null, 2));
     console.log('Deployed addresses saved to deployed.json');
 }
 
 deploy()
-    .then(() => console.log('Deployment completed'))
-    .catch(err => console.error('Error:', err));
+    .then(() => console.log('Deployment completed successfully'))
+    .catch(err => console.error('Error during deployment:', err));

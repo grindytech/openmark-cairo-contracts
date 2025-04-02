@@ -121,9 +121,13 @@ pub mod OERC1155Factory {
 
     #[abi(embed_v0)]
     impl FactoryManagerImpl of IFactoryManager<ContractState> {
-        fn set_classhash(ref self: ContractState, classhash: ClassHash) {
+        fn set_classhash(ref self: ContractState, classhash: Span<ClassHash>) {
             self.ownable.assert_only_owner();
-            self.collection_classhash.write(classhash);
+            self.collection_classhash.write(*classhash[0]);
+        }
+
+        fn get_classhash(self: @ContractState)-> Span<ClassHash> {
+            array![self.collection_classhash.read()].span()
         }
     }
 }

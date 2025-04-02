@@ -113,7 +113,6 @@ async function testVrfStageBuy() {
         }
     }
 
-
     // Step 3: Setup Drop Table
     if (stageAddress !== '') {
         const { abi: testAbi } = await provider.getClassAt(stageAddress);

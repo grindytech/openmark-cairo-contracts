@@ -1,3 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contract Declaration Script
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
+/// # OpenMark Contract Declaration Script
+///
+/// This script manages the declaration of OpenMark contracts on StarkNet:
+/// - Declares all contract classes from their Sierra and CASM artifacts
+/// - Checks if classes are already declared before proceeding
+/// - Saves computed class hashes to classhashes.json
+/// - Supports all OpenMark-related contracts including factories and implementations
+
 import { RpcProvider, Account, constants, json, hash } from 'starknet';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
@@ -37,19 +50,16 @@ async function declareContract(
         throw new Error(`Invalid CASM artifact for ${contractName}: CASM file missing`);
     }
 
-    // Compute the class hash from the Sierra artifact
     const computedClassHash = hash.computeContractClassHash(sierraArtifact);
 
-    // Check if the class is already declared
     try {
         await provider.getClassByHash(computedClassHash);
-        console.log(`${contractName} already declared with classHash:`, computedClassHash);
+        console.log(`${contractName} already declared with class hash: ${computedClassHash}`);
         return computedClassHash;
     } catch (error) {
-        `Failed to check class hash for ${contractName}: ${(error as Error).message}`;
+        // Class not declared yet, proceed with declaration
     }
 
-    // Declare the contract
     const declareResponse = await account.declare({
         contract: sierraArtifact,
         casm: casmArtifact,
@@ -58,7 +68,7 @@ async function declareContract(
         version: constants.TRANSACTION_VERSION.V3,
     });
 
-    console.log(`${contractName} declared with classHash:`, declareResponse.class_hash);
+    console.log(`✅ ${contractName} declared - Class hash: ${declareResponse.class_hash}`);
     return declareResponse.class_hash;
 }
 
@@ -66,7 +76,6 @@ async function declareAll() {
     const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
     const classHashes: ClassHashRecord = {};
 
-    // Map of contract names to their artifact paths
     const contractArtifacts: { [key: string]: { sierra: string; casm: string } } = {
         'OpenMark': {
             sierra: './target/dev/openmark_OpenMark.contract_class.json',
@@ -110,17 +119,19 @@ async function declareAll() {
         },
     };
 
-    // Declare all contracts
     for (const [contractName, { sierra, casm }] of Object.entries(contractArtifacts)) {
-        classHashes[contractName] = await declareContract(account, contractName, sierra, casm);
-        await delay(DELAY_MS);
+        try {
+            classHashes[contractName] = await declareContract(account, contractName, sierra, casm);
+            await delay(DELAY_MS);
+        } catch (error) {
+            console.error(`Error declaring ${contractName}:`, error);
+        }
     }
 
-    // Save class hashes to file
     fs.writeFileSync('./classhashes.json', JSON.stringify(classHashes, null, 2));
     console.log('Class hashes saved to classhashes.json');
 }
 
 declareAll()
-    .then(() => console.log('Declaration completed'))
-    .catch(err => console.error('Error:', err));
+    .then(() => console.log('Declaration completed successfully'))
+    .catch(err => console.error('Error during declaration:', err));

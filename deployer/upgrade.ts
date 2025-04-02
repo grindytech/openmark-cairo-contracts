@@ -1,3 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0
+// OpenMark Contracts Upgrade Script
+// Copyright (c) Grindy Technologies 2025
+// See LICENSE file for full terms.
+
+/// # OpenMark Contract Upgrade Script
+///
+/// This script manages the upgrade process for OpenMark contracts on StarkNet:
+/// - Compares deployed contract class hashes with expected hashes from classhashes.json
+/// - Upgrades contracts to the expected class hashes if they differ
+/// - Declares new class hashes if they aren't already on-chain
+/// - Supports OpenMark, OERC721Factory, OERC1155Factory, and StageFactory contracts
+
 import { RpcProvider, Account, constants, json, hash, CallData } from 'starknet';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
@@ -9,13 +22,27 @@ const provider = new RpcProvider({ nodeUrl: RPC });
 const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
 const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
-interface ClassHashRecord {
-    [contractName: string]: string;
-}
+interface ClassHashRecord { [contractName: string]: string; }
+interface DeployedRecord { [contractName: string]: string; }
 
-interface DeployedRecord {
-    [contractName: string]: string;
-}
+const contractArtifacts: { [key: string]: { sierra: string; casm: string } } = {
+    'OpenMark': {
+        sierra: './target/dev/openmark_OpenMark.contract_class.json',
+        casm: './target/dev/openmark_OpenMark.compiled_contract_class.json',
+    },
+    'OERC721Factory': {
+        sierra: './target/dev/openmark_OERC721Factory.contract_class.json',
+        casm: './target/dev/openmark_OERC721Factory.compiled_contract_class.json',
+    },
+    'OERC1155Factory': {
+        sierra: './target/dev/openmark_OERC1155Factory.contract_class.json',
+        casm: './target/dev/openmark_OERC1155Factory.compiled_contract_class.json',
+    },
+    'StageFactory': {
+        sierra: './target/dev/openmark_StageFactory.contract_class.json',
+        casm: './target/dev/openmark_StageFactory.compiled_contract_class.json',
+    },
+};
 
 async function declareContract(
     account: Account,
@@ -23,34 +50,19 @@ async function declareContract(
     sierraPath: string,
     casmPath: string
 ): Promise<string> {
-    let sierraArtifact: any, casmArtifact: any;
-    try {
-        sierraArtifact = json.parse(fs.readFileSync(sierraPath, 'utf8'));
-        casmArtifact = json.parse(fs.readFileSync(casmPath, 'utf8'));
-    } catch (error) {
-        throw new Error(`Failed to load artifacts for ${contractName}: ${(error as Error).message}`);
-    }
+    const sierraArtifact = json.parse(fs.readFileSync(sierraPath, 'utf8'));
+    const casmArtifact = json.parse(fs.readFileSync(casmPath, 'utf8'));
 
-    if (!sierraArtifact || !sierraArtifact.sierra_program) {
-        throw new Error(`Invalid Sierra artifact for ${contractName}: 'sierra_program' field missing`);
-    }
-    if (!casmArtifact) {
-        throw new Error(`Invalid CASM artifact for ${contractName}: CASM file missing`);
-    }
-
-    // Compute the class hash from the Sierra artifact
     const computedClassHash = hash.computeContractClassHash(sierraArtifact);
 
-    // Check if the class is already declared
     try {
         await provider.getClassByHash(computedClassHash);
-        console.log(`${contractName} already declared with classHash:`, computedClassHash);
-        return computedClassHash; // Return existing class hash if already declared
+        console.log(`Class hash ${computedClassHash} already declared for ${contractName}`);
+        return computedClassHash;
     } catch (error) {
-        `Failed to check class hash for ${contractName}: ${(error as Error).message}`
+        // Class not declared yet, proceed with declaration
     }
 
-    // If not declared, declare the contract
     const declareResponse = await account.declare({
         contract: sierraArtifact,
         casm: casmArtifact,
@@ -59,7 +71,7 @@ async function declareContract(
         version: constants.TRANSACTION_VERSION.V3,
     });
 
-    console.log(`${contractName} declared with classHash:`, declareResponse.class_hash);
+    console.log(`Declared new class hash for ${contractName}: ${declareResponse.class_hash}`);
     return declareResponse.class_hash;
 }
 
@@ -70,14 +82,8 @@ async function upgradeContract(
     newClassHash: string
 ) {
     const { abi } = await provider.getClassByHash(newClassHash);
-    if (!abi) {
-        throw new Error(`No ABI found for class hash ${newClassHash}`);
-    }
-
     const callData = new CallData(abi);
-    const calldata = callData.compile('upgrade', {
-        new_class_hash: newClassHash,
-    });
+    const calldata = callData.compile('upgrade', { new_class_hash: newClassHash });
 
     const txResponse = await account.execute({
         contractAddress,
@@ -85,74 +91,54 @@ async function upgradeContract(
         calldata,
     });
 
-    console.log(`Upgraded ${contractName} at ${contractAddress} to classHash ${newClassHash}. Tx: ${txResponse.transaction_hash}`);
+    console.log(`✅ ${contractName} upgraded - Tx: ${txResponse.transaction_hash}`);
     await provider.waitForTransaction(txResponse.transaction_hash);
 }
 
-async function upgrade() {
+async function performUpgrades() {
     const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
-
-    // Load existing class hashes and deployed addresses
     const classHashes: ClassHashRecord = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
     const deployedAddresses: DeployedRecord = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
 
-    // Contracts to check for upgrades
-    const contractsToUpgrade = [
-        'OpenMark',
-        'OERC721Factory',
-        'OERC1155Factory',
-        'StageFactory',
-    ];
+    const contractsToUpgrade = ['OpenMark', 'OERC721Factory', 'OERC1155Factory', 'StageFactory'];
 
-    // Map of contract names to their artifact paths
-    const contractArtifacts: { [key: string]: { sierra: string; casm: string } } = {
-        'OpenMark': {
-            sierra: './target/dev/openmark_OpenMark.contract_class.json',
-            casm: './target/dev/openmark_OpenMark.compiled_contract_class.json',
-        },
-        'OERC721Factory': {
-            sierra: './target/dev/openmark_OERC721Factory.contract_class.json',
-            casm: './target/dev/openmark_OERC721Factory.compiled_contract_class.json',
-        },
-        'OERC1155Factory': {
-            sierra: './target/dev/openmark_OERC1155Factory.contract_class.json',
-            casm: './target/dev/openmark_OERC1155Factory.compiled_contract_class.json',
-        },
-        'StageFactory': {
-            sierra: './target/dev/openmark_StageFactory.contract_class.json',
-            casm: './target/dev/openmark_StageFactory.compiled_contract_class.json',
-        },
-    };
-
-    // Check and upgrade each contract
     for (const contractName of contractsToUpgrade) {
-        const currentClassHash = classHashes[contractName];
-        const { sierra, casm } = contractArtifacts[contractName];
-        const sierraArtifact = json.parse(fs.readFileSync(sierra, 'utf8'));
-        const newComputedClassHash = hash.computeContractClassHash(sierraArtifact);
+        const contractAddress = deployedAddresses[contractName];
+        const expectedClassHash = classHashes[contractName];
 
-        if (currentClassHash !== newComputedClassHash) {
-            console.log(`${contractName} has new code. Declaring new class hash...`);
-            const newClassHash = await declareContract(account, contractName, sierra, casm);
-            classHashes[contractName] = newClassHash;
+        if (!contractAddress || contractAddress === '') {
+            console.log(`${contractName} not deployed yet, skipping.`);
+            continue;
+        }
 
-            // Upgrade the contract if deployed
-            const contractAddress = deployedAddresses[contractName];
-            if (contractAddress && contractAddress !== '') {
-                await upgradeContract(account, contractName, contractAddress, newClassHash);
+        try {
+            // Get the current class hash of the deployed contract
+            const currentClassHash = await provider.getClassHashAt(contractAddress);
+
+            if (currentClassHash !== expectedClassHash) {
+                console.log(`${contractName} needs upgrade (current: ${currentClassHash}, expected: ${expectedClassHash})`);
+                
+                // Check if the expected class hash exists, if not declare it
+                try {
+                    await provider.getClassByHash(expectedClassHash);
+                } catch (error) {
+                    console.log(`Declaring expected class hash ${expectedClassHash} for ${contractName}...`);
+                    const { sierra, casm } = contractArtifacts[contractName];
+                    await declareContract(account, contractName, sierra, casm);
+                }
+
+                await upgradeContract(account, contractName, contractAddress, expectedClassHash);
             } else {
-                console.log(`${contractName} not deployed yet, skipping upgrade.`);
+                console.log(`${contractName} is up to date`);
             }
-        } else {
-            console.log(`${contractName} class hash unchanged: ${currentClassHash}`);
+        } catch (error) {
+            console.error(`Error processing ${contractName}:`, error);
         }
     }
 
-    // Save updated class hashes
-    fs.writeFileSync('./classhashes.json', JSON.stringify(classHashes, null, 2));
-    console.log('Updated class hashes saved to classhashes.json');
+    console.log('Upgrade process completed');
 }
 
-upgrade()
-    .then(() => console.log('Upgrade completed'))
-    .catch(err => console.error('Error:', err));
+performUpgrades()
+    .then(() => console.log('Upgrade completed successfully'))
+    .catch(err => console.error('Error during upgrade:', err));

@@ -20,7 +20,7 @@ pub mod StageFactory {
         ClassHash, ContractAddress, get_caller_address, SyscallResultTrait, contract_address_const,
     };
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess, Map};
-    use openmark::factory::interface::{IStageFactory};
+    use openmark::factory::interface::{IStageFactory, IFactoryManager};
     use openmark::primitives::types::{Stage, ID, StageType};
     use openmark::primitives::constants::{MINTER_ROLE};
     use openzeppelin::upgrades::interface::IUpgradeable;
@@ -194,6 +194,23 @@ pub mod StageFactory {
         }
     }
 
+    #[abi(embed_v0)]
+    impl FactoryManagerImpl of IFactoryManager<ContractState> {
+        fn set_classhash(ref self: ContractState, classhash: Span<ClassHash>) {
+            self.ownable.assert_only_owner();
+              self.stage_selector.write(*classhash[0]);
+              self.stage_batch_selector.write(*classhash[1]);
+              self.stage_randomness.write(*classhash[2]);
+        }
+
+        fn get_classhash(self: @ContractState)-> Span<ClassHash> {
+            array![  self.stage_selector.read(),
+                self.stage_batch_selector.read(),
+                self.stage_randomness.read()
+                ].span()
+        }
+    }
+
     #[generate_trait]
     impl ExternalFunctions of ExternalFunctionsTrait {
         fn setCommission(ref self: ContractState, newCommission: u32) {
@@ -201,28 +218,9 @@ pub mod StageFactory {
             self.commission.write(newCommission);
         }
 
-        fn setSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
-            self.ownable.assert_only_owner();
-            self.stage_selector.write(newClasshash);
-        }
 
-        fn setBatchSelectorClasshash(ref self: ContractState, newClasshash: ClassHash) {
-            self.ownable.assert_only_owner();
-            self.stage_batch_selector.write(newClasshash);
-        }
-
-        fn setRandomnessClasshash(ref self: ContractState, newClasshash: ClassHash) {
-            self.ownable.assert_only_owner();
-            self.stage_batch_selector.write(newClasshash);
-        }
-
-        fn getConfig(self: @ContractState) -> (u32, ClassHash, ClassHash, ClassHash) {
-            return (
-                self.commission.read(),
-                self.stage_selector.read(),
-                self.stage_batch_selector.read(),
-                self.stage_randomness.read(),
-            );
+        fn getCommission(self: @ContractState) -> u32 {
+            self.commission.read()
         }
     }
 }
