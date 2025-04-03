@@ -50,9 +50,10 @@ async function updateFactoryClassHash(
         classHashes[className]
     );
 
-    const needsUpdate = currentClassHashes.some((hash: string, index: number) =>
-        hash !== expectedClassHashes[index]
-    );
+    const needsUpdate = currentClassHashes.some((hash: string, index: number) => {
+        hash = '0x' + (BigInt(hash)).toString(16);
+        return hash !== expectedClassHashes[index];
+    });
 
     if (needsUpdate) {
         console.log(`${contractName} needs class hash update`);

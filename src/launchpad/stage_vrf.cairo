@@ -191,6 +191,16 @@ pub mod StageVRF {
         }
 
         // Getter functions
+        fn get_drop_table(self: @ContractState) -> Span<DropEntry> {
+            let mut table: Array<DropEntry> = array![];
+            let mut i = 0;
+            while i < self.drop_table_length.read() {
+                table.append(self.drop_table.read(i));
+                i += 1;
+            };
+            table.span()
+        }
+
         fn get_drop_table_entry(self: @ContractState, index: u32) -> DropEntry {
             assert(index < self.drop_table_length.read(), 'OM: Index out of bounds');
             self.drop_table.read(index)

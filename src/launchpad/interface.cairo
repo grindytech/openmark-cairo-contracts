@@ -63,6 +63,7 @@ pub trait IStageVRF<T> {
     fn closeStage(ref self: T);
 
     // getters
+    fn get_drop_table(self: @T) -> Span<DropEntry>;
     fn get_drop_table_entry(self: @T, index: u32) -> DropEntry;
     fn get_drop_table_length(self: @T) -> u32;
     fn get_total_weight(self: @T) -> u128;
