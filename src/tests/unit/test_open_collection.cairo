@@ -3,7 +3,7 @@
 // Copyright (c) Grindy Technologies 2025
 // See LICENSE file for full terms.
 
-use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher};
+use openzeppelin::token::erc721::interface::{IERC721DispatcherTrait, IERC721Dispatcher, IERC721MetadataDispatcher,IERC721MetadataDispatcherTrait };
 use snforge_std::{declare, ContractClassTrait, DeclareResultTrait, start_cheat_caller_address};
 use starknet::{ContractAddress};
 use openmark::{assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait}};
@@ -81,14 +81,15 @@ fn test_mint_uris_works() {
     assert(open_collection.getTokenIndex() == 2, 'Token index should be 2');
 
     // Assert: Check stored URIs
+    let metadata_dispatcher = IERC721MetadataDispatcher {contract_address:contract_address };
     assert(
-        open_collection
-            .openTokenURI(0) == "ipfs://QmUMGWrnyeuPkARUYMUf5U9NWo8uihRGnhLH5yk3rzdUX6/0",
+        metadata_dispatcher
+            .token_uri(0) == "ipfs://QmUMGWrnyeuPkARUYMUf5U9NWo8uihRGnhLH5yk3rzdUX6/0",
         'Token 0 URI incorrect',
     );
     assert(
-        open_collection
-            .openTokenURI(1) == "ipfs://QmfFYf8G2Y9dvbnT843NFQs4evfJEJK1XHwo2qySjpHJ4e/1",
+        metadata_dispatcher
+            .token_uri(1) == "ipfs://QmfFYf8G2Y9dvbnT843NFQs4evfJEJK1XHwo2qySjpHJ4e/1",
         'Token 1 URI incorrect',
     );
 }

@@ -100,7 +100,7 @@ async function performUpgrades() {
     const classHashes: ClassHashRecord = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
     const deployedAddresses: DeployedRecord = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
 
-    const contractsToUpgrade = ['OpenMark', 'OERC721Factory', 'OERC1155Factory', 'StageFactory'];
+    const contractsToUpgrade = ['OpenMark', 'OpenCollection', 'OERC721Factory', 'OERC1155Factory', 'StageFactory'];
 
     for (const contractName of contractsToUpgrade) {
         const contractAddress = deployedAddresses[contractName];
