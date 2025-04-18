@@ -4,7 +4,7 @@
 // See LICENSE file for full terms.
 
 #[starknet::contract]
-mod OpenCollection {
+pub mod OpenCollection {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use starknet::ContractAddress;
@@ -25,7 +25,6 @@ mod OpenCollection {
         pub to: ContractAddress,
         #[key]
         pub token_id: u256,
-        #[key]
         pub uri: ByteArray,
     }
 
@@ -42,7 +41,7 @@ mod OpenCollection {
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         ERC721Event: ERC721Component::Event,
         #[flat]

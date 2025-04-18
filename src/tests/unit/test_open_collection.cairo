@@ -9,6 +9,10 @@ use starknet::{ContractAddress};
 use openmark::{assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait}};
 use openmark::tests::unit::common::{toAddress, BUYER1, SELLER1};
 use openzeppelin::utils::serde::SerializedAppend;
+use openmark::assets::open_collection::OpenCollection;
+
+use snforge_std::{spy_events};
+use snforge_std::EventSpyAssertionsTrait;
 
 // Helper constants
 fn NFT_NAME() -> ByteArray {
@@ -57,7 +61,17 @@ fn test_mint_uris_works() {
 
     // Act: Mint URIs as owner
     start_cheat_caller_address(contract_address, owner);
+
+    let mut spy = spy_events();
     open_collection.mintURIs(to, uris);
+    let expected_event1 = OpenCollection::Event::TokenMinted(OpenCollection::TokenMinted { to,
+     token_id: 0, uri: "ipfs://QmUMGWrnyeuPkARUYMUf5U9NWo8uihRGnhLH5yk3rzdUX6/0" });
+   
+    let expected_event2 = OpenCollection::Event::TokenMinted(OpenCollection::TokenMinted { to,
+     token_id: 1, uri: "ipfs://QmfFYf8G2Y9dvbnT843NFQs4evfJEJK1XHwo2qySjpHJ4e/1" });
+
+    spy.assert_emitted(@array![(contract_address, expected_event1)]);
+    spy.assert_emitted(@array![(contract_address, expected_event2)]);
 
     // Assert: Check ownership
     assert(erc721.owner_of(0) == to, 'Token 0 owner incorrect');
