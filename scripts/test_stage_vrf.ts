@@ -13,8 +13,8 @@ dotenv.config();
 // Configuration constants
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
-const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
-const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const privateKey0 = process.env.DEPLOY_ACCOUNT_PRIVATE_KEY || '';
+const DEPLOYER = process.env.DEPLOY_ACCOUNT_ADRESS || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
 const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 const ERC1155_COLLECTION = '0x1e6c3aafa77a9d555f9694444d1b188f1129ca440418660e995eb8d48fe5127';
@@ -39,7 +39,7 @@ export enum StageType {
 async function testVrfStageBuy() {
     const deployed: { [key: string]: string } = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
     const classHashes: { [key: string]: string } = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
-    const account = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, DEPLOYER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
     // Initialize the controller
     const STAGE_FACTORY_ADDRESS = deployed["StageFactory"];
 
@@ -47,14 +47,14 @@ async function testVrfStageBuy() {
     let nftAddress: string = ERC1155_COLLECTION;
     if (nftAddress === "") {
         const data: RawArgs = {
-            owner: OWNER,
+            owner: DEPLOYER,
             name: 'Test Ponies',
             symbol: 'OC',
             uri: 'ipfs://QmevyP9yyRSyYk3FkQaHK5bNj4kdSpWTDYnB2SrNhwnuje',
             maxTokenId: 1000,
             royaltyPercentage: 500, // 5%
         };
-        nftAddress = await do_deploy('OERC1155', OWNER, privateKey0, classHashes['OERC1155'], data);
+        nftAddress = await do_deploy('OERC1155', DEPLOYER, privateKey0, classHashes['OERC1155'], data);
     }
 
 

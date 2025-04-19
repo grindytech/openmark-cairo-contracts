@@ -10,8 +10,8 @@ dotenv.config();
 const RPC_URL = process.env.RPC;
 const provider = new RpcProvider({ nodeUrl: RPC_URL });
 
-const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY ? process.env.OZ_ACCOUNT_PRIVATE_KEY : "";
-const OWNER: string = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const privateKey0 = process.env.DEPLOY_ACCOUNT_PRIVATE_KEY ? process.env.DEPLOY_ACCOUNT_PRIVATE_KEY : "";
+const DEPLOYER: string = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 const OERC1155_FACTORY = '0x4474e27a47379d20e700739b26634de2d828fc532f16dfc2cd6962a458e6e51';
 
 async function executeTx(account: Account, address: string, entrypoint: string, calldata: any) {
@@ -53,13 +53,13 @@ async function executeTx(account: Account, address: string, entrypoint: string, 
 }
 
 async function deploy() {
-    const account = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, DEPLOYER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     const ID = 10000000001;
     let ERC1155Instance = "0x00cc15decf3d473a43a21c625771a750a7324186e8142f61a1d713598af7a2c6";
     // Create ERC1155 Instance
     {
-        await executeTx(account, OERC1155_FACTORY, 'createInstance', [ID, OWNER, "OMERC1155", "OM1155", "openmark.io", 100, 0]);
+        await executeTx(account, OERC1155_FACTORY, 'createInstance', [ID, DEPLOYER, "OMERC1155", "OM1155", "openmark.io", 100, 0]);
         {
             const { abi: testAbi } = await provider.getClassAt(OERC1155_FACTORY);
             if (testAbi === undefined) {
@@ -73,9 +73,9 @@ async function deploy() {
 
     console.log("ERC1155Instance: ", ERC1155Instance);
 
-    await executeTx(account, ERC1155Instance, 'mintBatch', [OWNER, [0, 1, 2], [100, 100, 100], []]);
+    await executeTx(account, ERC1155Instance, 'mintBatch', [DEPLOYER, [0, 1, 2], [100, 100, 100], []]);
 
-    await executeTx(account, ERC1155Instance, 'safeBatchTransferFrom', [OWNER, "0x03B2d9654644463e040f4264103333179cd9c24E30628fa0B39fab933f58168a", [0, 1, 2], [10, 10, 10], []]);
+    await executeTx(account, ERC1155Instance, 'safeBatchTransferFrom', [DEPLOYER, "0x03B2d9654644463e040f4264103333179cd9c24E30628fa0B39fab933f58168a", [0, 1, 2], [10, 10, 10], []]);
 }
 
 deploy().then().catch(err => {

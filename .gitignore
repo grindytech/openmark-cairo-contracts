@@ -144,3 +144,5 @@ docs/build/
 
 .snfoundry_cache
 snfoundry.toml
+
+*.env
