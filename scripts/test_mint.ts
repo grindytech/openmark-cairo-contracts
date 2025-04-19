@@ -13,7 +13,7 @@ const provider = new RpcProvider({ nodeUrl: RPC });
 // Private key for the deployer account; should be set in .env for security, empty string as fallback
 const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
 // Address of the deployer account (public key corresponding to privateKey0)
-const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 // Address of the STRK token contract on StarkNet Sepolia (used for payments)
 const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
@@ -29,7 +29,7 @@ interface DeployedRecord {
 async function callMint() {
     // Create an account instance for transaction signing and execution
     // Uses TRANSACTION_VERSION.V3 for compatibility with the latest StarkNet protocol
-    const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     // Address of the deployed StageSelector contract where the buy function will be called
     const STAGE_ADDRESS = "0x075bbc9f5211ba9ffb3c1924b2d605f4bbea613d0b56a452c98343d060ec9685";

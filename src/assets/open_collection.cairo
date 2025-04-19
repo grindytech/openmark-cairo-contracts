@@ -6,23 +6,26 @@
 #[starknet::contract]
 pub mod OpenCollection {
     use SRC5Component::InternalTrait as SRC5InternalTrait;
-    use openzeppelin::token::erc721::interface::IERC721_ID;
-    use openzeppelin::token::common::erc2981::interface::{IERC2981, IERC2981_ID};
+    use ERC721Component::InternalTrait as ERC721InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
-    use starknet::ContractAddress;
-    use openmark::assets::interface::{IOpenCollection};
-    use starknet::storage::Map;
     use openzeppelin::token::erc721::interface::{IERC721Metadata, IERC721MetadataCamelOnly};
+    use openzeppelin::token::erc721::interface::{IERC721_ID, IERC721_METADATA_ID};
+    use openzeppelin::introspection::interface::ISRC5;
+
+    use starknet::{ContractAddress};
+    use starknet::storage::Map;
+    use openmark::assets::interface::{IOpenCollection};
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
-    // ERC721
+    // ERC721 Mixin
     #[abi(embed_v0)]
     impl ERC721Impl = ERC721Component::ERC721Impl<ContractState>;
     impl ERC721CamelOnlyImpl = ERC721Component::ERC721CamelOnlyImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
+
 
     #[derive(Drop, PartialEq, starknet::Event)]
     pub struct TokenMinted {
@@ -32,6 +35,7 @@ pub mod OpenCollection {
         pub token_id: u256,
         pub uri: ByteArray,
     }
+
 
     #[storage]
     struct Storage {
@@ -54,11 +58,12 @@ pub mod OpenCollection {
         TokenMinted: TokenMinted,
     }
 
+
     #[constructor]
     fn constructor(ref self: ContractState, name: ByteArray, symbol: ByteArray) {
         self.erc721.initializer(name, symbol, "");
-        self.src5.register_interface(IERC2981_ID);
         self.src5.register_interface(IERC721_ID);
+        self.src5.register_interface(IERC721_METADATA_ID);
     }
 
     #[abi(embed_v0)]
@@ -81,7 +86,7 @@ pub mod OpenCollection {
         }
     }
 
-    // Implement IERC721Metadata to override tokenURI and avoid duplicate token_uri
+
     #[abi(embed_v0)]
     impl ERC721MetadataImpl of IERC721Metadata<ContractState> {
         fn name(self: @ContractState) -> ByteArray {
@@ -103,6 +108,14 @@ pub mod OpenCollection {
             self.token_uris.read(tokenId)
         }
     }
+
+    #[abi(embed_v0)]
+    impl SRC5Impl of ISRC5<ContractState> {
+        fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
+            self.src5.supports_interface(interface_id)
+        }
+    }
+
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {

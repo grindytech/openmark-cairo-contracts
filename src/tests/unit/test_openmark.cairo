@@ -16,15 +16,33 @@ use openmark::{
     },
 };
 use openmark::assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait};
+use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
 
 use openmark::tests::unit::common::{
     OM_OWNER, toAddress, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1,
-    setup_balance_at, TEST_PAYMENT, deploy_openmark,
+    setup_balance_at, TEST_PAYMENT, deploy_openmark,NFT_BASE_URI, ROYALTY
 };
 use openmark::core::OpenMark;
 use openmark::primitives::constants::{PERMYRIAD};
 use openmark::primitives::types::{Order, OrderType};
 use openmark::core::events::{OrderFilled};
+
+// pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> ContractAddress {
+//     let contract = declare("OERC721").unwrap().contract_class();
+//     let mut constructor_calldata = array![];
+//     constructor_calldata.append_serde(receiver);
+//     constructor_calldata.append_serde(NFT_NAME());
+//     constructor_calldata.append_serde(NFT_SYMBOL());
+//     constructor_calldata.append_serde(NFT_BASE_URI());
+//     constructor_calldata.append_serde(1000000_u256);
+//     constructor_calldata.append_serde(ROYALTY);
+//     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
+
+//     let collectionDispatcher = IERC721MinterDispatcher { contract_address };
+//     start_cheat_caller_address(contract_address, receiver);
+//     collectionDispatcher.mint_batch(receiver, [0, 1, 2, 3].span());
+//     contract_address
+// }
 
 pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> ContractAddress {
     let contract = declare("OpenCollection").unwrap().contract_class();
@@ -101,24 +119,24 @@ fn buy_works() {
     let mut spy = spy_events();
     openmark.buy(seller, order, signature.span());
 
-    // let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
-    // spy.assert_emitted(@array![(openmark_address, expected_event)]);
-    // let buyer_after_balance = payment_dispatcher.balance_of(buyer);
-    // let seller_after_balance = payment_dispatcher.balance_of(seller);
-    // let owner_balance = payment_dispatcher.balance_of(toAddress(OM_OWNER));
-    // let nft_owner_balance = payment_dispatcher.balance_of(toAddress(NFT_OWNER));
+    let expected_event = OpenMark::Event::OrderFilled(OrderFilled { seller, buyer, order });
+    spy.assert_emitted(@array![(openmark_address, expected_event)]);
+    let buyer_after_balance = payment_dispatcher.balance_of(buyer);
+    let seller_after_balance = payment_dispatcher.balance_of(seller);
+    let owner_balance = payment_dispatcher.balance_of(toAddress(OM_OWNER));
+    let nft_owner_balance = payment_dispatcher.balance_of(toAddress(NFT_OWNER));
 
-    // let price: u256 = (order.price * order.value).into();
-    // let commission = price * commission / PERMYRIAD;
-    // let royalty = 0;
-    // let payout = price - commission - royalty;
+    let price: u256 = (order.price * order.value).into();
+    let commission = price * commission / PERMYRIAD;
+    let royalty = 0;
+    let payout = price - commission - royalty;
 
-    // assert(nft_dispatcher.owner_of(order.tokenId.into()) == buyer, 'NFT owner not correct');
-    // assert(
-    //     buyer_after_balance == buyer_before_balance - order.price.into(),
-    //     'Buyer balance not correct',
-    // );
-    // assert(seller_after_balance == seller_before_balance + payout, 'Seller balance not correct');
-    // assert(owner_balance == commission, 'commission not correct');
-    // assert(nft_owner_balance == royalty, 'royalty not correct');
+    assert(nft_dispatcher.owner_of(order.tokenId.into()) == buyer, 'NFT owner not correct');
+    assert(
+        buyer_after_balance == buyer_before_balance - order.price.into(),
+        'Buyer balance not correct',
+    );
+    assert(seller_after_balance == seller_before_balance + payout, 'Seller balance not correct');
+    assert(owner_balance == commission, 'commission not correct');
+    assert(nft_owner_balance == royalty, 'royalty not correct');
 }

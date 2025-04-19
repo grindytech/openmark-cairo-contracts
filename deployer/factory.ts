@@ -20,7 +20,7 @@ dotenv.config();
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
 const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
-const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
 interface ClassHashRecord { [contractName: string]: string; }
 interface DeployedRecord { [contractName: string]: string; }
@@ -68,7 +68,7 @@ async function updateFactoryClassHash(
 }
 
 async function updateFactoryClassHashes() {
-    const account = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
     const classHashes: ClassHashRecord = json.parse(fs.readFileSync('./classhashes.json', 'utf8'));
     const deployedAddresses: DeployedRecord = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
 
