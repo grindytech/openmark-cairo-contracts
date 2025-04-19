@@ -8,15 +8,15 @@ dotenv.config();
 // Configuration
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
-const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
-const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const privateKey0 = process.env.DEPLOY_ACCOUNT_PRIVATE_KEY || '';
+const DEPLOYER = process.env.DEPLOY_ACCOUNT_ADRESS || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
 interface DeployedRecord {
     [contractName: string]: string;
 }
 
 async function callMintURIs() {
-    const account = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account = new Account(provider, DEPLOYER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     // Load deployed addresses
     const deployedAddresses: DeployedRecord = json.parse(fs.readFileSync('./deployed.json', 'utf8'));
@@ -37,7 +37,7 @@ async function callMintURIs() {
     }
 
     const calldata = CallData.compile({
-        to: OWNER,
+        to: DEPLOYER,
         uris: [
             byteArray.byteArrayFromString('ipfs://QmXmChYqhfXhtrZafjkREFBKomdk4cy345bJTnvBepAqv3/0'),
         ]

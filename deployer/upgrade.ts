@@ -19,8 +19,9 @@ dotenv.config();
 // Configuration
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
-const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
-const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+
+const privateKey0 = process.env.OWNER_ACCOUNT_PRIVATE_KEY || '';
+const OWNER = process.env.OWNER_ACCOUNT_ADDRESS || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
 interface ClassHashRecord { [contractName: string]: string; }
 interface DeployedRecord { [contractName: string]: string; }
