@@ -16,15 +16,33 @@ use openmark::{
     },
 };
 use openmark::assets::interface::{IOpenCollectionDispatcher, IOpenCollectionDispatcherTrait};
+use openmark::assets::interface::{IERC721MinterDispatcher, IERC721MinterDispatcherTrait};
 
 use openmark::tests::unit::common::{
     OM_OWNER, toAddress, NFT_OWNER, NFT_SYMBOL, NFT_NAME, TEST_NFT, SELLER1, BUYER1,
-    setup_balance_at, TEST_PAYMENT, deploy_openmark,
+    setup_balance_at, TEST_PAYMENT, deploy_openmark,NFT_BASE_URI, ROYALTY
 };
 use openmark::core::OpenMark;
 use openmark::primitives::constants::{PERMYRIAD};
 use openmark::primitives::types::{Order, OrderType};
 use openmark::core::events::{OrderFilled};
+
+// pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> ContractAddress {
+//     let contract = declare("OERC721").unwrap().contract_class();
+//     let mut constructor_calldata = array![];
+//     constructor_calldata.append_serde(receiver);
+//     constructor_calldata.append_serde(NFT_NAME());
+//     constructor_calldata.append_serde(NFT_SYMBOL());
+//     constructor_calldata.append_serde(NFT_BASE_URI());
+//     constructor_calldata.append_serde(1000000_u256);
+//     constructor_calldata.append_serde(ROYALTY);
+//     let (contract_address, _) = contract.deploy_at(@constructor_calldata, addr).unwrap();
+
+//     let collectionDispatcher = IERC721MinterDispatcher { contract_address };
+//     start_cheat_caller_address(contract_address, receiver);
+//     collectionDispatcher.mint_batch(receiver, [0, 1, 2, 3].span());
+//     contract_address
+// }
 
 pub fn setup_erc721_at(addr: ContractAddress, receiver: ContractAddress) -> ContractAddress {
     let contract = declare("OpenCollection").unwrap().contract_class();

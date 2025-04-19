@@ -20,7 +20,7 @@ dotenv.config();
 const RPC = process.env.RPC || 'https://starknet-sepolia.public.blastapi.io/rpc/v0_7';
 const provider = new RpcProvider({ nodeUrl: RPC });
 const privateKey0 = process.env.OZ_ACCOUNT_PRIVATE_KEY || '';
-const Deployer = '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
+const OWNER = process.env.OWNER_PUBLIC_KEY || '0x0575d4e20cC1f9beE77530922532a586BC1142B7CDc2AFe175321bcb6aF4E8A2';
 
 interface ClassHashRecord {
     [contractName: string]: string;
@@ -31,7 +31,7 @@ interface DeployedRecord {
 }
 
 export async function do_deploy(name: string, classHash: string, constructorData: RawArgs): Promise<string> {
-    const account0 = new Account(provider, Deployer, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
+    const account0 = new Account(provider, OWNER, privateKey0, undefined, constants.TRANSACTION_VERSION.V3);
 
     const { abi: contractAbi } = await provider.getClassByHash(classHash);
     if (contractAbi === undefined) {
@@ -60,7 +60,7 @@ async function deploy() {
     // Deploy OpenMark if missing
     if (!deployedAddresses['OpenMark'] || deployedAddresses['OpenMark'] === '') {
         const data: RawArgs = {
-            owner: Deployer,
+            owner: OWNER,
         };
         deployedAddresses['OpenMark'] = await do_deploy('OpenMark', classHashes['OpenMark'], data);
     } else {
@@ -70,7 +70,7 @@ async function deploy() {
     // Deploy OpenCollection if missing (assuming OERC721)
     if (!deployedAddresses['OpenCollection'] || deployedAddresses['OpenCollection'] === '') {
         const data: RawArgs = {
-            owner: Deployer,
+            owner: OWNER,
             name: 'Open Collection',
             symbol: 'OC',
             baseURI: '',
@@ -86,7 +86,7 @@ async function deploy() {
     if (!deployedAddresses['OERC721Factory'] || deployedAddresses['OERC721Factory'] === '') {
         const collection_classhash = classHashes['OERC721'];
         const data: RawArgs = {
-            owner: Deployer,
+            owner: OWNER,
             collection_classhash,
         };
         deployedAddresses['OERC721Factory'] = await do_deploy('OERC721Factory', classHashes['OERC721Factory'], data);
@@ -98,7 +98,7 @@ async function deploy() {
     if (!deployedAddresses['OERC1155Factory'] || deployedAddresses['OERC1155Factory'] === '') {
         const collection_classhash = classHashes['OERC1155'];
         const data: RawArgs = {
-            owner: Deployer,
+            owner: OWNER,
             collection_classhash,
         };
         deployedAddresses['OERC1155Factory'] = await do_deploy('OERC1155Factory', classHashes['OERC1155Factory'], data);
@@ -115,7 +115,7 @@ async function deploy() {
         const VRF_PROVIDER = "0x051fea4450da9d6aee758bdeba88b2f665bcbf549d2c61421aa724e9ac0ced8f";
 
         const data: RawArgs = {
-            owner: Deployer,
+            owner: OWNER,
             commission: commission,
             stage_selector: stage_selector,
             stage_batch_selector: stage_batch_selector,
